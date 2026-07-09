@@ -1,0 +1,16 @@
+version: '3.9'
+
+# Version1: アプリ本体はローカル実行を基本とし、DBのみsupabase CLI
+# （`supabase start`）が管理するスタックを使う（ADR 0001）。
+# この compose ファイルはアプリのコンテナ実行を確認する用途に限定し、
+# DBコンテナ自体はsupabase CLIに委ねる。
+
+services:
+  app:
+    build: .
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src
+    command: ['node', 'dist/infrastructure/cli/reflect.js']
+    network_mode: host # supabase CLIのローカルスタック(localhost:54321)に接続するため

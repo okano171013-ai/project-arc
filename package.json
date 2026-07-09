@@ -1,0 +1,38 @@
+{
+  "name": "project-arc",
+  "version": "0.1.0",
+  "description": "Project ARC — AI Life Management OS (Version1: foundation)",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsx src/infrastructure/cli/reflect.ts",
+    "reflect": "tsx src/infrastructure/cli/reflect.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "format": "prettier --write .",
+    "typecheck": "tsc --noEmit",
+    "prepare": "husky || exit 0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@typescript-eslint/eslint-plugin": "^7.16.0",
+    "@typescript-eslint/parser": "^7.16.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "husky": "^9.0.11",
+    "prettier": "^3.3.2",
+    "tsx": "^4.16.2",
+    "typescript": "~5.5.4",
+    "vitest": "^2.0.3"
+  }
+}
