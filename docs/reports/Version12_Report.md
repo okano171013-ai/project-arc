@@ -2,6 +2,8 @@
 
 `docs/reports/TEMPLATE.md`の14章構成に準拠。
 
+**コミットハッシュ**：`153dfda`（`feature/v4-v6-smart-capture`ブランチ）
+
 ## 1. Version概要
 
 **テーマ**：Decision Support — Version11で「取得」できるようになった
