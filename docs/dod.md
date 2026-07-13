@@ -224,4 +224,21 @@ Version10のDoDは達成済み（対話式CLIは擬似expectドライバで、�
 
 Version11のDoDは達成済み（非対話CLI・HTTP APIは実リクエスト/実データで確認済み）。
 
+## Version12完了チェックリスト
+
+- [x] `pnpm test` が全て緑（CandidateBuilder/ComparisonBuilder/DecisionEngineのテストを含む、168件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `pnpm decision -- "<質問>"`（直接指定）・`pnpm decision`（対話式、擬似expectドライバで駆動）が正常動作する（実機確認済み）
+- [x] ブリーフの5つの実機確認例（今日は何を勉強する？／今日は早く寝るべき？／この参考書を買うべき？／行政法と民訴法どちらを優先？／筋トレを休む？）全てでDecisionContextが生成されることを確認済み。「今日は何を勉強する？」で指示書の期待通り「行政法・民訴法・会社法」の3候補（優先順位なし）が出ることを確認
+- [x] `POST /decision/support` がHTTP経由で正常動作する（実機確認済み、日本語データの往復含む）
+- [x] DecisionContextにARCの解釈・結論文が一切含まれないことを確認済み（テスト・実機確認両方）
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0022〜0025（CandidateBuilderのパターンマッチング設計・Decision Supportと「Systemは判断しない」の整合性・DecisionContextをVOにした理由・Bridge非統合の理由）を記録済み
+- [x] `docs/architecture-diagram.md` を更新済み
+- [x] `docs/reports/Version12_Report.md` を生成済み（14章構成）
+- [x] `docs/reports/Version12_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+Version12のDoDは達成済み（対話式・非対話式CLI、HTTP APIともに実機確認済み）。
+
 Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。

@@ -359,4 +359,40 @@ describe('ARC Connector HTTP API', () => {
     expect(data.context).toContain('【External Brain】');
     expect(data.context).toContain('処分性は〜');
   });
+
+  it('POST /decision/support returns a DecisionContext with candidates and comparisons but no AI-authored conclusion', async () => {
+    await call('POST', '/external-knowledge', {
+      record: {
+        title: '行政法メモ',
+        content: '処分性は司法試験でよく使えるのでおすすめの論点',
+        capturedAt: '2026-07-01',
+        topics: ['行政法'],
+      },
+    });
+    await call('POST', '/external-knowledge', {
+      record: {
+        title: '民訴法メモ',
+        content: '要件事実は難しいので注意が必要',
+        capturedAt: '2026-07-02',
+        topics: ['民訴法'],
+      },
+    });
+
+    const { status, json } = await call('POST', '/decision/support', {
+      question: '行政法と民訴法どちらを優先？',
+    });
+    expect(status).toBe(200);
+    const data = json.data as {
+      decisionContext: {
+        candidates: string[];
+        comparisons: { candidate: string; merits: string[]; demerits: string[] }[];
+        pointsForOwnerToDecide: string[];
+      };
+      retrievedKnowledge: unknown[];
+      sources: unknown[];
+    };
+    expect(data.decisionContext.candidates.sort()).toEqual(['民訴法', '行政法'].sort());
+    expect(data.decisionContext.comparisons).toHaveLength(2);
+    expect(data.decisionContext.pointsForOwnerToDecide[0]).toContain('最終的な判断はOwner自身が行ってください');
+  });
 });

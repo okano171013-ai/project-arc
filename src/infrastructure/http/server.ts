@@ -45,6 +45,7 @@ import { DeleteExternalKnowledgeUseCase } from '../../application/use-cases/exte
 import { SearchExternalKnowledgeUseCase } from '../../application/use-cases/external-knowledge/SearchExternalKnowledge.js';
 import { RetrieveKnowledgeUseCase } from '../../application/use-cases/knowledge-retrieval/RetrieveKnowledge.js';
 import { buildRetrievalContext } from '../../application/use-cases/knowledge-retrieval/BuildRetrievalContext.js';
+import { DecisionEngineUseCase } from '../../application/use-cases/decision-support/DecisionEngine.js';
 import type { ExternalKnowledgeStatus } from '../../domain/entities/ExternalKnowledge.js';
 
 import { JsonFileReflectionRepository } from '../../adapters/repositories/JsonFileReflectionRepository.js';
@@ -69,6 +70,7 @@ import {
   serializeThirdPersonEvaluation,
   serializeExternalSource,
   serializeExternalKnowledge,
+  serializeDecisionContext,
 } from '../../application/serializers.js';
 
 export interface BuildAppOptions {
@@ -187,6 +189,7 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       externalKnowledgeRepository,
       externalSourceRepository,
     ),
+    decisionSupport: new DecisionEngineUseCase(externalKnowledgeRepository, externalSourceRepository),
   };
 }
 
@@ -457,6 +460,24 @@ export function createApp(options: BuildAppOptions = {}) {
         })),
         sources: result.sources.map(serializeExternalSource),
         context: buildRetrievalContext(result.results),
+      });
+    }),
+
+    // --- Decision Support（Version12） ---
+    // 比較材料の整理まで（DecisionContext）を返すのみ。ARCの解釈・
+    // 優先順位提案はここでは生成しない（ADR 0023）。
+    route('POST', '/decision/support', async (req) => {
+      const body = await readJsonBody(req);
+      const result = await useCases.decisionSupport.execute({
+        question: body.question as string,
+        candidates: body.candidates as string[] | undefined,
+        tags: body.tags as string[] | undefined,
+        topics: body.topics as string[] | undefined,
+      });
+      return ok({
+        decisionContext: serializeDecisionContext(result.decisionContext),
+        retrievedKnowledge: result.retrievedKnowledge.map(serializeExternalKnowledge),
+        sources: result.sources.map(serializeExternalSource),
       });
     }),
 

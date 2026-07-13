@@ -1,7 +1,7 @@
 {
   "name": "project-arc",
-  "version": "0.11.0",
-  "description": "Project ARC — AI Life Management OS (Version11: Knowledge Retrieval)",
+  "version": "0.12.0",
+  "description": "Project ARC — AI Life Management OS (Version12: Decision Support)",
   "type": "module",
   "private": true,
   "engines": {
@@ -23,6 +23,7 @@
     "evaluation": "tsx src/infrastructure/cli/evaluation.ts",
     "bridge": "tsx src/infrastructure/cli/bridge.ts",
     "external": "tsx src/infrastructure/cli/external.ts",
+    "decision": "tsx src/infrastructure/cli/decision.ts",
     "api": "tsx src/infrastructure/http/server.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",

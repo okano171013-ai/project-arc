@@ -22,6 +22,7 @@ import type { InventoryItem } from '../domain/entities/InventoryItem.js';
 import type { ThirdPersonEvaluation } from '../domain/entities/ThirdPersonEvaluation.js';
 import type { ExternalSource } from '../domain/entities/ExternalSource.js';
 import type { ExternalKnowledge } from '../domain/entities/ExternalKnowledge.js';
+import type { DecisionContext, DecisionEvidence } from '../domain/value-objects/DecisionContext.js';
 
 export function serializeReflection(reflection: Reflection) {
   return {
@@ -128,5 +129,31 @@ export function serializeExternalKnowledge(knowledge: ExternalKnowledge) {
     record: knowledge.record,
     createdAt: knowledge.createdAt.toISOString(),
     updatedAt: knowledge.updatedAt.toISOString(),
+  };
+}
+
+function serializeDecisionEvidence(evidence: DecisionEvidence) {
+  return {
+    knowledge: serializeExternalKnowledge(evidence.knowledge),
+    source: evidence.source ? serializeExternalSource(evidence.source) : null,
+    score: evidence.score,
+    matchedIn: evidence.matchedIn,
+  };
+}
+
+export function serializeDecisionContext(context: DecisionContext) {
+  return {
+    question: context.question,
+    candidates: context.candidates,
+    comparisons: context.comparisons.map((c) => ({
+      candidate: c.candidate,
+      merits: c.merits,
+      demerits: c.demerits,
+      missingInfo: c.missingInfo,
+      evidence: c.evidence.map(serializeDecisionEvidence),
+    })),
+    evidenceList: context.evidenceList.map(serializeDecisionEvidence),
+    missingInformation: context.missingInformation,
+    pointsForOwnerToDecide: context.pointsForOwnerToDecide,
   };
 }

@@ -195,6 +195,29 @@ Embedding、OpenAI/Claude/Gemini API呼び出し、自動要約・自動タグ�
 Version、ADR 0019・0021参照）。詳細は`docs/reports/
 Version11_Report.md`を参照。
 
+## Version12｜Decision Support（完了）
+
+**ゴール**：Version11で「取得」できるようになった外部知識を、
+選択肢の整理・比較材料の提示という形でOwnerの意思決定を支援する。
+Version11完了報告に対するARCの応答として届いたテーマ提案に基づく
+（原文は`docs/handoff/archive/Version12_ARC_Brief.md`に保管）。
+「知識を持つ」から「より良い判断を支援する」へ。
+
+| 機能 | 内容 |
+|---|---|
+| DecisionEngineUseCase | Question→Retrieve→CandidateBuilder→EvidenceCollector→ComparisonBuilder→DecisionContextという流れで比較材料を組み立てる。決定・優先順位付けは行わない（ADR 0023） |
+| CandidateBuilder | 質問文から選択肢を機械的パターン一致で導く（明示指定＞topic一致＞開放質問へのtopic提示＞Yes/Noフォールバック）。優先順位は付けない（ADR 0022） |
+| ComparisonBuilder | 根拠テキストからメリット/デメリットに該当する記述をキーワード一致で抜き出すのみ。新しい評価文は生成しない（ADR 0023） |
+| DecisionContext（Value Object） | question/candidates/comparisons/evidenceList/missingInformation/pointsForOwnerToDecideを持つ、永続化しない一時生成物（ADR 0024） |
+| CLI（`pnpm decision`） | 質問を渡すか対話式に聞き、DecisionContextを表示 |
+| HTTP API（`POST /decision/support`） | `{decisionContext, retrievedKnowledge, sources}`を返す |
+
+Version12では以下を意図的に実装しない：AI API呼び出し・自動決定・
+スケジュール変更・タスク自動生成・Memory/Reflection/External Brain
+の更新・自動通知・MCP・ChatGPT Actions、Bridge Import/Exportへの
+DecisionContext統合（一時生成物のため、ADR 0025参照）。詳細は
+`docs/reports/Version12_Report.md`を参照。
+
 ---
 
 ## 長期ロードマップ 2.0（Version9完了時、ARC提案）
@@ -213,9 +236,10 @@ Version9完了を受け、ARCから中長期ロードマップの組み替え提
   対応、API、Apple Health・Google Calendar等の外部データ取り込みを
   想定。Version10で最初の土台（ExternalSource/ExternalKnowledgeの
   保存・検索・Bridge/Timeline連携）、Version11でARCが実際に知識を
-  取り出せるQuery Layer（Knowledge Retrieval）が完了。Healthデータ
-  等の実データ連携・Version12「Decision Support」以降の検討は
-  引き続き先の課題とする。
+  取り出せるQuery Layer（Knowledge Retrieval）、Version12で取得した
+  知識を比較・整理して判断材料を作るDecision Supportが完了。
+  Healthデータ等の実データ連携・ARCが直接呼び出せる接続経路
+  （MCP・ChatGPT Actions等）は引き続き先の課題とする。
 - **Phase 3（Version16〜25）Life Management** — 毎日Reflection・
   睡眠・勉強・食事・筋トレ等をチェックし、ARCが未達を指摘する
   （「今週筋トレありません」等）、より踏み込んだ管理機能。
