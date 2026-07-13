@@ -99,3 +99,20 @@ Version2のDoDは達成済み。
 - [x] `docs/reports/Version4_Report.md` を生成済み（13章構成）
 
 Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。
+
+## Version5完了チェックリスト
+
+- [x] `pnpm test` が全て緑（SkinLog/PurchaseLog/ChallengeLogを含む、64件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `pnpm skin -- add/list/compare` が正常動作する（ユースケース層はテストで担保。対話式CLIのサンドボックス実機確認は未実施 — Version3〜5で既知の制約、Owner環境での確認を推奨）
+- [x] `pnpm purchase -- add/start/finish/list` が正常動作する（上記と同様の制約）
+- [x] `pnpm challenge -- add/list` が正常動作する（上記と同様の制約）
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0006（Skin Log/Purchase Log と Appearance Log/Life Inventoryの境界）を記録済み
+- [x] `docs/reports/Version5_Report.md` を生成済み（13章構成）
+- [x] `docs/reports/Version5_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+Version5のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。
+
+Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。

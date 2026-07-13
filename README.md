@@ -17,10 +17,10 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 
-## Version4のスコープ（現在地）
+## Version5のスコープ（現在地）
 
-テーマ：「Memory」— 生活と繋がるシステムから、人生を記憶する
-システムへ。
+テーマ：「Skin Log / Purchase Log / Challenge Log」— Version4の
+Memory/Appearance Logの土台の上に、より粒度の細かい記録先を追加。
 
 - **ARC Memory**（`pnpm memory`）— 持ち物・目標・好み・学歴・
   キャリア・健康・お金・人間関係等、長期間保持する知識を
@@ -29,6 +29,14 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - **Appearance Log**（`pnpm appearance`）— 月次の外見記録（総合評価・
   肌・髪・髭・服装・体型・コメント・改善提案）。写真はファイル管理
   のみ（画像解析はしない）
+- **Skin Log**（`pnpm skin`）— 肌の状態（赤み・毛穴・ニキビ・ニキビ跡・
+  皮脂を1〜5で評価）を頻繁に記録・比較。Appearance Logとは別の
+  Entity（ADR 0006）
+- **Purchase Log**（`pnpm purchase`）— 消耗品（化粧水・洗顔料・
+  カミソリ替刃等）の「購入→使い始め→使い切り」を管理。Life
+  Inventoryとは別のEntity（ADR 0006）
+- **Challenge Log**（`pnpm challenge`）— 人生で初めて挑戦したこと
+  （初めて食べたもの・体験）を記録
 - **Life Inventory写真紐付け**（`pnpm inventory -- photo`）— 持ち物に
   写真を紐付け（`show`で確認可能）
 - **横断検索**（`pnpm find <キーワード>`）— MemoryとLife Inventoryを
@@ -36,7 +44,7 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
   Appearance Logは検索対象外、ADR 0005参照）
 - 永続化はローカルJSONファイル（`data/`配下、Git管理外）— ADR 0003参照
 
-Gemini/OpenAI連携、Decision Engine、通知機能、画像解析AIはVersion5
+Gemini/OpenAI連携、Decision Engine、通知機能、画像解析AIはVersion6
 以降に延期しています（`docs/roadmap.md`参照）。
 
 ## セットアップ
@@ -45,7 +53,7 @@ Gemini/OpenAI連携、Decision Engine、通知機能、画像解析AIはVersion5
 pnpm install
 ```
 
-Version4はローカルJSONファイル + ローカルファイルコピーのみで動作する
+Version5はローカルJSONファイル + ローカルファイルコピーのみで動作する
 ため、追加のセットアップは不要です。Google Calendar/Tasks連携
 （Version3から継続）を使う場合は以下を参照してください。
 
@@ -62,7 +70,8 @@ supabase db reset
 ## よく使うコマンド
 
 `test`・`typecheck`等は問題ありませんが、`morning`/`reflect`/`inventory`/
-`memory`/`appearance`/`find`のような独自コマンドは、pnpm組み込みの
+`memory`/`appearance`/`skin`/`purchase`/`challenge`/`find`のような
+独自コマンドは、pnpm組み込みの
 コマンド名と偶然一致すると意図せず別の動作をしてしまうことが実機で
 判明しました（`search`→`find`への変更後も再発）。**確実に動かすため、
 すべて`pnpm run`を付けて実行してください。**
@@ -92,6 +101,18 @@ pnpm run memory -- delete          # Memoryを削除
 
 pnpm run appearance -- add         # Appearance Logを追加（月次、写真ファイル管理含む）
 pnpm run appearance -- list        # Appearance Logを一覧表示
+
+pnpm run skin -- add               # Skin Logを追加（赤み/毛穴/ニキビ/ニキビ跡/皮脂、写真含む）
+pnpm run skin -- list              # Skin Logを一覧表示
+pnpm run skin -- compare           # 直近2件の写真パスを提示（画像解析はしない）
+
+pnpm run purchase -- add           # 消耗品の購入を記録
+pnpm run purchase -- start         # 使い始めを記録
+pnpm run purchase -- finish        # 使い切りを記録
+pnpm run purchase -- list          # ステータス別（未使用/使用中/使い切り）に一覧表示
+
+pnpm run challenge -- add          # Challenge Logを追加（初めて挑戦したこと）
+pnpm run challenge -- list         # Challenge Logを一覧表示
 
 pnpm run find <キーワード>          # MemoryとInventoryを横断検索
 ```

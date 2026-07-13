@@ -1,7 +1,7 @@
 {
   "name": "project-arc",
-  "version": "0.4.0",
-  "description": "Project ARC — AI Life Management OS (Version4: memory)",
+  "version": "0.5.0",
+  "description": "Project ARC — AI Life Management OS (Version5: skin/purchase/challenge log)",
   "type": "module",
   "private": true,
   "engines": {
@@ -15,6 +15,9 @@
     "inventory": "tsx src/infrastructure/cli/inventory.ts",
     "memory": "tsx src/infrastructure/cli/memory.ts",
     "appearance": "tsx src/infrastructure/cli/appearance.ts",
+    "skin": "tsx src/infrastructure/cli/skin.ts",
+    "purchase": "tsx src/infrastructure/cli/purchase.ts",
+    "challenge": "tsx src/infrastructure/cli/challenge.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -66,7 +66,35 @@ Version4では以下を意図的に実装しない：Gemini/OpenAI連携、
 Decision Engine、通知機能、画像解析AI（すべてVersion5以降）。
 詳細は `docs/reports/Version4_Report.md` を参照。
 
+## Version5｜Skin Log / Purchase Log / Challenge Log（完了）
+
+**ゴール**：Memoryで「知識」を、Appearance Logで「月次の総合的な
+外見」を記録できるようになった土台の上に、より粒度の細かい記録先
+（肌の状態・消耗品の購入サイクル・人生初挑戦）を追加する。
+
+| 機能 | 内容 |
+|---|---|
+| Skin Log（`pnpm skin`） | 肌の状態（赤み・毛穴・ニキビ・ニキビ跡・皮脂）を数値で記録・比較。Appearance Logとは別Entity（ADR 0006） |
+| Purchase Log（`pnpm purchase`） | 消耗品の「購入→使い始め→使い切り」を管理。Life Inventoryとは別Entity（ADR 0006） |
+| Challenge Log（`pnpm challenge`） | 人生で初めて挑戦したこと（初めて食べたもの・体験）を記録 |
+
+Version5では以下を意図的に実装しない：Gemini/OpenAI連携、
+Decision Engine、通知機能、画像解析AI（Version6以降）。
+詳細は `docs/reports/Version5_Report.md` を参照。
+
+## Version6｜Smart Capture（次のVersion）
+
+**ゴール**：「記録して」と言わなくても、ARCが写真・文章から
+どのLogを更新すべきか自動で判断できる仕組みを作る（Owner・ARC
+合意のテーマ）。OCRや画像認識の高度な実装より、判断ロジックの
+Architecture（Entity/UseCase/Repository設計）を優先する。
+
 ---
+
+> 以降のVersion番号は、Version1着手時点で構想していた旧ロードマップ
+> （下記）であり、実際の開発順序（上記）とは一致しなくなっている。
+> 「Version5｜司法試験管理」等の記述は現時点では未着手であり、
+> 実施順は今後Owner/ARCと都度合意する（Principle 9: 段階的拡張）。
 
 ## Version2｜外部接続
 
