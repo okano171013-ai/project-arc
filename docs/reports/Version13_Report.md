@@ -2,6 +2,8 @@
 
 `docs/reports/TEMPLATE.md`の14章構成に準拠。
 
+**コミットハッシュ**：`d4ac1e2`（`feature/v4-v6-smart-capture`ブランチ）
+
 ## 1. Version概要
 
 **テーマ**：Conversational Integration — 「Owner→CLI→コピペ→ARC」
