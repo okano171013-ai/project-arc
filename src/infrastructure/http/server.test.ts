@@ -207,4 +207,130 @@ describe('ARC Connector HTTP API', () => {
     expect(data.logs).toHaveLength(1);
     expect(data.logs[0]?.type).toBe('ChallengeLog');
   });
+
+  // --- External Brain（Version10） ---
+
+  it('POST /external-sources creates a source, GET lists and fetches it', async () => {
+    const created = await call('POST', '/external-sources', {
+      record: { sourceType: 'web', title: '記事A', url: 'https://example.com/a' },
+    });
+    expect(created.status).toBe(201);
+    const source = (created.json.data as { source: { id: string; record: { title: string } } })
+      .source;
+    expect(source.record.title).toBe('記事A');
+
+    const list = await call('GET', '/external-sources');
+    expect((list.json.data as { sources: unknown[] }).sources).toHaveLength(1);
+
+    const fetched = await call('GET', `/external-sources/${source.id}`);
+    expect(fetched.status).toBe(200);
+  });
+
+  it('PATCH /external-sources/:id updates and DELETE removes it', async () => {
+    const created = await call('POST', '/external-sources', {
+      record: { sourceType: 'book', title: '元タイトル' },
+    });
+    const source = (created.json.data as { source: { id: string } }).source;
+
+    const updated = await call('PATCH', `/external-sources/${source.id}`, {
+      changes: { title: '更新後タイトル' },
+    });
+    expect(updated.status).toBe(200);
+    expect((updated.json.data as { source: { record: { title: string } } }).source.record.title).toBe(
+      '更新後タイトル',
+    );
+
+    const deleted = await call('DELETE', `/external-sources/${source.id}`);
+    expect(deleted.status).toBe(200);
+    const list = await call('GET', '/external-sources');
+    expect((list.json.data as { sources: unknown[] }).sources).toHaveLength(0);
+  });
+
+  it('GET /external-sources/:id returns 404 for a missing id', async () => {
+    const { status } = await call('GET', '/external-sources/does-not-exist');
+    expect(status).toBe(404);
+  });
+
+  it('POST /external-knowledge without a source succeeds (出典不明でも登録できる)', async () => {
+    const { status, json } = await call('POST', '/external-knowledge', {
+      record: { title: '知識A', content: '本文A', capturedAt: '2026-07-13' },
+    });
+    expect(status).toBe(201);
+    const data = json.data as { knowledge: { record: { status: string; confidence: string } } };
+    expect(data.knowledge.record.status).toBe('inbox');
+    expect(data.knowledge.record.confidence).toBe('unassessed');
+  });
+
+  it('POST /external-knowledge rejects a sourceId that does not exist', async () => {
+    const { status, json } = await call('POST', '/external-knowledge', {
+      record: { sourceId: 'does-not-exist', title: 'A', content: 'B', capturedAt: '2026-07-13' },
+    });
+    expect(status).toBe(400);
+    expect(json.error).toMatch(/ExternalSource not found/);
+  });
+
+  it('PATCH /external-knowledge/:id can review/archive via status, DELETE removes it', async () => {
+    const created = await call('POST', '/external-knowledge', {
+      record: { title: 'A', content: '本文', capturedAt: '2026-07-13' },
+    });
+    const knowledge = (created.json.data as { knowledge: { id: string } }).knowledge;
+
+    const reviewed = await call('PATCH', `/external-knowledge/${knowledge.id}`, {
+      changes: { status: 'reviewed' },
+    });
+    expect(
+      (reviewed.json.data as { knowledge: { record: { status: string } } }).knowledge.record
+        .status,
+    ).toBe('reviewed');
+
+    const deleted = await call('DELETE', `/external-knowledge/${knowledge.id}`);
+    expect(deleted.status).toBe(200);
+  });
+
+  it('GET /external-knowledge/search finds by keyword across Knowledge and related Source fields', async () => {
+    const source = await call('POST', '/external-sources', {
+      record: { sourceType: 'news', title: '日経新聞', publisher: '日本経済新聞社' },
+    });
+    const sourceId = (source.json.data as { source: { id: string } }).source.id;
+    await call('POST', '/external-knowledge', {
+      record: { sourceId, title: '会社法メモ', content: '株主総会について', capturedAt: '2026-07-13' },
+    });
+
+    const { status, json } = await call(
+      'GET',
+      `/external-knowledge/search?q=${encodeURIComponent('株主総会')}`,
+    );
+    expect(status).toBe(200);
+    const data = json.data as { results: { matchedIn: string[] }[] };
+    expect(data.results).toHaveLength(1);
+    expect(data.results[0]?.matchedIn).toContain('content');
+  });
+
+  it('GET /external-knowledge?status= filters the list', async () => {
+    const created = await call('POST', '/external-knowledge', {
+      record: { title: 'A', content: '本文', capturedAt: '2026-07-13' },
+    });
+    const knowledge = (created.json.data as { knowledge: { id: string } }).knowledge;
+    await call('PATCH', `/external-knowledge/${knowledge.id}`, {
+      changes: { status: 'archived' },
+    });
+    await call('POST', '/external-knowledge', {
+      record: { title: 'B', content: '本文', capturedAt: '2026-07-13' },
+    });
+
+    const { json } = await call('GET', '/external-knowledge?status=inbox');
+    const data = json.data as { knowledge: { record: { title: string } }[] };
+    expect(data.knowledge).toHaveLength(1);
+    expect(data.knowledge[0]?.record.title).toBe('B');
+  });
+
+  it('GET /timeline includes ExternalKnowledge entries', async () => {
+    await call('POST', '/external-knowledge', {
+      record: { title: '会社法メモ', content: '本文', capturedAt: '2026-07-13' },
+    });
+    const { json } = await call('GET', '/timeline?source=ExternalKnowledge');
+    const data = json.data as { entries: { title: string }[] };
+    expect(data.entries).toHaveLength(1);
+    expect(data.entries[0]?.title).toBe('会社法メモ');
+  });
 });

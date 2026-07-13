@@ -190,4 +190,21 @@ Version8のDoDは達成済み（Timeline CLIは対話式ではないため実デ
 
 Version9のDoDは達成済み（対話式CLIは擬似expectドライバで、非対話CLI・HTTP APIは実リクエストで確認済み）。
 
+## Version10完了チェックリスト
+
+- [x] `pnpm test` が全て緑（ExternalSource/ExternalKnowledge/Bridge拡張/Timeline拡張のテストを含む、144件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `pnpm external -- add/list/show/update/delete/search/review/archive` が正常動作する（実機確認済み、`add`/`update`/`delete`は擬似expectドライバで駆動。この検証中に実際のargv解析バグ（サブコマンド名をidと誤認識）と、`update()`が`changes`内の明示的な`undefined`で既存値を消してしまうバグの2件を発見・修正）
+- [x] `POST/GET/PATCH/DELETE /external-sources`・`/external-knowledge`・`GET /external-knowledge/search` がHTTP経由で正常動作する（実機確認済み、日本語データの往復含む）
+- [x] `pnpm bridge -- import/export` がExternalSource/ExternalKnowledgeを含めて正常動作する（実機確認済み。エクスポート件数上限・`truncated`フラグも確認）
+- [x] `pnpm timeline` / `GET /timeline` がExternalKnowledgeを含み、contentを含まないことを確認済み
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0012〜0018（External Brainの判断境界・Source/Knowledge分離・検索分離・Bridge命名規則・BridgeのsourceId解決・Timeline組み込み・MemoryEntryとの分離）を記録済み
+- [x] `docs/architecture-diagram.md` を更新済み
+- [x] `docs/reports/Version10_Report.md` を生成済み（14章構成）
+- [x] `docs/reports/Version10_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+Version10のDoDは達成済み（対話式CLIは擬似expectドライバで、非対話CLI・HTTP API・Bridgeは実リクエスト/実ファイルで確認済み）。
+
 Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。

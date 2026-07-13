@@ -21,7 +21,8 @@ export type TimelineSource =
   | 'ChallengeLog'
   | 'InventoryItem'
   | 'Capture'
-  | 'ThirdPersonEvaluation';
+  | 'ThirdPersonEvaluation'
+  | 'ExternalKnowledge';
 
 export interface TimelineEntry {
   readonly date: string; // YYYY-MM-DD

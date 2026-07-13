@@ -15,41 +15,49 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/ai-roles.md`](./docs/ai-roles.md) — 人間・ARC・Gemini・Claude Code・
   システム自体の責務分担
 - [`docs/architecture.md`](./docs/architecture.md) — 技術設計
-- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜9のロードマップ・
+- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜10のロードマップ・
   長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version9のスコープ（現在地）
+## Version10のスコープ（現在地）
 
-テーマ：「ARC Bridge」— ARCとProject ARCの最初の接続点を作る
-（ADR 0010）。完全自動ではなく、Ownerが「ARCの提案をProject ARCへ
-簡単に渡せる状態」を目指す。アーキテクチャ全体像は
+テーマ：「External Brain」— 外部情報（記事・書籍・会話等から得た
+知識）をProject ARCに保存し、後から再利用できるようにする
+（長期ロードマップ2.0 Phase 2の第一歩）。アーキテクチャ全体像は
 [`docs/architecture-diagram.md`](./docs/architecture-diagram.md)を参照。
 
+- **External Brain**（`pnpm external`）— 出典（`ExternalSource`：
+  Web/書籍/論文/動画等の書誌情報）と知識（`ExternalKnowledge`：
+  そこから得た内容、原文とOwnerの解釈を分離）を分けて保存
+  （ADR 0013）。confidence・重複検知はOwnerが判断する材料を示す
+  だけで、Systemは自動判定・自動統合しない（ADR 0012）
 - **Bridge Layer**（`pnpm bridge -- import/export`、`POST
   /bridge/import`、`GET /bridge/export`）— `{type, data}`形式のJSONで
   Reflection/Memory/InventoryItem/AppearanceLog/SkinLog/PurchaseLog/
-  ChallengeLog/ThirdPersonEvaluationを一括登録・一括出力。既存の
-  UseCaseへ委譲するだけの薄いディスパッチャで、1件の失敗が他に
-  影響しない（ADR 0010）
+  ChallengeLog/ThirdPersonEvaluation/ExternalSource/ExternalKnowledge
+  を一括登録・一括出力。既存のUseCaseへ委譲するだけの薄い
+  ディスパッチャで、1件の失敗が他に影響しない（ADR 0010・0016）
 - **Third Person Evaluation**（`pnpm evaluation`、`POST
   /evaluation`）— 他者からの評価・コメント（「いとこにガタイ良く
   なったと言われた」等）を構造化して記録。Appearance Log（Owner
   自身の評価）とは別Entity（ADR 0011）
 - **Timeline**（`pnpm timeline`、`GET /timeline`）— Reflection/
   AppearanceLog/SkinLog/PurchaseLog/ChallengeLog/Capture/
-  ThirdPersonEvaluationの7Logを横断して日付降順で一覧表示。
-  `--since=` `--source=` `--limit=`で絞り込み可能。Memory/Life
-  Inventoryは対象外（ADR 0009）
+  ThirdPersonEvaluation/ExternalKnowledgeの8Logを横断して日付降順で
+  一覧表示。`--since=` `--source=` `--limit=`で絞り込み可能。
+  Memory/Life Inventory/ExternalSourceは対象外（ADR 0009・0017）
 - **ARC Connector**（`pnpm api`）— Application層をHTTP経由で呼び出せる
   API。`POST /reflection` `/skin` `/purchase` `/purchase/:id/start`
   `/purchase/:id/finish` `/appearance` `/evaluation` `/capture/suggest`
-  `/capture` `/bridge/import`、`GET /health` `/timeline`
-  `/bridge/export`。新規外部依存なし（Node標準の`http`のみ）。
-  ローカル専用（`127.0.0.1`のみ）・認証は未実装（将来リモート接続が
-  必要になった時点で追加、ADR 0008参照）
+  `/capture` `/bridge/import` `/external-sources` `/external-knowledge`、
+  `GET /health` `/timeline` `/bridge/export` `/external-sources`
+  `/external-knowledge` `/external-knowledge/search`、`PATCH`/`DELETE`
+  も`/external-sources/:id` `/external-knowledge/:id`に対応。新規
+  外部依存なし（Node標準の`http`のみ）。ローカル専用（`127.0.0.1`
+  のみ）・認証は未実装（将来リモート接続が必要になった時点で追加、
+  ADR 0008参照）
 - **Smart Capture**（`pnpm capture`）— 文章・写真を入力すると、
   キーワード一致による下書き提案（例：「肌」→Skin Log、「買った」→
   Purchase Log、「言われた」→Third Person Evaluation）を表示。Owner
@@ -74,7 +82,8 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
   写真を紐付け（`show`で確認可能）
 - **横断検索**（`pnpm find <キーワード>`）— MemoryとLife Inventoryを
   横断検索。「あれ何使ってた？」にすぐ答えることが目的（Reflection・
-  Appearance Logは検索対象外、ADR 0005参照）
+  Appearance Log・External Brainは検索対象外。External Brainの検索は
+  `pnpm external -- search`が別に持つ、ADR 0005・0014参照）
 - 永続化はローカルJSONファイル（`data/`配下、Git管理外）— ADR 0003参照
 
 Gemini/OpenAI連携、実際の画像解析・OCR、Decision Engine、通知機能は
@@ -86,7 +95,7 @@ Gemini/OpenAI連携、実際の画像解析・OCR、Decision Engine、通知機�
 pnpm install
 ```
 
-Version9はローカルJSONファイル + ローカルファイルコピーのみで動作する
+Version10はローカルJSONファイル + ローカルファイルコピーのみで動作する
 ため、追加のセットアップは不要です。Google Calendar/Tasks連携
 （Version3から継続）を使う場合は以下を参照してください。
 
@@ -104,7 +113,7 @@ supabase db reset
 
 `test`・`typecheck`等は問題ありませんが、`morning`/`reflect`/`inventory`/
 `memory`/`appearance`/`skin`/`purchase`/`challenge`/`capture`/
-`timeline`/`evaluation`/`bridge`/`find`のような独自コマンドは、pnpm組み込みの
+`timeline`/`evaluation`/`bridge`/`external`/`find`のような独自コマンドは、pnpm組み込みの
 コマンド名と偶然一致すると意図せず別の動作をしてしまうことが実機で
 判明しました（`search`→`find`への変更後も再発）。**確実に動かすため、
 すべて`pnpm run`を付けて実行してください。**
@@ -162,6 +171,16 @@ pnpm run timeline --source=SkinLog    # ソースで絞り込み
 pnpm run bridge -- import <ファイル>  # {logs:[{type,data}, ...]}形式のJSONを一括登録
 pnpm run bridge -- export             # 全Logをまとめてエクスポート
 pnpm run bridge -- export --type=SkinLog  # typeを指定してエクスポート
+
+pnpm run external -- add           # External Brainに知識を追加（出典の入力込み）
+pnpm run external -- list          # 知識を一覧表示
+pnpm run external -- list --status=inbox  # ステータスで絞り込み
+pnpm run external -- show <id>     # 知識の詳細（出典情報込み）を表示
+pnpm run external -- update <id>   # 知識を更新
+pnpm run external -- delete <id>   # 知識を削除
+pnpm run external -- search <キーワード>  # 知識と出典を横断検索
+pnpm run external -- review <id>   # ステータスをreviewedに変更
+pnpm run external -- archive <id>  # ステータスをarchivedに変更
 
 pnpm run api                       # ARC Connector（HTTP API）を起動（既定ポート3939）
 ```

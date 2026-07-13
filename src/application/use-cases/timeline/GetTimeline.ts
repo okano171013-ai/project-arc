@@ -6,6 +6,8 @@ import type { PurchaseLogRepository } from '../../ports/PurchaseLogRepository.js
 import type { ChallengeLogRepository } from '../../ports/ChallengeLogRepository.js';
 import type { CaptureRepository } from '../../ports/CaptureRepository.js';
 import type { ThirdPersonEvaluationRepository } from '../../ports/ThirdPersonEvaluationRepository.js';
+import type { ExternalKnowledgeRepository } from '../../ports/ExternalKnowledgeRepository.js';
+import type { ExternalSourceRepository } from '../../ports/ExternalSourceRepository.js';
 
 /**
  * Reflectionには`findAll()`がなく`findRecent(limit)`のみ持つ
@@ -30,13 +32,21 @@ export interface GetTimelineOutput {
 }
 
 /**
- * GetTimelineUseCase（Version8、Version9でThirdPersonEvaluationを追加）
+ * GetTimelineUseCase（Version8、Version9でThirdPersonEvaluationを追加、
+ * Version10でExternalKnowledgeを追加）
  *
  * 各Logを横断して時系列に並べる射影UseCase。対象はReflection/
  * AppearanceLog/SkinLog/PurchaseLog/ChallengeLog/Capture/
- * ThirdPersonEvaluationの7つ（「ある瞬間の出来事」を持つLog）。
- * Memory（時間に紐づかない知識、ADR 0005）とLife Inventory
- * （耐久品の状態管理、ADR 0006）は対象外とする（ADR 0009参照）。
+ * ThirdPersonEvaluation/ExternalKnowledgeの8つ（「ある瞬間の出来事」
+ * を持つLog）。Memory（時間に紐づかない知識、ADR 0005）とLife
+ * Inventory（耐久品の状態管理、ADR 0006）、ExternalSource単体
+ * （情報源の管理Entityであり出来事ではない、ADR 0017）は対象外と
+ * する（ADR 0009参照）。
+ *
+ * ExternalKnowledgeは「いつその情報を知ったか（capturedAt）」を
+ * 人生の時系列として扱う（指示書8章）。Timeline上では長文の
+ * contentを表示せず、title/sourceType/source title/topics/
+ * capturedAt/statusの要約のみを表示する（ADR 0017）。
  *
  * このUseCase自身は各Logの記録を集めて日付順に並べ替えるだけで、
  * 「何が重要か」の判断・要約は行わない（ai-roles.md、ADR 0007/0008
@@ -51,19 +61,33 @@ export class GetTimelineUseCase {
     private readonly challengeLogRepository: ChallengeLogRepository,
     private readonly captureRepository: CaptureRepository,
     private readonly thirdPersonEvaluationRepository: ThirdPersonEvaluationRepository,
+    private readonly externalKnowledgeRepository: ExternalKnowledgeRepository,
+    private readonly externalSourceRepository: ExternalSourceRepository,
   ) {}
 
   async execute(input: GetTimelineInput = {}): Promise<GetTimelineOutput> {
-    const [reflections, appearanceLogs, skinLogs, purchases, challenges, captures, evaluations] =
-      await Promise.all([
-        this.reflectionRepository.findRecent(REFLECTION_FETCH_LIMIT),
-        this.appearanceLogRepository.findAll(),
-        this.skinLogRepository.findAll(),
-        this.purchaseLogRepository.findAll(),
-        this.challengeLogRepository.findAll(),
-        this.captureRepository.findAll(),
-        this.thirdPersonEvaluationRepository.findAll(),
-      ]);
+    const [
+      reflections,
+      appearanceLogs,
+      skinLogs,
+      purchases,
+      challenges,
+      captures,
+      evaluations,
+      knowledgeItems,
+      sources,
+    ] = await Promise.all([
+      this.reflectionRepository.findRecent(REFLECTION_FETCH_LIMIT),
+      this.appearanceLogRepository.findAll(),
+      this.skinLogRepository.findAll(),
+      this.purchaseLogRepository.findAll(),
+      this.challengeLogRepository.findAll(),
+      this.captureRepository.findAll(),
+      this.thirdPersonEvaluationRepository.findAll(),
+      this.externalKnowledgeRepository.findAll(),
+      this.externalSourceRepository.findAll(),
+    ]);
+    const sourceById = new Map(sources.map((s) => [s.id, s]));
 
     let entries: TimelineEntry[] = [
       ...reflections.map((r) => ({
@@ -115,6 +139,22 @@ export class GetTimelineUseCase {
         summary: undefined,
         metadata: { id: e.id, category: e.record.category },
       })),
+      ...knowledgeItems.map((k) => {
+        const source = k.sourceId ? sourceById.get(k.sourceId) : undefined;
+        return {
+          date: k.capturedAt,
+          source: 'ExternalKnowledge' as const,
+          title: k.title,
+          summary: source ? `[${source.record.sourceType}] ${source.title}` : undefined,
+          metadata: {
+            id: k.id,
+            status: k.record.status,
+            topics: k.record.topics,
+            sourceTitle: source?.title,
+            sourceType: source?.record.sourceType,
+          },
+        };
+      }),
     ];
 
     if (input.source) {

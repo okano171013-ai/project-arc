@@ -152,13 +152,36 @@ ADR 0007/0008の「Systemは判断しない」という制約はBridge Layerで�
 貢献」が追加された（`docs/reports/TEMPLATE.md`参照）。詳細は
 `docs/reports/Version9_Report.md`を参照。
 
+## Version10｜External Brain（完了）
+
+**ゴール**：外部情報（記事・書籍・会話・動画等から得た知識）を
+Project ARCに保存し、後から再利用できるようにする。「Phase 2
+External Brain」の最初のVersion（長期ロードマップ2.0）。ARCから
+PDFで届いた24節構成の実装指示書に基づく。
+
+| 機能 | 内容 |
+|---|---|
+| ExternalSource（出典） | Web/書籍/論文/動画等の出典情報（書誌情報のみ）。ExternalKnowledgeとは別Entity（ADR 0013） |
+| ExternalKnowledge（知識）（`pnpm external`） | 出典から得た知識・情報。原文（content）とOwnerの解釈（ownerSummary/ownerComment）を分離。confidence/statusはOwnerが設定。MemoryEntryとは別Entity（ADR 0012・0018） |
+| 検索（`pnpm external -- search`） | ExternalKnowledge専用の検索。`pnpm find`（Memory/Inventory対象）とは分離（ADR 0014） |
+| Bridge拡張 | `ExternalSource`/`ExternalKnowledge`をImport/Export対象に追加（ADR 0015・0016） |
+| Timeline拡張 | ExternalKnowledgeをTimelineに追加（要約のみ、contentは含めない）。ExternalSource自体は対象外（ADR 0017） |
+| HTTP API拡張 | `/external-sources`・`/external-knowledge`・`/external-knowledge/search`のCRUD+検索エンドポイント |
+
+Version10では以下を意図的に実装しない：外部情報の自動信頼度評価、
+重複の自動統合、Bridge Import時の同一バッチ内forward reference
+解決、Apple Health等の実データ連携（すべて将来のVersion、
+ADR 0012・0016参照）。詳細は`docs/reports/Version10_Report.md`を
+参照。
+
 ---
 
 ## 長期ロードマップ 2.0（Version9完了時、ARC提案）
 
 Version9完了を受け、ARCから中長期ロードマップの組み替え提案があった
-（`docs/handoff/archive/`参照）。Version10の正式な指示書はまだ届いて
-いないため、以下は方向性の記録であり、確定した実装計画ではない
+（`docs/handoff/archive/`参照）。Version10「External Brain」は
+その後PDFで指示書が届き、着手・完了した。Version11以降は方向性の
+記録であり、確定した実装計画ではない
 （Principle 9: 段階的拡張、Principle 1: 最終決定はOwner）。
 
 - **Phase 1（Version1〜9）Data Foundation** — 完了。人生の事実を
@@ -167,9 +190,9 @@ Version9完了を受け、ARCから中長期ロードマップの組み替え提
 - **Phase 2（Version10〜15）External Brain** — 「ARCがProject ARCを
   読む」ことを最優先にする。Context Export/Import、ARC Bridge、MCP
   対応、API、Apple Health・Google Calendar等の外部データ取り込みを
-  想定。ARC提案により、Version10のテーマは「Health Integration」
-  単体ではなく「External Brain」に広げる方向で検討中（Health
-  データはExternal Brainへ流れ込む入力源の1つと位置づける）。
+  想定。Version10で最初の土台（ExternalSource/ExternalKnowledgeの
+  保存・検索・Bridge/Timeline連携）が完了。Healthデータ等の実データ
+  連携はこの土台に接続する入力源の1つとして、Version11以降で検討する。
 - **Phase 3（Version16〜25）Life Management** — 毎日Reflection・
   睡眠・勉強・食事・筋トレ等をチェックし、ARCが未達を指摘する
   （「今週筋トレありません」等）、より踏み込んだ管理機能。

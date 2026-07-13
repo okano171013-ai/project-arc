@@ -10,6 +10,8 @@ import type { SkinLogRepository } from '../../ports/SkinLogRepository.js';
 import type { PurchaseLogRepository } from '../../ports/PurchaseLogRepository.js';
 import type { ChallengeLogRepository } from '../../ports/ChallengeLogRepository.js';
 import type { ThirdPersonEvaluationRepository } from '../../ports/ThirdPersonEvaluationRepository.js';
+import type { ExternalSourceRepository } from '../../ports/ExternalSourceRepository.js';
+import type { ExternalKnowledgeRepository } from '../../ports/ExternalKnowledgeRepository.js';
 
 import type { MemoryEntry } from '../../../domain/entities/MemoryEntry.js';
 import type { InventoryItem } from '../../../domain/entities/InventoryItem.js';
@@ -18,6 +20,8 @@ import type { SkinLog } from '../../../domain/entities/SkinLog.js';
 import type { PurchaseLog } from '../../../domain/entities/PurchaseLog.js';
 import type { ChallengeLog } from '../../../domain/entities/ChallengeLog.js';
 import type { ThirdPersonEvaluation } from '../../../domain/entities/ThirdPersonEvaluation.js';
+import type { ExternalSource } from '../../../domain/entities/ExternalSource.js';
+import type { ExternalKnowledge } from '../../../domain/entities/ExternalKnowledge.js';
 
 class FakeMemoryRepository implements MemoryRepository {
   store = new Map<string, MemoryEntry>();
@@ -101,6 +105,44 @@ class FakeThirdPersonEvaluationRepository implements ThirdPersonEvaluationReposi
   }
 }
 
+class FakeExternalSourceRepository implements ExternalSourceRepository {
+  store = new Map<string, ExternalSource>();
+  async save(s: ExternalSource): Promise<void> {
+    this.store.set(s.id, s);
+  }
+  async findById(id: string): Promise<ExternalSource | null> {
+    return this.store.get(id) ?? null;
+  }
+  async findAll(): Promise<ExternalSource[]> {
+    return [...this.store.values()];
+  }
+  async delete(id: string): Promise<void> {
+    this.store.delete(id);
+  }
+  async findByUrl(url: string): Promise<ExternalSource[]> {
+    return [...this.store.values()].filter((s) => s.url === url);
+  }
+  async findByIdentifier(identifier: string): Promise<ExternalSource[]> {
+    return [...this.store.values()].filter((s) => s.identifier === identifier);
+  }
+}
+
+class FakeExternalKnowledgeRepository implements ExternalKnowledgeRepository {
+  store = new Map<string, ExternalKnowledge>();
+  async save(k: ExternalKnowledge): Promise<void> {
+    this.store.set(k.id, k);
+  }
+  async findById(id: string): Promise<ExternalKnowledge | null> {
+    return this.store.get(id) ?? null;
+  }
+  async findAll(): Promise<ExternalKnowledge[]> {
+    return [...this.store.values()];
+  }
+  async delete(id: string): Promise<void> {
+    this.store.delete(id);
+  }
+}
+
 function buildUseCases() {
   const reflectionRepo = new InMemoryReflectionRepository();
   const memoryRepo = new FakeMemoryRepository();
@@ -110,6 +152,8 @@ function buildUseCases() {
   const purchaseRepo = new FakePurchaseLogRepository();
   const challengeRepo = new FakeChallengeLogRepository();
   const evaluationRepo = new FakeThirdPersonEvaluationRepository();
+  const sourceRepo = new FakeExternalSourceRepository();
+  const knowledgeRepo = new FakeExternalKnowledgeRepository();
 
   const importLogs = new ImportLogsUseCase(
     reflectionRepo,
@@ -120,6 +164,8 @@ function buildUseCases() {
     purchaseRepo,
     challengeRepo,
     evaluationRepo,
+    sourceRepo,
+    knowledgeRepo,
   );
   const exportLogs = new ExportLogsUseCase(
     reflectionRepo,
@@ -130,9 +176,15 @@ function buildUseCases() {
     purchaseRepo,
     challengeRepo,
     evaluationRepo,
+    sourceRepo,
+    knowledgeRepo,
   );
 
-  return { importLogs, exportLogs, repos: { memoryRepo, skinRepo, purchaseRepo } };
+  return {
+    importLogs,
+    exportLogs,
+    repos: { memoryRepo, skinRepo, purchaseRepo, sourceRepo, knowledgeRepo },
+  };
 }
 
 describe('ImportLogs', () => {
@@ -184,6 +236,41 @@ describe('ImportLogs', () => {
     expect(results[0]?.ok).toBe(true);
     expect(useCases.repos.memoryRepo.store.size).toBe(1);
   });
+
+  it('ExternalSourceとExternalKnowledgeをtype経由でインポートできる', async () => {
+    const { results } = await useCases.importLogs.execute({
+      logs: [
+        { type: 'ExternalSource', data: { record: { sourceType: 'web', title: '記事A' } } },
+        {
+          type: 'ExternalKnowledge',
+          data: { record: { title: '知識A', content: '本文A', capturedAt: '2026-07-13' } },
+        },
+      ],
+    });
+    expect(results.every((r) => r.ok)).toBe(true);
+    expect(useCases.repos.sourceRepo.store.size).toBe(1);
+    expect(useCases.repos.knowledgeRepo.store.size).toBe(1);
+  });
+
+  it('同一バッチ内で新規SourceのIDをKnowledgeが前方参照することはできない（ADR 0016）', async () => {
+    const { results } = await useCases.importLogs.execute({
+      logs: [
+        {
+          type: 'ExternalKnowledge',
+          data: {
+            record: {
+              sourceId: 'まだ存在しないID',
+              title: '知識A',
+              content: '本文A',
+              capturedAt: '2026-07-13',
+            },
+          },
+        },
+      ],
+    });
+    expect(results[0]?.ok).toBe(false);
+    expect(results[0]?.error).toMatch(/ExternalSource not found/);
+  });
 });
 
 describe('ExportLogs', () => {
@@ -228,5 +315,77 @@ describe('ExportLogs', () => {
     const data = logs[0]?.data as Record<string, unknown>;
     expect(data).toHaveProperty('id');
     expect(data).not.toHaveProperty('_id');
+  });
+
+  it('件数上限を超える場合はtruncatedがtrueになり、limitで切り詰められる（Version9の技術的負債への対応）', async () => {
+    for (let i = 0; i < 5; i++) {
+      await useCases.importLogs.execute({
+        logs: [{ type: 'ChallengeLog', data: { record: { date: '2026-07-13', title: `#${i}` } } }],
+      });
+    }
+    const { logs, truncated } = await useCases.exportLogs.execute({
+      type: 'ChallengeLog',
+      limit: 3,
+    });
+    expect(logs).toHaveLength(3);
+    expect(truncated).toBe(true);
+  });
+
+  it('all: trueを指定すると件数上限を無視する', async () => {
+    for (let i = 0; i < 5; i++) {
+      await useCases.importLogs.execute({
+        logs: [{ type: 'ChallengeLog', data: { record: { date: '2026-07-13', title: `#${i}` } } }],
+      });
+    }
+    const { logs, truncated } = await useCases.exportLogs.execute({
+      type: 'ChallengeLog',
+      limit: 3,
+      all: true,
+    });
+    expect(logs).toHaveLength(5);
+    expect(truncated).toBe(false);
+  });
+
+  it('ExternalKnowledgeをstatus/topic/期間で絞り込める', async () => {
+    await useCases.importLogs.execute({
+      logs: [
+        {
+          type: 'ExternalKnowledge',
+          data: {
+            record: {
+              title: 'A',
+              content: '本文',
+              capturedAt: '2026-07-01',
+              topics: ['法律'],
+              status: 'reviewed',
+            },
+          },
+        },
+        {
+          type: 'ExternalKnowledge',
+          data: { record: { title: 'B', content: '本文', capturedAt: '2026-07-10' } },
+        },
+      ],
+    });
+
+    const { logs } = await useCases.exportLogs.execute({
+      type: 'ExternalKnowledge',
+      status: 'reviewed',
+    });
+    expect(logs).toHaveLength(1);
+  });
+
+  it('ExternalSourceをsourceTypeで絞り込める', async () => {
+    await useCases.importLogs.execute({
+      logs: [
+        { type: 'ExternalSource', data: { record: { sourceType: 'web', title: 'Web記事' } } },
+        { type: 'ExternalSource', data: { record: { sourceType: 'book', title: '書籍' } } },
+      ],
+    });
+    const { logs } = await useCases.exportLogs.execute({
+      type: 'ExternalSource',
+      sourceType: 'book',
+    });
+    expect(logs).toHaveLength(1);
   });
 });

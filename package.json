@@ -1,7 +1,7 @@
 {
   "name": "project-arc",
-  "version": "0.9.0",
-  "description": "Project ARC — AI Life Management OS (Version9: ARC bridge)",
+  "version": "0.10.0",
+  "description": "Project ARC — AI Life Management OS (Version10: External Brain)",
   "type": "module",
   "private": true,
   "engines": {
@@ -22,6 +22,7 @@
     "timeline": "tsx src/infrastructure/cli/timeline.ts",
     "evaluation": "tsx src/infrastructure/cli/evaluation.ts",
     "bridge": "tsx src/infrastructure/cli/bridge.ts",
+    "external": "tsx src/infrastructure/cli/external.ts",
     "api": "tsx src/infrastructure/http/server.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",

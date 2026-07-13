@@ -7,6 +7,8 @@ import { AddSkinLogUseCase } from '../skin/AddSkinLog.js';
 import { RecordPurchaseUseCase } from '../purchase/RecordPurchase.js';
 import { AddChallengeLogUseCase } from '../challenge/AddChallengeLog.js';
 import { AddThirdPersonEvaluationUseCase } from '../evaluation/AddThirdPersonEvaluation.js';
+import { AddExternalSourceUseCase } from '../external-source/AddExternalSource.js';
+import { AddExternalKnowledgeUseCase } from '../external-knowledge/AddExternalKnowledge.js';
 
 import type { ReflectionRepository } from '../../ports/ReflectionRepository.js';
 import type { MemoryRepository } from '../../ports/MemoryRepository.js';
@@ -16,6 +18,8 @@ import type { SkinLogRepository } from '../../ports/SkinLogRepository.js';
 import type { PurchaseLogRepository } from '../../ports/PurchaseLogRepository.js';
 import type { ChallengeLogRepository } from '../../ports/ChallengeLogRepository.js';
 import type { ThirdPersonEvaluationRepository } from '../../ports/ThirdPersonEvaluationRepository.js';
+import type { ExternalSourceRepository } from '../../ports/ExternalSourceRepository.js';
+import type { ExternalKnowledgeRepository } from '../../ports/ExternalKnowledgeRepository.js';
 
 export interface ImportLogEntry {
   type: BridgeLogType;
@@ -52,6 +56,13 @@ export interface ImportLogsOutput {
  * このUseCase自身はどのLogへ書くべきかを判断しない——`type`は
  * 呼び出し側（Owner/ARC）が確定済みの値として渡す（ADR 0007/0008
  * から継続する方針）。
+ *
+ * Version10でExternalSource/ExternalKnowledgeを追加。同一バッチ内で
+ * 新規ExternalSourceを作成し、同じバッチ内のExternalKnowledgeから
+ * その新規sourceIdを参照することはサポートしない（IDは登録完了時に
+ * 生成されるため、バッチ内での前方参照は解決できない）。Sourceを
+ * 先にImportし、返却されたidを使って改めてKnowledgeをImportする
+ * 2段階の運用とする（ADR 0016）。
  */
 export class ImportLogsUseCase {
   constructor(
@@ -63,6 +74,8 @@ export class ImportLogsUseCase {
     private readonly purchaseLogRepository: PurchaseLogRepository,
     private readonly challengeLogRepository: ChallengeLogRepository,
     private readonly thirdPersonEvaluationRepository: ThirdPersonEvaluationRepository,
+    private readonly externalSourceRepository: ExternalSourceRepository,
+    private readonly externalKnowledgeRepository: ExternalKnowledgeRepository,
   ) {}
 
   async execute(input: ImportLogsInput): Promise<ImportLogsOutput> {
@@ -142,6 +155,23 @@ export class ImportLogsUseCase {
           entry.data as unknown as Parameters<typeof useCase.execute>[0],
         );
         return result.evaluation.id;
+      }
+      case 'ExternalSource': {
+        const useCase = new AddExternalSourceUseCase(this.externalSourceRepository);
+        const result = await useCase.execute(
+          entry.data as unknown as Parameters<typeof useCase.execute>[0],
+        );
+        return result.source.id;
+      }
+      case 'ExternalKnowledge': {
+        const useCase = new AddExternalKnowledgeUseCase(
+          this.externalKnowledgeRepository,
+          this.externalSourceRepository,
+        );
+        const result = await useCase.execute(
+          entry.data as unknown as Parameters<typeof useCase.execute>[0],
+        );
+        return result.knowledge.id;
       }
       default: {
         const exhaustive: never = entry.type;

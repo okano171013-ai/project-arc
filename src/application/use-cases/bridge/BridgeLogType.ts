@@ -1,5 +1,5 @@
 /**
- * BridgeLogType（Version9）
+ * BridgeLogType（Version9、Version10でExternalSource/ExternalKnowledgeを追加）
  *
  * Import/Exportの対象となる全Log種別。Smart Captureの
  * `CaptureLogType`（4〜5種、「瞬間の出来事」のみ）より広く、
@@ -7,6 +7,12 @@
  * Log」を対象とする。Captureそのもの（監査記録）は対象外とする
  * （ADR 0010参照：Captureは「記録の結果」であり「記録の材料」では
  * ないため、Import/Exportの対象に含めると二重記録になりうる）。
+ *
+ * Version10指示書は`"externalSource"`/`"externalKnowledge"`という
+ * lowerCamelCaseの例を示していたが、既存の値が全てEntity名と同じ
+ * PascalCaseであるため、既存規則を優先し`'ExternalSource'`/
+ * `'ExternalKnowledge'`とした（指示書23章「既存の命名規則と異なる
+ * 場合は既存規則を優先する」、ADR 0015）。
  */
 export type BridgeLogType =
   | 'Reflection'
@@ -16,4 +22,6 @@ export type BridgeLogType =
   | 'SkinLog'
   | 'PurchaseLog'
   | 'ChallengeLog'
-  | 'ThirdPersonEvaluation';
+  | 'ThirdPersonEvaluation'
+  | 'ExternalSource'
+  | 'ExternalKnowledge';

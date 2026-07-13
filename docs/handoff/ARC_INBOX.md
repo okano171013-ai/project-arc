@@ -17,8 +17,12 @@ Owner: ARC（ChatGPT）から新しいVersionのテーマ・指示が来たら�
 `docs/vision.md`・`docs/principles.md`・README・CLAUDE.mdから相互
 参照するよう更新した（原文は
 `docs/handoff/archive/2026-07_ARC_Roadmap2_and_Constitution_Proposal.md`
-に保管）。Version10「External Brain」の具体的な実装指示書はまだ
-届いていない。
+に保管）。
+
+**処理済み**：Version10「External Brain」（`docs/reports/
+Version10_Report.md`）。実装指示書はPDFファイル
+（`Project ARC Version10 実装指示書.pdf`）として届いた（原文は
+`docs/handoff/archive/Version10_ARC_Brief.md`に保管）。
 
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください。

@@ -32,6 +32,18 @@ import { ImportLogsUseCase } from '../../application/use-cases/bridge/ImportLogs
 import { ExportLogsUseCase } from '../../application/use-cases/bridge/ExportLogs.js';
 import type { BridgeLogType } from '../../application/use-cases/bridge/BridgeLogType.js';
 import type { TimelineSource } from '../../domain/value-objects/TimelineEntry.js';
+import { AddExternalSourceUseCase } from '../../application/use-cases/external-source/AddExternalSource.js';
+import { ListExternalSourcesUseCase } from '../../application/use-cases/external-source/ListExternalSources.js';
+import { GetExternalSourceUseCase } from '../../application/use-cases/external-source/GetExternalSource.js';
+import { UpdateExternalSourceUseCase } from '../../application/use-cases/external-source/UpdateExternalSource.js';
+import { DeleteExternalSourceUseCase } from '../../application/use-cases/external-source/DeleteExternalSource.js';
+import { AddExternalKnowledgeUseCase } from '../../application/use-cases/external-knowledge/AddExternalKnowledge.js';
+import { ListExternalKnowledgeUseCase } from '../../application/use-cases/external-knowledge/ListExternalKnowledge.js';
+import { GetExternalKnowledgeUseCase } from '../../application/use-cases/external-knowledge/GetExternalKnowledge.js';
+import { UpdateExternalKnowledgeUseCase } from '../../application/use-cases/external-knowledge/UpdateExternalKnowledge.js';
+import { DeleteExternalKnowledgeUseCase } from '../../application/use-cases/external-knowledge/DeleteExternalKnowledge.js';
+import { SearchExternalKnowledgeUseCase } from '../../application/use-cases/external-knowledge/SearchExternalKnowledge.js';
+import type { ExternalKnowledgeStatus } from '../../domain/entities/ExternalKnowledge.js';
 
 import { JsonFileReflectionRepository } from '../../adapters/repositories/JsonFileReflectionRepository.js';
 import { JsonFileMemoryRepository } from '../../adapters/repositories/JsonFileMemoryRepository.js';
@@ -42,6 +54,8 @@ import { JsonFileChallengeLogRepository } from '../../adapters/repositories/Json
 import { JsonFileAppearanceLogRepository } from '../../adapters/repositories/JsonFileAppearanceLogRepository.js';
 import { JsonFileCaptureRepository } from '../../adapters/repositories/JsonFileCaptureRepository.js';
 import { JsonFileThirdPersonEvaluationRepository } from '../../adapters/repositories/JsonFileThirdPersonEvaluationRepository.js';
+import { JsonFileExternalSourceRepository } from '../../adapters/repositories/JsonFileExternalSourceRepository.js';
+import { JsonFileExternalKnowledgeRepository } from '../../adapters/repositories/JsonFileExternalKnowledgeRepository.js';
 import { RuleBasedCaptureClassifier } from '../../adapters/providers/RuleBasedCaptureClassifier.js';
 
 import {
@@ -51,6 +65,8 @@ import {
   serializeAppearanceLog,
   serializeCapture,
   serializeThirdPersonEvaluation,
+  serializeExternalSource,
+  serializeExternalKnowledge,
 } from '../../application/serializers.js';
 
 export interface BuildAppOptions {
@@ -85,6 +101,12 @@ export function buildUseCases(options: BuildAppOptions = {}) {
   const thirdPersonEvaluationRepository = new JsonFileThirdPersonEvaluationRepository(
     repoPath(dataDir, 'third-person-evaluation.json'),
   );
+  const externalSourceRepository = new JsonFileExternalSourceRepository(
+    repoPath(dataDir, 'external-sources.json'),
+  );
+  const externalKnowledgeRepository = new JsonFileExternalKnowledgeRepository(
+    repoPath(dataDir, 'external-knowledge.json'),
+  );
   const classifier = new RuleBasedCaptureClassifier();
 
   return {
@@ -112,6 +134,8 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       challengeLogRepository,
       captureRepository,
       thirdPersonEvaluationRepository,
+      externalKnowledgeRepository,
+      externalSourceRepository,
     ),
     importLogs: new ImportLogsUseCase(
       reflectionRepository,
@@ -122,6 +146,8 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       purchaseLogRepository,
       challengeLogRepository,
       thirdPersonEvaluationRepository,
+      externalSourceRepository,
+      externalKnowledgeRepository,
     ),
     exportLogs: new ExportLogsUseCase(
       reflectionRepository,
@@ -132,6 +158,28 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       purchaseLogRepository,
       challengeLogRepository,
       thirdPersonEvaluationRepository,
+      externalSourceRepository,
+      externalKnowledgeRepository,
+    ),
+    addExternalSource: new AddExternalSourceUseCase(externalSourceRepository),
+    listExternalSources: new ListExternalSourcesUseCase(externalSourceRepository),
+    getExternalSource: new GetExternalSourceUseCase(externalSourceRepository),
+    updateExternalSource: new UpdateExternalSourceUseCase(externalSourceRepository),
+    deleteExternalSource: new DeleteExternalSourceUseCase(externalSourceRepository),
+    addExternalKnowledge: new AddExternalKnowledgeUseCase(
+      externalKnowledgeRepository,
+      externalSourceRepository,
+    ),
+    listExternalKnowledge: new ListExternalKnowledgeUseCase(externalKnowledgeRepository),
+    getExternalKnowledge: new GetExternalKnowledgeUseCase(externalKnowledgeRepository),
+    updateExternalKnowledge: new UpdateExternalKnowledgeUseCase(
+      externalKnowledgeRepository,
+      externalSourceRepository,
+    ),
+    deleteExternalKnowledge: new DeleteExternalKnowledgeUseCase(externalKnowledgeRepository),
+    searchExternalKnowledge: new SearchExternalKnowledgeUseCase(
+      externalKnowledgeRepository,
+      externalSourceRepository,
     ),
   };
 }
@@ -319,6 +367,100 @@ export function createApp(options: BuildAppOptions = {}) {
       const type = (url.searchParams.get('type') ?? undefined) as BridgeLogType | undefined;
       const result = await useCases.exportLogs.execute({ type });
       return ok(result);
+    }),
+
+    // --- External Brain（Version10） ---
+    // `/external-knowledge/search`は`/external-knowledge/:id`より前に
+    // 置く必要がある（先勝ちルーティングで"search"がidと誤認識されないため）。
+    route('GET', '/external-knowledge/search', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const query = url.searchParams.get('q') ?? undefined;
+      const status = (url.searchParams.get('status') ?? undefined) as
+        | ExternalKnowledgeStatus
+        | undefined;
+      const result = await useCases.searchExternalKnowledge.execute({ query, status });
+      return ok({
+        results: result.results.map((r) => ({
+          knowledge: serializeExternalKnowledge(r.knowledge),
+          source: r.source ? serializeExternalSource(r.source) : null,
+          matchedIn: r.matchedIn,
+        })),
+      });
+    }),
+
+    route('GET', '/external-knowledge', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const status = (url.searchParams.get('status') ?? undefined) as
+        | ExternalKnowledgeStatus
+        | undefined;
+      const result = await useCases.listExternalKnowledge.execute({ status });
+      return ok({ knowledge: result.knowledge.map(serializeExternalKnowledge) });
+    }),
+
+    route('GET', '/external-knowledge/:id', async (_req, params) => {
+      const result = await useCases.getExternalKnowledge.execute({ id: params.id! });
+      if (!result.knowledge) return fail(new Error('not found'), 404);
+      return ok({ knowledge: serializeExternalKnowledge(result.knowledge) });
+    }),
+
+    route('POST', '/external-knowledge', async (req) => {
+      const body = await readJsonBody(req);
+      const record = body.record as Parameters<
+        typeof useCases.addExternalKnowledge.execute
+      >[0]['record'];
+      const result = await useCases.addExternalKnowledge.execute({ record });
+      return ok({ knowledge: serializeExternalKnowledge(result.knowledge) }, 201);
+    }),
+
+    route('PATCH', '/external-knowledge/:id', async (req, params) => {
+      const body = await readJsonBody(req);
+      const changes = body.changes as Parameters<
+        typeof useCases.updateExternalKnowledge.execute
+      >[0]['changes'];
+      const result = await useCases.updateExternalKnowledge.execute({
+        id: params.id!,
+        changes,
+      });
+      return ok({ knowledge: serializeExternalKnowledge(result.knowledge) });
+    }),
+
+    route('DELETE', '/external-knowledge/:id', async (_req, params) => {
+      await useCases.deleteExternalKnowledge.execute({ id: params.id! });
+      return ok({ deleted: true });
+    }),
+
+    route('GET', '/external-sources', async () => {
+      const result = await useCases.listExternalSources.execute();
+      return ok({ sources: result.sources.map(serializeExternalSource) });
+    }),
+
+    route('GET', '/external-sources/:id', async (_req, params) => {
+      const result = await useCases.getExternalSource.execute({ id: params.id! });
+      if (!result.source) return fail(new Error('not found'), 404);
+      return ok({ source: serializeExternalSource(result.source) });
+    }),
+
+    route('POST', '/external-sources', async (req) => {
+      const body = await readJsonBody(req);
+      const record = body.record as Parameters<
+        typeof useCases.addExternalSource.execute
+      >[0]['record'];
+      const result = await useCases.addExternalSource.execute({ record });
+      return ok({ source: serializeExternalSource(result.source) }, 201);
+    }),
+
+    route('PATCH', '/external-sources/:id', async (req, params) => {
+      const body = await readJsonBody(req);
+      const changes = body.changes as Parameters<
+        typeof useCases.updateExternalSource.execute
+      >[0]['changes'];
+      const result = await useCases.updateExternalSource.execute({ id: params.id!, changes });
+      return ok({ source: serializeExternalSource(result.source) });
+    }),
+
+    route('DELETE', '/external-sources/:id', async (_req, params) => {
+      await useCases.deleteExternalSource.execute({ id: params.id! });
+      return ok({ deleted: true });
     }),
   ];
 

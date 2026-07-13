@@ -22,6 +22,8 @@ import { JsonFileSkinLogRepository } from '../../adapters/repositories/JsonFileS
 import { JsonFilePurchaseLogRepository } from '../../adapters/repositories/JsonFilePurchaseLogRepository.js';
 import { JsonFileChallengeLogRepository } from '../../adapters/repositories/JsonFileChallengeLogRepository.js';
 import { JsonFileThirdPersonEvaluationRepository } from '../../adapters/repositories/JsonFileThirdPersonEvaluationRepository.js';
+import { JsonFileExternalSourceRepository } from '../../adapters/repositories/JsonFileExternalSourceRepository.js';
+import { JsonFileExternalKnowledgeRepository } from '../../adapters/repositories/JsonFileExternalKnowledgeRepository.js';
 
 function line(char = '─', length = 44): string {
   return char.repeat(length);
@@ -36,6 +38,8 @@ function buildUseCases() {
   const purchaseLogRepository = new JsonFilePurchaseLogRepository();
   const challengeLogRepository = new JsonFileChallengeLogRepository();
   const thirdPersonEvaluationRepository = new JsonFileThirdPersonEvaluationRepository();
+  const externalSourceRepository = new JsonFileExternalSourceRepository();
+  const externalKnowledgeRepository = new JsonFileExternalKnowledgeRepository();
 
   return {
     importLogs: new ImportLogsUseCase(
@@ -47,6 +51,8 @@ function buildUseCases() {
       purchaseLogRepository,
       challengeLogRepository,
       thirdPersonEvaluationRepository,
+      externalSourceRepository,
+      externalKnowledgeRepository,
     ),
     exportLogs: new ExportLogsUseCase(
       reflectionRepository,
@@ -57,6 +63,8 @@ function buildUseCases() {
       purchaseLogRepository,
       challengeLogRepository,
       thirdPersonEvaluationRepository,
+      externalSourceRepository,
+      externalKnowledgeRepository,
     ),
   };
 }

@@ -20,6 +20,8 @@ import type { Capture } from '../domain/entities/Capture.js';
 import type { MemoryEntry } from '../domain/entities/MemoryEntry.js';
 import type { InventoryItem } from '../domain/entities/InventoryItem.js';
 import type { ThirdPersonEvaluation } from '../domain/entities/ThirdPersonEvaluation.js';
+import type { ExternalSource } from '../domain/entities/ExternalSource.js';
+import type { ExternalKnowledge } from '../domain/entities/ExternalKnowledge.js';
 
 export function serializeReflection(reflection: Reflection) {
   return {
@@ -108,5 +110,23 @@ export function serializeThirdPersonEvaluation(evaluation: ThirdPersonEvaluation
     id: evaluation.id,
     record: evaluation.record,
     createdAt: evaluation.createdAt.toISOString(),
+  };
+}
+
+export function serializeExternalSource(source: ExternalSource) {
+  return {
+    id: source.id,
+    record: source.record,
+    createdAt: source.createdAt.toISOString(),
+    updatedAt: source.updatedAt.toISOString(),
+  };
+}
+
+export function serializeExternalKnowledge(knowledge: ExternalKnowledge) {
+  return {
+    id: knowledge.id,
+    record: knowledge.record,
+    createdAt: knowledge.createdAt.toISOString(),
+    updatedAt: knowledge.updatedAt.toISOString(),
   };
 }

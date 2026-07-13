@@ -15,6 +15,8 @@ import { JsonFilePurchaseLogRepository } from '../../adapters/repositories/JsonF
 import { JsonFileChallengeLogRepository } from '../../adapters/repositories/JsonFileChallengeLogRepository.js';
 import { JsonFileCaptureRepository } from '../../adapters/repositories/JsonFileCaptureRepository.js';
 import { JsonFileThirdPersonEvaluationRepository } from '../../adapters/repositories/JsonFileThirdPersonEvaluationRepository.js';
+import { JsonFileExternalKnowledgeRepository } from '../../adapters/repositories/JsonFileExternalKnowledgeRepository.js';
+import { JsonFileExternalSourceRepository } from '../../adapters/repositories/JsonFileExternalSourceRepository.js';
 import type { TimelineSource } from '../../domain/value-objects/TimelineEntry.js';
 
 function line(char = '─', length = 44): string {
@@ -39,6 +41,8 @@ async function main(): Promise<void> {
     new JsonFileChallengeLogRepository(),
     new JsonFileCaptureRepository(),
     new JsonFileThirdPersonEvaluationRepository(),
+    new JsonFileExternalKnowledgeRepository(),
+    new JsonFileExternalSourceRepository(),
   );
 
   const { entries } = await useCase.execute({ since, source, limit });

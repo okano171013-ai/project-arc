@@ -7,6 +7,8 @@ import { AddChallengeLogUseCase } from '../challenge/AddChallengeLog.js';
 import { RecordCaptureUseCase } from '../capture/RecordCapture.js';
 import { RecordDailyReflectionUseCase } from '../reflection/RecordDailyReflection.js';
 import { AddThirdPersonEvaluationUseCase } from '../evaluation/AddThirdPersonEvaluation.js';
+import { AddExternalKnowledgeUseCase } from '../external-knowledge/AddExternalKnowledge.js';
+import { AddExternalSourceUseCase } from '../external-source/AddExternalSource.js';
 
 import type { ReflectionRepository } from '../../ports/ReflectionRepository.js';
 import type { AppearanceLogRepository } from '../../ports/AppearanceLogRepository.js';
@@ -15,6 +17,8 @@ import type { PurchaseLogRepository } from '../../ports/PurchaseLogRepository.js
 import type { ChallengeLogRepository } from '../../ports/ChallengeLogRepository.js';
 import type { CaptureRepository } from '../../ports/CaptureRepository.js';
 import type { ThirdPersonEvaluationRepository } from '../../ports/ThirdPersonEvaluationRepository.js';
+import type { ExternalKnowledgeRepository } from '../../ports/ExternalKnowledgeRepository.js';
+import type { ExternalSourceRepository } from '../../ports/ExternalSourceRepository.js';
 
 import type { Reflection } from '../../../domain/entities/Reflection.js';
 import type { AppearanceLog } from '../../../domain/entities/AppearanceLog.js';
@@ -23,6 +27,8 @@ import type { PurchaseLog } from '../../../domain/entities/PurchaseLog.js';
 import type { ChallengeLog } from '../../../domain/entities/ChallengeLog.js';
 import type { Capture } from '../../../domain/entities/Capture.js';
 import type { ThirdPersonEvaluation } from '../../../domain/entities/ThirdPersonEvaluation.js';
+import type { ExternalKnowledge } from '../../../domain/entities/ExternalKnowledge.js';
+import type { ExternalSource } from '../../../domain/entities/ExternalSource.js';
 
 class FakeReflectionRepository implements ReflectionRepository {
   store: Reflection[] = [];
@@ -100,6 +106,44 @@ class FakeThirdPersonEvaluationRepository implements ThirdPersonEvaluationReposi
   }
 }
 
+class FakeExternalKnowledgeRepository implements ExternalKnowledgeRepository {
+  store = new Map<string, ExternalKnowledge>();
+  async save(k: ExternalKnowledge): Promise<void> {
+    this.store.set(k.id, k);
+  }
+  async findById(id: string): Promise<ExternalKnowledge | null> {
+    return this.store.get(id) ?? null;
+  }
+  async findAll(): Promise<ExternalKnowledge[]> {
+    return [...this.store.values()];
+  }
+  async delete(id: string): Promise<void> {
+    this.store.delete(id);
+  }
+}
+
+class FakeExternalSourceRepository implements ExternalSourceRepository {
+  store = new Map<string, ExternalSource>();
+  async save(s: ExternalSource): Promise<void> {
+    this.store.set(s.id, s);
+  }
+  async findById(id: string): Promise<ExternalSource | null> {
+    return this.store.get(id) ?? null;
+  }
+  async findAll(): Promise<ExternalSource[]> {
+    return [...this.store.values()];
+  }
+  async delete(id: string): Promise<void> {
+    this.store.delete(id);
+  }
+  async findByUrl(url: string): Promise<ExternalSource[]> {
+    return [...this.store.values()].filter((s) => s.url === url);
+  }
+  async findByIdentifier(identifier: string): Promise<ExternalSource[]> {
+    return [...this.store.values()].filter((s) => s.identifier === identifier);
+  }
+}
+
 describe('GetTimeline', () => {
   let reflectionRepo: FakeReflectionRepository;
   let appearanceRepo: FakeAppearanceLogRepository;
@@ -108,6 +152,8 @@ describe('GetTimeline', () => {
   let challengeRepo: FakeChallengeLogRepository;
   let captureRepo: FakeCaptureRepository;
   let evaluationRepo: FakeThirdPersonEvaluationRepository;
+  let knowledgeRepo: FakeExternalKnowledgeRepository;
+  let sourceRepo: FakeExternalSourceRepository;
   let useCase: GetTimelineUseCase;
 
   beforeEach(() => {
@@ -118,6 +164,8 @@ describe('GetTimeline', () => {
     challengeRepo = new FakeChallengeLogRepository();
     captureRepo = new FakeCaptureRepository();
     evaluationRepo = new FakeThirdPersonEvaluationRepository();
+    knowledgeRepo = new FakeExternalKnowledgeRepository();
+    sourceRepo = new FakeExternalSourceRepository();
     useCase = new GetTimelineUseCase(
       reflectionRepo,
       appearanceRepo,
@@ -126,6 +174,8 @@ describe('GetTimeline', () => {
       challengeRepo,
       captureRepo,
       evaluationRepo,
+      knowledgeRepo,
+      sourceRepo,
     );
   });
 
@@ -219,5 +269,27 @@ describe('GetTimeline', () => {
     expect(entries).toHaveLength(1);
     expect(entries[0]?.source).toBe('ThirdPersonEvaluation');
     expect(entries[0]?.title).toBe('いとこ: 「ガタイ良くなった」');
+  });
+
+  it('includes ExternalKnowledge entries with a source summary but not full content', async () => {
+    const { source } = await new AddExternalSourceUseCase(sourceRepo).execute({
+      record: { sourceType: 'news', title: '日経新聞記事' },
+    });
+    await new AddExternalKnowledgeUseCase(knowledgeRepo, sourceRepo).execute({
+      record: {
+        sourceId: source.id,
+        title: '会社法メモ',
+        content: '非常に長い本文'.repeat(50),
+        capturedAt: '2026-07-13',
+      },
+    });
+
+    const { entries } = await useCase.execute();
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.source).toBe('ExternalKnowledge');
+    expect(entries[0]?.title).toBe('会社法メモ');
+    expect(entries[0]?.summary).toBe('[news] 日経新聞記事');
+    // 長文contentがTimelineのどのフィールドにも含まれないこと
+    expect(JSON.stringify(entries[0])).not.toContain('非常に長い本文');
   });
 });
