@@ -90,41 +90,56 @@ Version2のDoDは達成済み。
 - [x] `pnpm test` が全て緑（Memory/AppearanceLog/Search/写真保存を含む、49件）
 - [x] `pnpm typecheck` がエラーゼロ
 - [x] `pnpm lint` がエラーゼロ
-- [x] `pnpm memory -- add/list/update/delete` が正常動作する（ユースケース層はテストで担保。対話式CLIのサンドボックス実機確認は未実施 — Version3・Version4双方で既知の制約、Owner環境での確認を推奨）
-- [x] `pnpm appearance -- add/list` が正常動作する（写真ファイルの保存含む、上記と同様の制約）
-- [x] `pnpm inventory -- photo` が正常動作する（上記と同様の制約）
+- [x] `pnpm memory -- add/list/update/delete` が正常動作する（実機確認済み — 2026年7月、擬似expectドライバによる対話式CLIの実行で確認。日本語タグの往復含めて正常）
+- [x] `pnpm appearance -- add/list` が正常動作する（実機確認済み。写真ファイルの実コピーを確認）
+- [x] `pnpm inventory -- photo` が正常動作する（実機確認済み。写真ファイルの実コピーを確認）
 - [x] `pnpm run find <キーワード>` が正常動作する（`search`→`find`も衝突したため、以後すべて`pnpm run`形式に統一。後述）
 - [x] README / docsに実装との乖離がない
 - [x] ADR 0005（Memory/Inventory/Reflectionの境界）を記録済み
 - [x] `docs/reports/Version4_Report.md` を生成済み（13章構成）
 
-Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。
+Version4のDoDは達成済み（対話式CLIの実機確認も完了、2026年7月）。
 
 ## Version5完了チェックリスト
 
 - [x] `pnpm test` が全て緑（SkinLog/PurchaseLog/ChallengeLogを含む、64件）
 - [x] `pnpm typecheck` がエラーゼロ
 - [x] `pnpm lint` がエラーゼロ
-- [x] `pnpm skin -- add/list/compare` が正常動作する（ユースケース層はテストで担保。対話式CLIのサンドボックス実機確認は未実施 — Version3〜5で既知の制約、Owner環境での確認を推奨）
-- [x] `pnpm purchase -- add/start/finish/list` が正常動作する（上記と同様の制約）
-- [x] `pnpm challenge -- add/list` が正常動作する（上記と同様の制約）
+- [x] `pnpm skin -- add/list/compare` が正常動作する（実機確認済み。数値5項目すべて正常に記録）
+- [x] `pnpm purchase -- add/start/finish/list` が正常動作する（実機確認済み。未使用→使用中→使い切りの状態遷移を確認）
+- [x] `pnpm challenge -- add/list` が正常動作する（実機確認済み）
 - [x] README / docsに実装との乖離がない
 - [x] ADR 0006（Skin Log/Purchase Log と Appearance Log/Life Inventoryの境界）を記録済み
 - [x] `docs/reports/Version5_Report.md` を生成済み（13章構成）
 - [x] `docs/reports/Version5_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
 
-Version5のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。
+Version5のDoDは達成済み（対話式CLIの実機確認も完了、2026年7月）。
 
 ## Version6完了チェックリスト
 
 - [x] `pnpm test` が全て緑（Capture/RuleBasedCaptureClassifierを含む、73件）
 - [x] `pnpm typecheck` がエラーゼロ
 - [x] `pnpm lint` がエラーゼロ
-- [x] `pnpm capture -- add/list` が正常動作する（ユースケース層はテストで担保。実ファイルI/Oでの結合スモークテストも実施済み。対話式CLIのサンドボックス実機確認は未実施 — Version3〜6で既知の制約、Owner環境での確認を推奨）
+- [x] `pnpm capture -- add/list` が正常動作する（実機確認済み。「メラノCC買った」→Purchase Log提案→確定→書き込み→監査ログまで一気通貫で確認）
 - [x] README / docsに実装との乖離がない
 - [x] ADR 0007（Smart CaptureにおけるSystem/ARCの責務分担）を記録済み
 - [x] `docs/reports/Version6_Report.md` を生成済み（13章構成）
 - [x] `docs/reports/Version6_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+Version6のDoDは達成済み（対話式CLIの実機確認も完了、2026年7月）。
+
+## 対話式CLI実機確認について（Version4〜6共通の注記）
+
+Version3〜5の時点では、Claude Codeのサンドボックス環境の制約
+（Node.js `readline/promises`が非TTY標準入力に対して複数質問を
+正しく解決できないバグ、Version6 Reportで原因特定）により対話式CLI
+の実機確認ができていなかった。2026年7月、擬似expectドライバ
+（プロンプト文字列の出力を検知してから次の回答を送る簡易自動化
+スクリプト、`child_process.spawn`ベース）を作成し、Version4〜6の
+全対話式CLI（memory/appearance/inventory photo/skin/purchase/
+challenge/capture、計17コマンド）を実際にサンドボックス上で駆動して
+実機確認を完了した。生成されたJSONファイル・写真コピーの中身も
+目視確認済み。検証用データ・スクリプトは確認後に削除済み。
 
 Version6のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。
 
