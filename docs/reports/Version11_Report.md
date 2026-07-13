@@ -2,6 +2,8 @@
 
 `docs/reports/TEMPLATE.md`の14章構成に準拠。
 
+**コミットハッシュ**：`c49ae64`（`feature/v4-v6-smart-capture`ブランチ）
+
 ## 1. Version概要
 
 **テーマ**：Knowledge Retrieval — Version10で「蓄積」したExternal
