@@ -4,6 +4,11 @@ Project ARCの設計・実装における判断基準。迷ったときは
 ここに立ち返る。各ADR（Architecture Decision Record）は、
 どのPrincipleに基づく判断かを明記すること。
 
+さらに上位の文書として[`docs/constitution.md`](./constitution.md)
+（ARC Constitution、7条文）がある。Principle同士、あるいは
+Principleと条文が衝突するように見える場合は、まず`constitution.md`
+の「条文間の関係」を確認する（特に第6条とPrinciple 3・6の関係）。
+
 ---
 
 ### Principle 1｜人間が最終意思決定者である
@@ -43,6 +48,10 @@ AIが生成した分析・要約・示唆のうち、事実に基づかない
 技術的に優れていても、日々使う上での摩擦が大きい設計は
 採用しない。「毎朝・毎晩、無理なく触れるか」を実装前に
 必ず検証する。
+
+（`docs/constitution.md`第6条「マネジメントは遠慮しない」との
+関係：本Principleは操作性・UXの基準、第6条はARCの発言内容・姿勢の
+基準であり、適用範囲が異なる。詳細はconstitution.md参照）
 
 ### Principle 7｜機能追加より意思決定支援を優先する
 

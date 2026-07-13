@@ -1,5 +1,11 @@
 # Vision
 
+> [`docs/constitution.md`](./constitution.md)第7条「Project ARCの
+> 目的は『記録』ではなく、『Ownerが理想の人生に近づくこと』である」
+> が最上位の目的地。以下のCore Missionは、そこへ至るメカニズム
+> （記録→気づき→判断）を述べたもの。両者は矛盾せず、同じ山を
+> 違う角度から見たもの（詳細は`constitution.md`「条文間の関係」参照）。
+
 ## Core Mission
 
 Project ARCは情報を保存することが目的ではない。

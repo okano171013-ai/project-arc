@@ -1,9 +1,10 @@
 # Project ARC — Claude Codeへの指示
 
-コードを読む前に、まず`docs/vision.md` / `docs/principles.md` /
-`docs/ai-roles.md` / `docs/architecture.md` / `docs/roadmap.md` /
-`docs/dod.md`を読むこと。判断に迷ったら`docs/principles.md`の
-Principleに立ち返る。
+コードを読む前に、まず`docs/constitution.md`（最上位、7条文） /
+`docs/vision.md` / `docs/principles.md` / `docs/ai-roles.md` /
+`docs/architecture.md` / `docs/roadmap.md` / `docs/dod.md`を読む
+こと。判断に迷ったら`docs/constitution.md`→`docs/principles.md`の
+Principleの順に立ち返る。
 
 ## セッション開始時に必ず確認すること
 

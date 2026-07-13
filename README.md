@@ -8,12 +8,15 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 
 コードを読む前に、まず以下を読むことを推奨します。
 
+- [`docs/constitution.md`](./docs/constitution.md) — ARC
+  Constitution（最も基礎的な7条文、2026年7月Owner承認）
 - [`docs/vision.md`](./docs/vision.md) — Core Mission / Vision
 - [`docs/principles.md`](./docs/principles.md) — 意思決定の基本原則
 - [`docs/ai-roles.md`](./docs/ai-roles.md) — 人間・ARC・Gemini・Claude Code・
   システム自体の責務分担
 - [`docs/architecture.md`](./docs/architecture.md) — 技術設計
-- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜9のロードマップ
+- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜9のロードマップ・
+  長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 
