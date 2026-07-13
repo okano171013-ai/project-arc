@@ -20,7 +20,8 @@ export type TimelineSource =
   | 'PurchaseLog'
   | 'ChallengeLog'
   | 'InventoryItem'
-  | 'Capture';
+  | 'Capture'
+  | 'ThirdPersonEvaluation';
 
 export interface TimelineEntry {
   readonly date: string; // YYYY-MM-DD

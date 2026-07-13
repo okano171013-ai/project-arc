@@ -17,27 +17,40 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 
-## Version8のスコープ（現在地）
+## Version9のスコープ（現在地）
 
-テーマ：「Timeline」— Version7で型のみ設計した`TimelineEntry`を
-実装し、各Logを横断した時系列一覧を提供する（ADR 0009）。
-アーキテクチャ全体像は[`docs/architecture-diagram.md`](./docs/architecture-diagram.md)を参照。
+テーマ：「ARC Bridge」— ARCとProject ARCの最初の接続点を作る
+（ADR 0010）。完全自動ではなく、Ownerが「ARCの提案をProject ARCへ
+簡単に渡せる状態」を目指す。アーキテクチャ全体像は
+[`docs/architecture-diagram.md`](./docs/architecture-diagram.md)を参照。
 
+- **Bridge Layer**（`pnpm bridge -- import/export`、`POST
+  /bridge/import`、`GET /bridge/export`）— `{type, data}`形式のJSONで
+  Reflection/Memory/InventoryItem/AppearanceLog/SkinLog/PurchaseLog/
+  ChallengeLog/ThirdPersonEvaluationを一括登録・一括出力。既存の
+  UseCaseへ委譲するだけの薄いディスパッチャで、1件の失敗が他に
+  影響しない（ADR 0010）
+- **Third Person Evaluation**（`pnpm evaluation`、`POST
+  /evaluation`）— 他者からの評価・コメント（「いとこにガタイ良く
+  なったと言われた」等）を構造化して記録。Appearance Log（Owner
+  自身の評価）とは別Entity（ADR 0011）
 - **Timeline**（`pnpm timeline`、`GET /timeline`）— Reflection/
-  AppearanceLog/SkinLog/PurchaseLog/ChallengeLog/Captureの6Logを
-  横断して日付降順で一覧表示。`--since=` `--source=` `--limit=`で
-  絞り込み可能。Memory/Life Inventoryは対象外（ADR 0009）
+  AppearanceLog/SkinLog/PurchaseLog/ChallengeLog/Capture/
+  ThirdPersonEvaluationの7Logを横断して日付降順で一覧表示。
+  `--since=` `--source=` `--limit=`で絞り込み可能。Memory/Life
+  Inventoryは対象外（ADR 0009）
 - **ARC Connector**（`pnpm api`）— Application層をHTTP経由で呼び出せる
   API。`POST /reflection` `/skin` `/purchase` `/purchase/:id/start`
-  `/purchase/:id/finish` `/appearance` `/capture/suggest` `/capture`、
-  `GET /health` `/timeline`。新規外部依存なし（Node標準の`http`のみ）。
+  `/purchase/:id/finish` `/appearance` `/evaluation` `/capture/suggest`
+  `/capture` `/bridge/import`、`GET /health` `/timeline`
+  `/bridge/export`。新規外部依存なし（Node標準の`http`のみ）。
   ローカル専用（`127.0.0.1`のみ）・認証は未実装（将来リモート接続が
   必要になった時点で追加、ADR 0008参照）
 - **Smart Capture**（`pnpm capture`）— 文章・写真を入力すると、
   キーワード一致による下書き提案（例：「肌」→Skin Log、「買った」→
-  Purchase Log）を表示。Ownerが確認・確定した分だけSkin Log/
-  Purchase Log/Challenge Log/Appearance Logへ書き込む。書き込み
-  履歴はCapture Logとして`list`で確認できる
+  Purchase Log、「言われた」→Third Person Evaluation）を表示。Owner
+  が確認・確定した分だけ対応するLogへ書き込む。書き込み履歴はCapture
+  Logとして`list`で確認できる
 - **ARC Memory**（`pnpm memory`）— 持ち物・目標・好み・学歴・
   キャリア・健康・お金・人間関係等、長期間保持する知識を
   追加・一覧・更新・削除。Reflection（その日の記録）とは
@@ -69,7 +82,7 @@ Gemini/OpenAI連携、実際の画像解析・OCR、Decision Engine、通知機�
 pnpm install
 ```
 
-Version8はローカルJSONファイル + ローカルファイルコピーのみで動作する
+Version9はローカルJSONファイル + ローカルファイルコピーのみで動作する
 ため、追加のセットアップは不要です。Google Calendar/Tasks連携
 （Version3から継続）を使う場合は以下を参照してください。
 
@@ -87,7 +100,7 @@ supabase db reset
 
 `test`・`typecheck`等は問題ありませんが、`morning`/`reflect`/`inventory`/
 `memory`/`appearance`/`skin`/`purchase`/`challenge`/`capture`/
-`timeline`/`find`のような独自コマンドは、pnpm組み込みの
+`timeline`/`evaluation`/`bridge`/`find`のような独自コマンドは、pnpm組み込みの
 コマンド名と偶然一致すると意図せず別の動作をしてしまうことが実機で
 判明しました（`search`→`find`への変更後も再発）。**確実に動かすため、
 すべて`pnpm run`を付けて実行してください。**
@@ -133,11 +146,18 @@ pnpm run challenge -- list         # Challenge Logを一覧表示
 pnpm run capture -- add            # Smart Capture：文章・写真から下書き提案 → 確認 → 記録
 pnpm run capture -- list           # Capture Logの実行履歴を一覧表示
 
+pnpm run evaluation -- add         # Third Person Evaluationを追加（他者からの評価）
+pnpm run evaluation -- list        # Third Person Evaluationを一覧表示
+
 pnpm run find <キーワード>          # MemoryとInventoryを横断検索
 
 pnpm run timeline                  # 各Logを横断した時系列一覧
 pnpm run timeline --since=2026-07-01  # 日付で絞り込み
 pnpm run timeline --source=SkinLog    # ソースで絞り込み
+
+pnpm run bridge -- import <ファイル>  # {logs:[{type,data}, ...]}形式のJSONを一括登録
+pnpm run bridge -- export             # 全Logをまとめてエクスポート
+pnpm run bridge -- export --type=SkinLog  # typeを指定してエクスポート
 
 pnpm run api                       # ARC Connector（HTTP API）を起動（既定ポート3939）
 ```

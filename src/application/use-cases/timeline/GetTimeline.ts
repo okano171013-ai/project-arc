@@ -5,6 +5,7 @@ import type { SkinLogRepository } from '../../ports/SkinLogRepository.js';
 import type { PurchaseLogRepository } from '../../ports/PurchaseLogRepository.js';
 import type { ChallengeLogRepository } from '../../ports/ChallengeLogRepository.js';
 import type { CaptureRepository } from '../../ports/CaptureRepository.js';
+import type { ThirdPersonEvaluationRepository } from '../../ports/ThirdPersonEvaluationRepository.js';
 
 /**
  * Reflectionには`findAll()`がなく`findRecent(limit)`のみ持つ
@@ -29,13 +30,13 @@ export interface GetTimelineOutput {
 }
 
 /**
- * GetTimelineUseCase（Version8）
+ * GetTimelineUseCase（Version8、Version9でThirdPersonEvaluationを追加）
  *
  * 各Logを横断して時系列に並べる射影UseCase。対象はReflection/
- * AppearanceLog/SkinLog/PurchaseLog/ChallengeLog/Captureの6つ
- * （「ある瞬間の出来事」を持つLog）。Memory（時間に紐づかない知識、
- * ADR 0005）とLife Inventory（耐久品の状態管理、ADR 0006）は対象外
- * とする（ADR 0009参照）。
+ * AppearanceLog/SkinLog/PurchaseLog/ChallengeLog/Capture/
+ * ThirdPersonEvaluationの7つ（「ある瞬間の出来事」を持つLog）。
+ * Memory（時間に紐づかない知識、ADR 0005）とLife Inventory
+ * （耐久品の状態管理、ADR 0006）は対象外とする（ADR 0009参照）。
  *
  * このUseCase自身は各Logの記録を集めて日付順に並べ替えるだけで、
  * 「何が重要か」の判断・要約は行わない（ai-roles.md、ADR 0007/0008
@@ -49,10 +50,11 @@ export class GetTimelineUseCase {
     private readonly purchaseLogRepository: PurchaseLogRepository,
     private readonly challengeLogRepository: ChallengeLogRepository,
     private readonly captureRepository: CaptureRepository,
+    private readonly thirdPersonEvaluationRepository: ThirdPersonEvaluationRepository,
   ) {}
 
   async execute(input: GetTimelineInput = {}): Promise<GetTimelineOutput> {
-    const [reflections, appearanceLogs, skinLogs, purchases, challenges, captures] =
+    const [reflections, appearanceLogs, skinLogs, purchases, challenges, captures, evaluations] =
       await Promise.all([
         this.reflectionRepository.findRecent(REFLECTION_FETCH_LIMIT),
         this.appearanceLogRepository.findAll(),
@@ -60,6 +62,7 @@ export class GetTimelineUseCase {
         this.purchaseLogRepository.findAll(),
         this.challengeLogRepository.findAll(),
         this.captureRepository.findAll(),
+        this.thirdPersonEvaluationRepository.findAll(),
       ]);
 
     let entries: TimelineEntry[] = [
@@ -104,6 +107,13 @@ export class GetTimelineUseCase {
         title: c.record.text ?? '(写真のみ)',
         summary: undefined,
         metadata: { id: c.id, appliedDestinations: c.record.appliedDestinations },
+      })),
+      ...evaluations.map((e) => ({
+        date: e.date,
+        source: 'ThirdPersonEvaluation' as const,
+        title: `${e.record.person}: 「${e.record.evaluation}」`,
+        summary: undefined,
+        metadata: { id: e.id, category: e.record.category },
       })),
     ];
 

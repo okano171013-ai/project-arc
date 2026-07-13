@@ -1,7 +1,7 @@
 {
   "name": "project-arc",
-  "version": "0.8.0",
-  "description": "Project ARC — AI Life Management OS (Version8: timeline)",
+  "version": "0.9.0",
+  "description": "Project ARC — AI Life Management OS (Version9: ARC bridge)",
   "type": "module",
   "private": true,
   "engines": {
@@ -20,6 +20,8 @@
     "challenge": "tsx src/infrastructure/cli/challenge.ts",
     "capture": "tsx src/infrastructure/cli/capture.ts",
     "timeline": "tsx src/infrastructure/cli/timeline.ts",
+    "evaluation": "tsx src/infrastructure/cli/evaluation.ts",
+    "bridge": "tsx src/infrastructure/cli/bridge.ts",
     "api": "tsx src/infrastructure/http/server.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",

@@ -6,6 +6,7 @@ import { RecordPurchaseUseCase } from '../purchase/RecordPurchase.js';
 import { AddChallengeLogUseCase } from '../challenge/AddChallengeLog.js';
 import { RecordCaptureUseCase } from '../capture/RecordCapture.js';
 import { RecordDailyReflectionUseCase } from '../reflection/RecordDailyReflection.js';
+import { AddThirdPersonEvaluationUseCase } from '../evaluation/AddThirdPersonEvaluation.js';
 
 import type { ReflectionRepository } from '../../ports/ReflectionRepository.js';
 import type { AppearanceLogRepository } from '../../ports/AppearanceLogRepository.js';
@@ -13,6 +14,7 @@ import type { SkinLogRepository } from '../../ports/SkinLogRepository.js';
 import type { PurchaseLogRepository } from '../../ports/PurchaseLogRepository.js';
 import type { ChallengeLogRepository } from '../../ports/ChallengeLogRepository.js';
 import type { CaptureRepository } from '../../ports/CaptureRepository.js';
+import type { ThirdPersonEvaluationRepository } from '../../ports/ThirdPersonEvaluationRepository.js';
 
 import type { Reflection } from '../../../domain/entities/Reflection.js';
 import type { AppearanceLog } from '../../../domain/entities/AppearanceLog.js';
@@ -20,6 +22,7 @@ import type { SkinLog } from '../../../domain/entities/SkinLog.js';
 import type { PurchaseLog } from '../../../domain/entities/PurchaseLog.js';
 import type { ChallengeLog } from '../../../domain/entities/ChallengeLog.js';
 import type { Capture } from '../../../domain/entities/Capture.js';
+import type { ThirdPersonEvaluation } from '../../../domain/entities/ThirdPersonEvaluation.js';
 
 class FakeReflectionRepository implements ReflectionRepository {
   store: Reflection[] = [];
@@ -87,6 +90,16 @@ class FakeCaptureRepository implements CaptureRepository {
   }
 }
 
+class FakeThirdPersonEvaluationRepository implements ThirdPersonEvaluationRepository {
+  store: ThirdPersonEvaluation[] = [];
+  async save(e: ThirdPersonEvaluation): Promise<void> {
+    this.store.push(e);
+  }
+  async findAll(): Promise<ThirdPersonEvaluation[]> {
+    return [...this.store];
+  }
+}
+
 describe('GetTimeline', () => {
   let reflectionRepo: FakeReflectionRepository;
   let appearanceRepo: FakeAppearanceLogRepository;
@@ -94,6 +107,7 @@ describe('GetTimeline', () => {
   let purchaseRepo: FakePurchaseLogRepository;
   let challengeRepo: FakeChallengeLogRepository;
   let captureRepo: FakeCaptureRepository;
+  let evaluationRepo: FakeThirdPersonEvaluationRepository;
   let useCase: GetTimelineUseCase;
 
   beforeEach(() => {
@@ -103,6 +117,7 @@ describe('GetTimeline', () => {
     purchaseRepo = new FakePurchaseLogRepository();
     challengeRepo = new FakeChallengeLogRepository();
     captureRepo = new FakeCaptureRepository();
+    evaluationRepo = new FakeThirdPersonEvaluationRepository();
     useCase = new GetTimelineUseCase(
       reflectionRepo,
       appearanceRepo,
@@ -110,6 +125,7 @@ describe('GetTimeline', () => {
       purchaseRepo,
       challengeRepo,
       captureRepo,
+      evaluationRepo,
     );
   });
 
@@ -180,6 +196,7 @@ describe('GetTimeline', () => {
       purchaseRepo,
       challengeRepo,
       appearanceRepo,
+      evaluationRepo,
     );
     await recordCapture.execute({
       text: '赤福を初めて食べた',
@@ -191,5 +208,16 @@ describe('GetTimeline', () => {
     expect(entries.map((e) => e.source).sort()).toEqual(
       ['AppearanceLog', 'Capture', 'ChallengeLog', 'PurchaseLog'].sort(),
     );
+  });
+
+  it('includes ThirdPersonEvaluation entries', async () => {
+    await new AddThirdPersonEvaluationUseCase(evaluationRepo).execute({
+      record: { date: '2026-07-13', person: 'いとこ', evaluation: 'ガタイ良くなった' },
+    });
+
+    const { entries } = await useCase.execute();
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.source).toBe('ThirdPersonEvaluation');
+    expect(entries[0]?.title).toBe('いとこ: 「ガタイ良くなった」');
   });
 });

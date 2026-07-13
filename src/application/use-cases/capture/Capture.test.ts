@@ -7,11 +7,13 @@ import type { SkinLogRepository } from '../../ports/SkinLogRepository.js';
 import type { PurchaseLogRepository } from '../../ports/PurchaseLogRepository.js';
 import type { ChallengeLogRepository } from '../../ports/ChallengeLogRepository.js';
 import type { AppearanceLogRepository } from '../../ports/AppearanceLogRepository.js';
+import type { ThirdPersonEvaluationRepository } from '../../ports/ThirdPersonEvaluationRepository.js';
 import type { Capture, CaptureSuggestion } from '../../../domain/entities/Capture.js';
 import type { SkinLog } from '../../../domain/entities/SkinLog.js';
 import type { PurchaseLog } from '../../../domain/entities/PurchaseLog.js';
 import type { ChallengeLog } from '../../../domain/entities/ChallengeLog.js';
 import type { AppearanceLog } from '../../../domain/entities/AppearanceLog.js';
+import type { ThirdPersonEvaluation } from '../../../domain/entities/ThirdPersonEvaluation.js';
 
 class FakeCaptureClassifier implements CaptureClassifier {
   constructor(private readonly fixed: CaptureSuggestion[]) {}
@@ -73,6 +75,16 @@ class FakeAppearanceLogRepository implements AppearanceLogRepository {
   }
 }
 
+class FakeThirdPersonEvaluationRepository implements ThirdPersonEvaluationRepository {
+  store: ThirdPersonEvaluation[] = [];
+  async save(e: ThirdPersonEvaluation): Promise<void> {
+    this.store.push(e);
+  }
+  async findAll(): Promise<ThirdPersonEvaluation[]> {
+    return [...this.store];
+  }
+}
+
 describe('SuggestCaptureDestinations', () => {
   it('classifierの提案をそのまま返す（自身では判断しない）', async () => {
     const suggestion: CaptureSuggestion = {
@@ -94,6 +106,7 @@ describe('RecordCapture', () => {
   let purchaseRepo: FakePurchaseLogRepository;
   let challengeRepo: FakeChallengeLogRepository;
   let appearanceRepo: FakeAppearanceLogRepository;
+  let evaluationRepo: FakeThirdPersonEvaluationRepository;
   let useCase: RecordCaptureUseCase;
 
   beforeEach(() => {
@@ -102,7 +115,15 @@ describe('RecordCapture', () => {
     purchaseRepo = new FakePurchaseLogRepository();
     challengeRepo = new FakeChallengeLogRepository();
     appearanceRepo = new FakeAppearanceLogRepository();
-    useCase = new RecordCaptureUseCase(captureRepo, skinRepo, purchaseRepo, challengeRepo, appearanceRepo);
+    evaluationRepo = new FakeThirdPersonEvaluationRepository();
+    useCase = new RecordCaptureUseCase(
+      captureRepo,
+      skinRepo,
+      purchaseRepo,
+      challengeRepo,
+      appearanceRepo,
+      evaluationRepo,
+    );
   });
 
   it('確定済みのdestinationsを対応するLogへ書き込む', async () => {
@@ -141,6 +162,32 @@ describe('RecordCapture', () => {
         destinations: [{ logType: 'AppearanceLog', fields: { comment: 'ガタイ良くなったと言われた' } }],
       }),
     ).rejects.toThrow(/overallRating/);
+  });
+
+  it('ThirdPersonEvaluationへ書き込む（personは必須、テキストから断定しない）', async () => {
+    const result = await useCase.execute({
+      text: 'いとこにガタイ良くなったと言われた',
+      capturedAt: '2026-07-13',
+      destinations: [
+        {
+          logType: 'ThirdPersonEvaluation',
+          fields: { evaluation: 'いとこにガタイ良くなったと言われた', person: 'いとこ' },
+        },
+      ],
+    });
+    expect(result.applied[0]?.logType).toBe('ThirdPersonEvaluation');
+  });
+
+  it('ThirdPersonEvaluationはpersonが欠けていると捏造せずエラーにする', async () => {
+    await expect(
+      useCase.execute({
+        text: 'ガタイ良くなったと言われた',
+        capturedAt: '2026-07-13',
+        destinations: [
+          { logType: 'ThirdPersonEvaluation', fields: { evaluation: 'ガタイ良くなった' } },
+        ],
+      }),
+    ).rejects.toThrow(/person/);
   });
 
   it('必須項目が欠けている場合は捏造せずエラーにする（PurchaseLogのproductName）', async () => {

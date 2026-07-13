@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 /**
- * ARC Connector（Version7）
+ * ARC Connector（Version7、Version9でBridge Layerのimport/exportを追加）
  *
  * Project ARCのApplication層を、CLI以外からも呼び出せるようにする
- * HTTP API。ADR 0008参照。重要な制約：
+ * HTTP API。ADR 0008・ADR 0010参照。重要な制約：
  *
  * - このServer自身は「何を記録すべきか」を判断しない（ai-roles.md、
  *   ADR 0007の方針を継承）。`/capture`は確定済みdestinationsを
  *   受け取って書き込むだけ。`/capture/suggest`が返すのは機械的な
- *   下書き提案のみ。
+ *   下書き提案のみ。`/bridge/import`も`type`が確定済みの入力のみを
+ *   受け付ける。
  * - ローカル専用（127.0.0.1のみ）。認証は未実装（ADR 0008参照、
  *   将来リモート接続が必要になった時点で追加する）。
  * - 新規の外部依存は追加せず、Node.js標準の`http`モジュールのみで
@@ -26,14 +27,21 @@ import { AddAppearanceLogUseCase } from '../../application/use-cases/appearance/
 import { SuggestCaptureDestinationsUseCase } from '../../application/use-cases/capture/SuggestCaptureDestinations.js';
 import { RecordCaptureUseCase } from '../../application/use-cases/capture/RecordCapture.js';
 import { GetTimelineUseCase } from '../../application/use-cases/timeline/GetTimeline.js';
+import { AddThirdPersonEvaluationUseCase } from '../../application/use-cases/evaluation/AddThirdPersonEvaluation.js';
+import { ImportLogsUseCase } from '../../application/use-cases/bridge/ImportLogs.js';
+import { ExportLogsUseCase } from '../../application/use-cases/bridge/ExportLogs.js';
+import type { BridgeLogType } from '../../application/use-cases/bridge/BridgeLogType.js';
 import type { TimelineSource } from '../../domain/value-objects/TimelineEntry.js';
 
 import { JsonFileReflectionRepository } from '../../adapters/repositories/JsonFileReflectionRepository.js';
+import { JsonFileMemoryRepository } from '../../adapters/repositories/JsonFileMemoryRepository.js';
+import { JsonFileInventoryRepository } from '../../adapters/repositories/JsonFileInventoryRepository.js';
 import { JsonFileSkinLogRepository } from '../../adapters/repositories/JsonFileSkinLogRepository.js';
 import { JsonFilePurchaseLogRepository } from '../../adapters/repositories/JsonFilePurchaseLogRepository.js';
 import { JsonFileChallengeLogRepository } from '../../adapters/repositories/JsonFileChallengeLogRepository.js';
 import { JsonFileAppearanceLogRepository } from '../../adapters/repositories/JsonFileAppearanceLogRepository.js';
 import { JsonFileCaptureRepository } from '../../adapters/repositories/JsonFileCaptureRepository.js';
+import { JsonFileThirdPersonEvaluationRepository } from '../../adapters/repositories/JsonFileThirdPersonEvaluationRepository.js';
 import { RuleBasedCaptureClassifier } from '../../adapters/providers/RuleBasedCaptureClassifier.js';
 
 import {
@@ -42,7 +50,8 @@ import {
   serializePurchaseLog,
   serializeAppearanceLog,
   serializeCapture,
-} from './serializers.js';
+  serializeThirdPersonEvaluation,
+} from '../../application/serializers.js';
 
 export interface BuildAppOptions {
   /** テスト時に本番の`data/`と隔離するためのディレクトリ差し替え。 */
@@ -60,6 +69,8 @@ export function buildUseCases(options: BuildAppOptions = {}) {
   const reflectionRepository = new JsonFileReflectionRepository(
     repoPath(dataDir, 'reflections.json'),
   );
+  const memoryRepository = new JsonFileMemoryRepository(repoPath(dataDir, 'memory.json'));
+  const inventoryRepository = new JsonFileInventoryRepository(repoPath(dataDir, 'inventory.json'));
   const skinLogRepository = new JsonFileSkinLogRepository(repoPath(dataDir, 'skin-log.json'));
   const purchaseLogRepository = new JsonFilePurchaseLogRepository(
     repoPath(dataDir, 'purchase-log.json'),
@@ -71,6 +82,9 @@ export function buildUseCases(options: BuildAppOptions = {}) {
     repoPath(dataDir, 'appearance-log.json'),
   );
   const captureRepository = new JsonFileCaptureRepository(repoPath(dataDir, 'capture-log.json'));
+  const thirdPersonEvaluationRepository = new JsonFileThirdPersonEvaluationRepository(
+    repoPath(dataDir, 'third-person-evaluation.json'),
+  );
   const classifier = new RuleBasedCaptureClassifier();
 
   return {
@@ -80,6 +94,7 @@ export function buildUseCases(options: BuildAppOptions = {}) {
     startUsingPurchase: new StartUsingPurchaseUseCase(purchaseLogRepository),
     finishPurchase: new FinishPurchaseUseCase(purchaseLogRepository),
     addAppearanceLog: new AddAppearanceLogUseCase(appearanceLogRepository),
+    addThirdPersonEvaluation: new AddThirdPersonEvaluationUseCase(thirdPersonEvaluationRepository),
     suggestCaptureDestinations: new SuggestCaptureDestinationsUseCase(classifier),
     recordCapture: new RecordCaptureUseCase(
       captureRepository,
@@ -87,6 +102,7 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       purchaseLogRepository,
       challengeLogRepository,
       appearanceLogRepository,
+      thirdPersonEvaluationRepository,
     ),
     getTimeline: new GetTimelineUseCase(
       reflectionRepository,
@@ -95,6 +111,27 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       purchaseLogRepository,
       challengeLogRepository,
       captureRepository,
+      thirdPersonEvaluationRepository,
+    ),
+    importLogs: new ImportLogsUseCase(
+      reflectionRepository,
+      memoryRepository,
+      inventoryRepository,
+      appearanceLogRepository,
+      skinLogRepository,
+      purchaseLogRepository,
+      challengeLogRepository,
+      thirdPersonEvaluationRepository,
+    ),
+    exportLogs: new ExportLogsUseCase(
+      reflectionRepository,
+      memoryRepository,
+      inventoryRepository,
+      appearanceLogRepository,
+      skinLogRepository,
+      purchaseLogRepository,
+      challengeLogRepository,
+      thirdPersonEvaluationRepository,
     ),
   };
 }
@@ -259,6 +296,29 @@ export function createApp(options: BuildAppOptions = {}) {
         { capture: serializeCapture(result.capture), applied: result.applied },
         201,
       );
+    }),
+
+    route('POST', '/evaluation', async (req) => {
+      const body = await readJsonBody(req);
+      const record = body.record as Parameters<
+        typeof useCases.addThirdPersonEvaluation.execute
+      >[0]['record'];
+      const result = await useCases.addThirdPersonEvaluation.execute({ record });
+      return ok({ evaluation: serializeThirdPersonEvaluation(result.evaluation) }, 201);
+    }),
+
+    route('POST', '/bridge/import', async (req) => {
+      const body = await readJsonBody(req);
+      const logs = body.logs as Parameters<typeof useCases.importLogs.execute>[0]['logs'];
+      const result = await useCases.importLogs.execute({ logs });
+      return ok(result);
+    }),
+
+    route('GET', '/bridge/export', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const type = (url.searchParams.get('type') ?? undefined) as BridgeLogType | undefined;
+      const result = await useCases.exportLogs.execute({ type });
+      return ok(result);
     }),
   ];
 

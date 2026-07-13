@@ -135,6 +135,23 @@ Timeline自体は各Logの記録を集めて並べ替えるだけで、「何が
 [`docs/architecture-diagram.md`](./architecture-diagram.md)（Owner
 提案によるアーキテクチャ図）を参照。
 
+## Version9｜ARC Bridge（完了）
+
+**ゴール**：ARCとProject ARCの最初の接続点を作る。完全自動は目指さず、
+Ownerが「ARCの提案をProject ARCへ簡単に渡せる状態」を作る（ARC
+ブリーフ）。
+
+| 機能 | 内容 |
+|---|---|
+| Bridge Layer（`pnpm bridge -- import/export`、`POST /bridge/import`、`GET /bridge/export`） | `{type, data}`形式のJSONで複数Logを一括登録・一括出力。既存UseCaseへ委譲するだけの薄いディスパッチャ（ADR 0010） |
+| Third Person Evaluation（`pnpm evaluation`、`POST /evaluation`） | 他者からの評価・コメントを構造化して記録。Appearance Logとは別Entity（ADR 0011、Version5〜8から持ち越しの課題を正式決着） |
+
+ADR 0007/0008の「Systemは判断しない」という制約はBridge Layerでも
+維持した（`type`は呼び出し側が確定済みの値として渡す）。Owner提案に
+より、Version9からVersion Reportに14章「10年後のProject ARCへの
+貢献」が追加された（`docs/reports/TEMPLATE.md`参照）。詳細は
+`docs/reports/Version9_Report.md`を参照。
+
 ---
 
 > 以降のVersion番号は、Version1着手時点で構想していた旧ロードマップ

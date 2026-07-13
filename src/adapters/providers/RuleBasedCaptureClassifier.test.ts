@@ -22,6 +22,14 @@ describe('RuleBasedCaptureClassifier', () => {
     expect(suggestions).toEqual([]);
   });
 
+  it('「言われた」「ガタイ」はThirdPersonEvaluationを提案する（personは含めない）', async () => {
+    const suggestions = await classifier.suggest({ text: 'いとこにガタイ良くなったと言われた' });
+    const evaluation = suggestions.find((s) => s.logType === 'ThirdPersonEvaluation');
+    expect(evaluation).toBeDefined();
+    expect(evaluation?.fields.evaluation).toBe('いとこにガタイ良くなったと言われた');
+    expect(evaluation?.fields.person).toBeUndefined();
+  });
+
   it('写真のみ（テキストなし）の場合は画像解析をしないため空配列を返す', async () => {
     const suggestions = await classifier.suggest({ photoPath: 'data/x.jpg' });
     expect(suggestions).toEqual([]);

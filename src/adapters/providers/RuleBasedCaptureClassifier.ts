@@ -39,8 +39,15 @@ const RULES: KeywordRule[] = [
   },
   {
     logType: 'AppearanceLog',
-    keywords: ['髪', '髭', '服', '体型', '言われた', 'ガタイ'],
+    keywords: ['髪', '髭', '服', '体型'],
     buildFields: (text) => ({ comment: text }),
+  },
+  {
+    logType: 'ThirdPersonEvaluation',
+    // 「誰が言ったか」はテキストから断定できないため、personは
+    // フィールドに含めない（CLI/API側で必ず確認する、Principle 5）。
+    keywords: ['言われた', 'ガタイ'],
+    buildFields: (text) => ({ evaluation: text }),
   },
 ];
 

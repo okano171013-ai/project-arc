@@ -170,4 +170,24 @@ Version7のDoDは達成済み（HTTP APIは`fetch`ベースの自動テストと
 
 Version8のDoDは達成済み（Timeline CLIは対話式ではないため実データで直接確認、HTTP APIも実サーバーへの実リクエストで確認済み）。
 
+## Version9完了チェックリスト
+
+- [x] `pnpm test` が全て緑（Bridge Layer・ThirdPersonEvaluationの結合テストを含む、107件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `pnpm evaluation -- add/list` が正常動作する（実機確認済み、擬似expectドライバで駆動）
+- [x] `pnpm bridge -- import <file>` が正常動作する（実機確認済み。実データで検証中に実際のargv解析バグ（サブコマンド名をファイルパスと誤認識）を発見・修正）
+- [x] `pnpm bridge -- export`（`--type=`含む）が正常動作する（実機確認済み）
+- [x] `POST /evaluation` `/bridge/import`、`GET /bridge/export` がHTTP経由で正常動作する（実機確認済み、日本語データの往復含む）
+- [x] Smart Captureの「言われた」「ガタイ」キーワードがThirdPersonEvaluationへ振り分けられることを確認済み
+- [x] Timelineが7ソース目としてThirdPersonEvaluationを含むことを確認済み
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0010（Bridge Layer）・ADR 0011（Third Person Evaluation）を記録済み
+- [x] `docs/architecture-diagram.md` を更新済み
+- [x] `docs/reports/TEMPLATE.md` に14章「10年後のProject ARCへの貢献」を追加済み
+- [x] `docs/reports/Version9_Report.md` を生成済み（14章構成）
+- [x] `docs/reports/Version9_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+Version9のDoDは達成済み（対話式CLIは擬似expectドライバで、非対話CLI・HTTP APIは実リクエストで確認済み）。
+
 Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。

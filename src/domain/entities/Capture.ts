@@ -10,7 +10,12 @@
  * 常にOwner/ARC側に残る（ADR 0007）。
  */
 
-export type CaptureLogType = 'SkinLog' | 'PurchaseLog' | 'ChallengeLog' | 'AppearanceLog';
+export type CaptureLogType =
+  | 'SkinLog'
+  | 'PurchaseLog'
+  | 'ChallengeLog'
+  | 'AppearanceLog'
+  | 'ThirdPersonEvaluation';
 
 /**
  * 機械的な下書き提案。断定ではなく、根拠（reason）を必ず伴う

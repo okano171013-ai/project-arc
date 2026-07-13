@@ -174,4 +174,37 @@ describe('ARC Connector HTTP API', () => {
     const { status } = await call('GET', '/nope');
     expect(status).toBe(404);
   });
+
+  it('POST /evaluation records a third person evaluation', async () => {
+    const { status, json } = await call('POST', '/evaluation', {
+      record: { date: '2026-07-13', person: 'いとこ', evaluation: 'ガタイ良くなった' },
+    });
+    expect(status).toBe(201);
+    const data = json.data as { evaluation: { record: { person: string } } };
+    expect(data.evaluation.record.person).toBe('いとこ');
+  });
+
+  it('POST /bridge/import registers multiple log types and reports per-item results', async () => {
+    const { status, json } = await call('POST', '/bridge/import', {
+      logs: [
+        { type: 'SkinLog', data: { record: { date: '2026-07-13', redness: 2 } } },
+        { type: 'PurchaseLog', data: { record: {} } }, // productName欠如で失敗するはず
+      ],
+    });
+    expect(status).toBe(200);
+    const data = json.data as { successCount: number; failureCount: number };
+    expect(data.successCount).toBe(1);
+    expect(data.failureCount).toBe(1);
+  });
+
+  it('GET /bridge/export?type= exports only the requested type', async () => {
+    await call('POST', '/bridge/import', {
+      logs: [{ type: 'ChallengeLog', data: { record: { date: '2026-07-13', title: '赤福' } } }],
+    });
+    const { status, json } = await call('GET', '/bridge/export?type=ChallengeLog');
+    expect(status).toBe(200);
+    const data = json.data as { logs: { type: string }[] };
+    expect(data.logs).toHaveLength(1);
+    expect(data.logs[0]?.type).toBe('ChallengeLog');
+  });
 });

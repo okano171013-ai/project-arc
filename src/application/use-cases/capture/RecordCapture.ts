@@ -5,10 +5,12 @@ import type { SkinLogRepository } from '../../ports/SkinLogRepository.js';
 import type { PurchaseLogRepository } from '../../ports/PurchaseLogRepository.js';
 import type { ChallengeLogRepository } from '../../ports/ChallengeLogRepository.js';
 import type { AppearanceLogRepository } from '../../ports/AppearanceLogRepository.js';
+import type { ThirdPersonEvaluationRepository } from '../../ports/ThirdPersonEvaluationRepository.js';
 import { AddSkinLogUseCase } from '../skin/AddSkinLog.js';
 import { RecordPurchaseUseCase } from '../purchase/RecordPurchase.js';
 import { AddChallengeLogUseCase } from '../challenge/AddChallengeLog.js';
 import { AddAppearanceLogUseCase } from '../appearance/AddAppearanceLog.js';
+import { AddThirdPersonEvaluationUseCase } from '../evaluation/AddThirdPersonEvaluation.js';
 
 export interface RecordCaptureDestination {
   logType: CaptureLogType;
@@ -69,6 +71,7 @@ export class RecordCaptureUseCase {
     private readonly purchaseLogRepository: PurchaseLogRepository,
     private readonly challengeLogRepository: ChallengeLogRepository,
     private readonly appearanceLogRepository: AppearanceLogRepository,
+    private readonly thirdPersonEvaluationRepository: ThirdPersonEvaluationRepository,
   ) {}
 
   async execute(input: RecordCaptureInput): Promise<RecordCaptureOutput> {
@@ -160,6 +163,18 @@ export class RecordCaptureUseCase {
           },
         });
         return log.id;
+      }
+      case 'ThirdPersonEvaluation': {
+        const useCase = new AddThirdPersonEvaluationUseCase(this.thirdPersonEvaluationRepository);
+        const { evaluation } = await useCase.execute({
+          record: {
+            date: optionalString(fields, 'date') ?? capturedAt,
+            person: requireString(fields, 'person', 'ThirdPersonEvaluation'),
+            evaluation: requireString(fields, 'evaluation', 'ThirdPersonEvaluation'),
+            category: optionalString(fields, 'category'),
+          },
+        });
+        return evaluation.id;
       }
       default: {
         const exhaustive: never = logType;

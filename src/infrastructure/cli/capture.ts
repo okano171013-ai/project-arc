@@ -21,11 +21,18 @@ import { JsonFileSkinLogRepository } from '../../adapters/repositories/JsonFileS
 import { JsonFilePurchaseLogRepository } from '../../adapters/repositories/JsonFilePurchaseLogRepository.js';
 import { JsonFileChallengeLogRepository } from '../../adapters/repositories/JsonFileChallengeLogRepository.js';
 import { JsonFileAppearanceLogRepository } from '../../adapters/repositories/JsonFileAppearanceLogRepository.js';
+import { JsonFileThirdPersonEvaluationRepository } from '../../adapters/repositories/JsonFileThirdPersonEvaluationRepository.js';
 import { savePhoto } from '../storage/photoStore.js';
 import type { CaptureLogType, CaptureSuggestion } from '../../domain/entities/Capture.js';
 
 const PHOTO_DIR = 'data/capture-photos';
-const ALL_LOG_TYPES: CaptureLogType[] = ['SkinLog', 'PurchaseLog', 'ChallengeLog', 'AppearanceLog'];
+const ALL_LOG_TYPES: CaptureLogType[] = [
+  'SkinLog',
+  'PurchaseLog',
+  'ChallengeLog',
+  'AppearanceLog',
+  'ThirdPersonEvaluation',
+];
 
 function line(char = '─', length = 44): string {
   return char.repeat(length);
@@ -43,6 +50,7 @@ function buildRepositories() {
     purchaseLogRepository: new JsonFilePurchaseLogRepository(),
     challengeLogRepository: new JsonFileChallengeLogRepository(),
     appearanceLogRepository: new JsonFileAppearanceLogRepository(),
+    thirdPersonEvaluationRepository: new JsonFileThirdPersonEvaluationRepository(),
   };
 }
 
@@ -62,6 +70,12 @@ async function ensureRequiredFields(
   if (logType === 'AppearanceLog' && typeof filled.overallRating !== 'number') {
     const raw = await rl.question('  AppearanceLogのoverallRating（必須、1〜5）: ');
     filled.overallRating = Number(raw);
+  }
+  if (logType === 'ThirdPersonEvaluation' && typeof filled.person !== 'string') {
+    filled.person = await rl.question('  ThirdPersonEvaluationのperson（誰から、必須）: ');
+  }
+  if (logType === 'ThirdPersonEvaluation' && typeof filled.evaluation !== 'string') {
+    filled.evaluation = await rl.question('  ThirdPersonEvaluationのevaluation（内容、必須）: ');
   }
   return filled;
 }
@@ -133,6 +147,7 @@ async function runAdd(): Promise<void> {
       repos.purchaseLogRepository,
       repos.challengeLogRepository,
       repos.appearanceLogRepository,
+      repos.thirdPersonEvaluationRepository,
     );
     const result = await recordUseCase.execute({
       text: text || undefined,
@@ -184,7 +199,7 @@ async function chooseDestinations(
   }
 
   const manualRaw = await rl.question(
-    '\n手動で記録先を選びますか？ (1=SkinLog 2=PurchaseLog 3=ChallengeLog 4=AppearanceLog, カンマ区切り, Enterで中止): ',
+    '\n手動で記録先を選びますか？ (1=SkinLog 2=PurchaseLog 3=ChallengeLog 4=AppearanceLog 5=ThirdPersonEvaluation, カンマ区切り, Enterで中止): ',
   );
   if (!manualRaw.trim()) return [];
   const indices = manualRaw
