@@ -57,4 +57,45 @@ DoDを厳格にする一方、Principle 9（段階的拡張）に基づき、
 - [x] `pnpm reflect` がCLIとして正常動作する（InMemory実行）
 - [x] README / docsに実装との乖離がない
 
-Version1のDoDは達成済み。Supabase CLI（init/start）のセットアップに進む。
+Version1のDoDは達成済み。
+
+## Version2完了チェックリスト
+
+- [x] `pnpm test` が全て緑（Reflection score / Inventory / Morning Brief含む）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `pnpm morning` が正常動作する
+- [x] `pnpm reflect` が正常動作する（新フィールド・スコア表示含む）
+- [x] `pnpm inventory -- add / list / update` が正常動作する
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0003（JSON永続化）を記録済み
+
+Version2のDoDは達成済み。
+
+## Version3完了チェックリスト
+
+- [x] `pnpm test` が全て緑（29件：Google連携ロジック・Inventory拡張・Reflection前日比較含む）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `pnpm morning` が正常動作する（ダミーデータへのフォールバック確認済み、Google連携は未確認）
+- [x] `pnpm reflect` が正常動作する（新規記録・上書き・前日比較なしケースを確認済み）
+- [x] `pnpm inventory -- add/list/update/maintain/show` が正常動作する
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0004（Google OAuth・トークン暗号化）を記録済み
+- [x] `docs/reports/Version3_Report.md` を生成済み（`docs/reports/TEMPLATE.md`の12章構成に準拠、以降のVersionも同様）
+- [x] Google Calendar/Tasks連携の実機確認（OAuth認証・Tasks取得まで確認済み）
+
+## Version4完了チェックリスト
+
+- [x] `pnpm test` が全て緑（Memory/AppearanceLog/Search/写真保存を含む、49件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `pnpm memory -- add/list/update/delete` が正常動作する（ユースケース層はテストで担保。対話式CLIのサンドボックス実機確認は未実施 — Version3・Version4双方で既知の制約、Owner環境での確認を推奨）
+- [x] `pnpm appearance -- add/list` が正常動作する（写真ファイルの保存含む、上記と同様の制約）
+- [x] `pnpm inventory -- photo` が正常動作する（上記と同様の制約）
+- [x] `pnpm run find <キーワード>` が正常動作する（`search`→`find`も衝突したため、以後すべて`pnpm run`形式に統一。後述）
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0005（Memory/Inventory/Reflectionの境界）を記録済み
+- [x] `docs/reports/Version4_Report.md` を生成済み（13章構成）
+
+Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。

@@ -11,17 +11,29 @@
 export interface ReflectionRecord {
   readonly sleepHours?: number;
   readonly studyMinutes?: number;
-  readonly didMartialArts: boolean;
-  readonly didEnglishLesson: boolean;
+  readonly didMartialArts?: boolean;
+  readonly didEnglishLesson?: boolean;
+  readonly didAttendClass?: boolean;
+  readonly planAchieved?: boolean;
   readonly mood?: Mood;
   readonly expenseYen?: number;
   readonly notes?: string;
+  /** 今日頑張ったこと。事実の記述であり、評価はここでは行わない。 */
+  readonly proudOf?: string;
   /** 事実と推測を分離する（Principle 5）。ここは事実の記述のみ。 */
   readonly todaysEvents?: string;
   readonly tomorrowsGoal?: string;
 }
 
 export type Mood = 'great' | 'good' | 'neutral' | 'low' | 'bad';
+
+const MOOD_SCORE_DELTA: Record<Mood, number> = {
+  great: 10,
+  good: 5,
+  neutral: 0,
+  low: -5,
+  bad: -10,
+};
 
 export class Reflection {
   private constructor(
@@ -70,6 +82,36 @@ export class Reflection {
    * 「今日は何をすべきか」の判断はARC（アプリケーション外）に委ねる。
    */
   hasMinimumRoutine(): boolean {
-    return this._record.didMartialArts || this._record.studyMinutes !== undefined;
+    return Boolean(this._record.didMartialArts) || this._record.studyMinutes !== undefined;
+  }
+
+  /**
+   * 今日の点数（100点満点）。
+   *
+   * 注意：これは記録された事実から機械的に算出される「参考指標」で
+   * あり、その日の価値を断定する評価ではない（Principle 5: 推測は
+   * 推測として扱う／Principle 1: 最終判断は人間が行う）。
+   * 点数が低い日を悪い日と決めつけないこと。
+   *
+   * 内訳（50点を基準に加減点）：
+   *   + 勉強時間: 最大20点（180分で満点換算）
+   *   + 予定達成: 10点
+   *   + 授業出席: 10点
+   *   + 睡眠6時間以上: 10点
+   *   + 気分: -10 〜 +10点
+   */
+  score(): number {
+    const r = this._record;
+    let total = 50;
+
+    if (r.studyMinutes !== undefined) {
+      total += Math.min(20, Math.round((r.studyMinutes / 180) * 20));
+    }
+    if (r.planAchieved) total += 10;
+    if (r.didAttendClass) total += 10;
+    if (r.sleepHours !== undefined && r.sleepHours >= 6) total += 10;
+    if (r.mood) total += MOOD_SCORE_DELTA[r.mood];
+
+    return Math.max(0, Math.min(100, total));
   }
 }

@@ -5,7 +5,7 @@ Principle 9（段階的拡張）に基づき、一度に全てを作らない。
 
 ---
 
-## Version1｜土台（現在地）
+## Version1｜土台（完了）
 
 **ゴール**：機能を作ることではなく、後続バージョンでDomain層を
 壊さずに機能追加できる骨格と、判断基準となる思想文書を作ること。
@@ -14,12 +14,57 @@ Principle 9（段階的拡張）に基づき、一度に全てを作らない。
 |---|---|
 | 1 | 思想ドキュメント確定（vision / principles / ai-roles / architecture / roadmap / ADR） |
 | 2 | リポジトリ初期化・tsconfig・ESLint/Prettier・Vitest設定 |
-| 3 | Supabase CLIによるローカルPostgres環境構築 |
+| 3 | ~~Supabase CLIによるローカルPostgres環境構築~~ → Version2でJSON永続化に変更（ADR 0003） |
 | 4 | Domain層：`Reflection`, `StudyLog`, `Task` エンティティ定義 |
 | 5 | Application層：`RecordDailyReflection`など1〜2ユースケース（テスト駆動） |
-| 6 | Adapters層：Supabase Repository実装 |
-| 7 | Infrastructure：簡易CLI（例：`pnpm reflect`で日次振り返りを記録） |
+| 6 | Adapters層：Repository実装（InMemory / Supabase） |
+| 7 | Infrastructure：簡易CLI（`pnpm reflect`で日次振り返りを記録） |
 | 8 | Docker化・CI設定・README整備 |
+
+## Version2｜「ARCと一日を始め、ARCと一日を終える」（進行中）
+
+**ゴール**：機能数よりUXを重視し、毎日使うプロダクトにする。
+
+| 機能 | 内容 |
+|---|---|
+| Morning Brief（`pnpm morning`） | 今日の予定・やること・フォーカス（ダミー）、前日の勉強時間・支出（実データ） |
+| Evening Reflection（`pnpm reflect`） | 今日の振り返り記録 + 100点満点の参考スコア |
+| Life Inventory（`pnpm inventory`） | 持ち物の追加・一覧・更新（MVP） |
+| 永続化 | ローカルJSONファイル（ADR 0003） |
+
+Version2では以下を意図的に実装しない：Google Calendar/Tasks、
+Supabaseクラウド同期、Gemini/OpenAI連携、画像解析、Decision Engine、
+通知機能（すべてVersion3以降）。
+
+## Version3｜「Connected Life」（進行中）
+
+**ゴール**：自分の情報を管理するツールから、生活と繋がるシステムへ。
+
+| 機能 | 内容 |
+|---|---|
+| Morning Brief（データソース差替） | Google Calendar/Tasksの実データを表示（UIは無変更） |
+| Life Inventory拡張 | 購入日・価格・状態・用途・交換目安・メンテナンス履歴（複数）を追加 |
+| Reflection改善 | 前日比較（自分自身との比較のみ、他人比較なし）を追加 |
+| 認証 | Google OAuth（初回のみ）+ リフレッシュトークン暗号化保存（ADR 0004） |
+
+Version3では以下を意図的に実装しない：Gemini/OpenAI連携、
+Decision Engine、画像解析、通知機能（すべてVersion4以降）。
+詳細は `docs/reports/Version3_Report.md` を参照。
+
+## Version4｜「Memory」（進行中）
+
+**ゴール**：生活と繋がるシステムから、人生を記憶するシステムへ。
+
+| 機能 | 内容 |
+|---|---|
+| ARC Memory | 長期間保持する知識（Assets/Appearance/Goals等10カテゴリ）の追加・一覧・更新・削除 |
+| Appearance Log | 月次の外見記録（写真ファイル管理のみ、画像解析なし） |
+| Life Inventory写真紐付け | 持ち物に写真を紐付け |
+| 横断検索 | MemoryとInventoryを横断検索（Reflection/Appearanceは対象外、ADR 0005） |
+
+Version4では以下を意図的に実装しない：Gemini/OpenAI連携、
+Decision Engine、通知機能、画像解析AI（すべてVersion5以降）。
+詳細は `docs/reports/Version4_Report.md` を参照。
 
 ---
 

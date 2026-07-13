@@ -20,9 +20,12 @@ interface ReflectionRow {
   study_minutes: number | null;
   did_martial_arts: boolean;
   did_english_lesson: boolean;
+  did_attend_class: boolean;
+  plan_achieved: boolean;
   mood: string | null;
   expense_yen: number | null;
   notes: string | null;
+  proud_of: string | null;
   todays_events: string | null;
   tomorrows_goal: string | null;
   created_at: string;
@@ -38,11 +41,14 @@ export class SupabaseReflectionRepository implements ReflectionRepository {
       date: reflection.date,
       sleep_hours: record.sleepHours ?? null,
       study_minutes: record.studyMinutes ?? null,
-      did_martial_arts: record.didMartialArts,
-      did_english_lesson: record.didEnglishLesson,
+      did_martial_arts: record.didMartialArts ?? false,
+      did_english_lesson: record.didEnglishLesson ?? false,
+      did_attend_class: record.didAttendClass ?? false,
+      plan_achieved: record.planAchieved ?? false,
       mood: record.mood ?? null,
       expense_yen: record.expenseYen ?? null,
       notes: record.notes ?? null,
+      proud_of: record.proudOf ?? null,
       todays_events: record.todaysEvents ?? null,
       tomorrows_goal: record.tomorrowsGoal ?? null,
     };
@@ -89,9 +95,12 @@ export class SupabaseReflectionRepository implements ReflectionRepository {
       studyMinutes: row.study_minutes ?? undefined,
       didMartialArts: row.did_martial_arts,
       didEnglishLesson: row.did_english_lesson,
+      didAttendClass: row.did_attend_class,
+      planAchieved: row.plan_achieved,
       mood: (row.mood as ReflectionRecord['mood']) ?? undefined,
       expenseYen: row.expense_yen ?? undefined,
       notes: row.notes ?? undefined,
+      proudOf: row.proud_of ?? undefined,
       todaysEvents: row.todays_events ?? undefined,
       tomorrowsGoal: row.tomorrows_goal ?? undefined,
     };

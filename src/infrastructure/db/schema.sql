@@ -1,6 +1,8 @@
--- Project ARC — Version1 schema
+-- Project ARC — schema
 -- 対象: supabase CLI が起動するローカルPostgres（ADR 0001）
 -- 適用方法: supabase/migrations/ 配下にコピーし `supabase db reset` で適用する想定
+-- 注意: Version2の既定の永続化はJSONファイル（ADR 0003）。本スキーマは
+-- --db=supabase を選択した場合のみ使用する。
 
 create table if not exists reflections (
   id uuid primary key,
@@ -9,9 +11,12 @@ create table if not exists reflections (
   study_minutes integer,
   did_martial_arts boolean not null default false,
   did_english_lesson boolean not null default false,
+  did_attend_class boolean not null default false,
+  plan_achieved boolean not null default false,
   mood text check (mood in ('great', 'good', 'neutral', 'low', 'bad')),
   expense_yen integer,
   notes text,
+  proud_of text,
   todays_events text,
   tomorrows_goal text,
   created_at timestamptz not null default now()
@@ -43,3 +48,17 @@ create table if not exists tasks (
   due_date date,
   created_at timestamptz not null default now()
 );
+
+-- Version2: Life Inventory（MVP）
+create table if not exists inventory_items (
+  id uuid primary key,
+  name text not null,
+  category text not null check (
+    category in ('財布', '傘', 'シェーバー', 'スキンケア', '靴', '服', 'ガジェット', 'その他')
+  ),
+  note text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists idx_inventory_items_category on inventory_items (category);

@@ -1,7 +1,7 @@
 {
   "name": "project-arc",
-  "version": "0.1.0",
-  "description": "Project ARC — AI Life Management OS (Version1: foundation)",
+  "version": "0.4.0",
+  "description": "Project ARC — AI Life Management OS (Version4: memory)",
   "type": "module",
   "private": true,
   "engines": {
@@ -10,7 +10,12 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "dev": "tsx src/infrastructure/cli/reflect.ts",
+    "morning": "tsx src/infrastructure/cli/morning.ts",
     "reflect": "tsx src/infrastructure/cli/reflect.ts",
+    "inventory": "tsx src/infrastructure/cli/inventory.ts",
+    "memory": "tsx src/infrastructure/cli/memory.ts",
+    "appearance": "tsx src/infrastructure/cli/appearance.ts",
+    "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint . --ext .ts",
@@ -21,6 +26,9 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",
+    "dotenv": "^16.4.5",
+    "google-auth-library": "^9.14.1",
+    "googleapis": "^144.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
