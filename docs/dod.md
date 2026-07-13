@@ -207,4 +207,21 @@ Version9のDoDは達成済み（対話式CLIは擬似expectドライバで、非
 
 Version10のDoDは達成済み（対話式CLIは擬似expectドライバで、非対話CLI・HTTP API・Bridgeは実リクエスト/実ファイルで確認済み）。
 
+## Version11完了チェックリスト
+
+- [x] `pnpm test` が全て緑（RetrieveKnowledge/buildRetrievalContextのテストを含む、153件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `pnpm external -- retrieve <query>`・`--tags=`・`--topics=`・`--limit=` が正常動作する（実機確認済み。ブリーフの「行政法の処分性」検索例を実データで再現し、スコア順ランキングとContext Builder出力を確認）
+- [x] `POST /knowledge/retrieve` がHTTP経由で正常動作する（実機確認済み、日本語データの往復含む）
+- [x] タグ一致による絞り込みが無関係な知識（「料理レシピ」等）を正しく除外することを確認済み
+- [x] Context Builderが「【External Brain】」ブロックのみを生成し、「【ARC】」の推論部分を生成しないことを確認済み（テスト・実機確認両方）
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0019〜0021（Query Layerのスコープ・ランキング方式・Context Builderの責務境界）を記録済み
+- [x] `docs/architecture-diagram.md` を更新済み
+- [x] `docs/reports/Version11_Report.md` を生成済み（14章構成）
+- [x] `docs/reports/Version11_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+Version11のDoDは達成済み（非対話CLI・HTTP APIは実リクエスト/実データで確認済み）。
+
 Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。

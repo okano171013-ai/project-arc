@@ -1,10 +1,11 @@
 # Project ARC アーキテクチャ図
 
 Version7完了時にOwnerから提案された、レイヤー構成・データの流れ・
-ARCとの接続点を示す図（2026年7月、Version10時点の実装を反映。
+ARCとの接続点を示す図（2026年7月、Version11時点の実装を反映。
 Version9でBridge Layer・ThirdPersonEvaluation、Version10で
-External Brain（ExternalSource/ExternalKnowledge）を追加）。
-文章での説明は[`docs/architecture.md`](./architecture.md)を参照。
+External Brain（ExternalSource/ExternalKnowledge）、Version11で
+Knowledge Retrieval（RetrieveKnowledgeUseCase・Context Builder）を
+追加）。文章での説明は[`docs/architecture.md`](./architecture.md)を参照。
 
 ---
 
@@ -20,6 +21,7 @@ graph TB
     subgraph Application["Application層"]
         UC["UseCases\n(Add*, Record*, List*, Get*, Suggest*, ...)"]
         Bridge["Bridge Layer\nImportLogsUseCase / ExportLogsUseCase\n(Version9, ADR 0010)"]
+        Retrieval["Knowledge Retrieval\nRetrieveKnowledgeUseCase (QueryEngine) /\nbuildRetrievalContext (Context Builder)\n(Version11, ADR 0019-0021)"]
         Serializers["serializers.ts\n(Entity→プレーンオブジェクト、CLI/HTTP共有)"]
         Ports["Ports (interfaces)\n*Repository, CaptureClassifier,\nCalendarProvider, TaskProvider, ..."]
     end
@@ -37,10 +39,14 @@ graph TB
 
     CLI --> UC
     CLI --> Bridge
+    CLI --> Retrieval
     HTTP --> UC
     HTTP --> Bridge
+    HTTP --> Retrieval
     Bridge --> UC
     Bridge --> Serializers
+    Retrieval --> Ports
+    Retrieval --> Serializers
     UC --> Ports
     UC --> Entities
     Ports -.実装.-> JsonRepo
@@ -55,6 +61,9 @@ Domain）。DomainとApplicationは、CLIかHTTP APIか、JSONファイルか
 Supabaseかを一切知らない（Principle 8: 長期保守性）。Bridge Layer
 （Version9）はApplication層に置かれた薄いディスパッチャであり、
 新しい書き込みロジックは持たず既存UseCaseへ委譲する（ADR 0010）。
+Knowledge Retrieval（Version11）は既存のExternalKnowledge/
+ExternalSourceRepositoryをそのまま使い、新しい永続化層は追加しない
+（指示書①「Repositoryはそのまま」、ADR 0019）。
 
 ---
 
@@ -99,10 +108,13 @@ sequenceDiagram
     Owner->>ARC: LATEST_ARC_FEEDBACK.mdの内容を貼る
 ```
 
-**Systemは判断しない**（`docs/ai-roles.md`、ADR 0007/0008/0010/0012）：
-UseCase層・Bridge Layerはどのログに書くべきかを判断せず、確定済みの
-入力を忠実に保存するだけ。External Brainのconfidence・重複検知も
-同様に、Systemは材料を示すだけでOwner/ARCが最終判断する（ADR 0012）。
+**Systemは判断しない**（`docs/ai-roles.md`、ADR 0007/0008/0010/0012/
+0021）：UseCase層・Bridge Layerはどのログに書くべきかを判断せず、
+確定済みの入力を忠実に保存するだけ。External Brainのconfidence・
+重複検知も同様に、Systemは材料を示すだけでOwner/ARCが最終判断する
+（ADR 0012）。Knowledge Retrieval（Version11）のContext Builderも
+「【External Brain】」の引用ブロックまでしか生成せず、そこから
+先の解釈・結論（「【ARC】」部分）はARCが会話の中で行う（ADR 0021）。
 判断・解釈は常にARCまたはOwnerの側で行われる。
 
 ---
@@ -148,10 +160,11 @@ Captureを除く10種別（上段7つ + Memory + Inventory + ExternalSource）
 
 ## 4. ARCとの接続点（現状と将来）
 
-| 接続点 | 現状（2026年7月、Version10時点） | 将来 |
+| 接続点 | 現状（2026年7月、Version11時点） | 将来 |
 |---|---|---|
 | 指示の受け渡し | `docs/handoff/ARC_INBOX.md`にOwnerが手動で貼り付け（テキスト・PDF両対応） | 変更なし（人間による意思決定の窓口として維持、Principle 1） |
 | フィードバックの受け渡し | `docs/reports/VersionN_ARC_Feedback.md`をOwnerが手動でコピー | 変更なし |
 | データの一括受け渡し | `pnpm bridge -- import`でOwnerがARCの提案をJSONファイル経由で一括登録（ExternalSource/ExternalKnowledge含む）。`GET /bridge/export`で全データをJSON取得可能 | ARCが直接`POST /bridge/import`を呼べるようになる可能性（認証の実装が前提、ADR 0008/0010） |
+| 知識の取得 | `POST /knowledge/retrieve`でquery/tags/topicsを渡すと、スコア順のKnowledge/Sourcesと引用ブロック（context）が返る（Version11、Owner経由で手動呼び出し） | ARCが直接`POST /knowledge/retrieve`を呼び、会話に必要な知識だけをその場で取得できるようになる可能性（認証実装が前提） |
 | 個別の読み書き | ARCから直接は不可能。ARC ConnectorはOwnerがCLIまたは`curl`/`fetch`で手動操作する前提（`/external-sources`・`/external-knowledge`含む） | ChatGPT Actions・MCP等でARCが直接`POST /skin`等を呼べるようになる可能性 |
-| 判断・分類 | 常にARCまたはOwner（Systemは判断しない、ADR 0007/0008/0010/0012） | 変わらない（Project ARCの根幹原則、`docs/ai-roles.md`） |
+| 判断・分類 | 常にARCまたはOwner（Systemは判断しない、ADR 0007/0008/0010/0012/0021） | 変わらない（Project ARCの根幹原則、`docs/ai-roles.md`） |

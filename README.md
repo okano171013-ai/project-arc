@@ -15,19 +15,25 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/ai-roles.md`](./docs/ai-roles.md) — 人間・ARC・Gemini・Claude Code・
   システム自体の責務分担
 - [`docs/architecture.md`](./docs/architecture.md) — 技術設計
-- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜10のロードマップ・
+- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜11のロードマップ・
   長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version10のスコープ（現在地）
+## Version11のスコープ（現在地）
 
-テーマ：「External Brain」— 外部情報（記事・書籍・会話等から得た
-知識）をProject ARCに保存し、後から再利用できるようにする
-（長期ロードマップ2.0 Phase 2の第一歩）。アーキテクチャ全体像は
+テーマ：「Knowledge Retrieval」— Version10で蓄積したExternal Brainの
+知識を、ARCが会話の中で実際に取り出せるようにする（長期ロードマップ
+2.0 Phase 2の続き）。アーキテクチャ全体像は
 [`docs/architecture-diagram.md`](./docs/architecture-diagram.md)を参照。
 
+- **Knowledge Retrieval**（`pnpm external -- retrieve`、`POST
+  /knowledge/retrieve`）— query/tags/topicsを渡すと、ExternalKnowledge
+  /ExternalSourceをタイトル・タグ・トピック一致による機械的スコア順に
+  取得（Embedding・AIによる関連度判定はなし、ADR 0020）。結果は
+  「【External Brain】」引用ブロック（Context Builder出力）としても
+  受け取れる。ARC自身の推論・結論部分はSystemが生成しない（ADR 0021）
 - **External Brain**（`pnpm external`）— 出典（`ExternalSource`：
   Web/書籍/論文/動画等の書誌情報）と知識（`ExternalKnowledge`：
   そこから得た内容、原文とOwnerの解釈を分離）を分けて保存
@@ -51,13 +57,13 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - **ARC Connector**（`pnpm api`）— Application層をHTTP経由で呼び出せる
   API。`POST /reflection` `/skin` `/purchase` `/purchase/:id/start`
   `/purchase/:id/finish` `/appearance` `/evaluation` `/capture/suggest`
-  `/capture` `/bridge/import` `/external-sources` `/external-knowledge`、
-  `GET /health` `/timeline` `/bridge/export` `/external-sources`
-  `/external-knowledge` `/external-knowledge/search`、`PATCH`/`DELETE`
-  も`/external-sources/:id` `/external-knowledge/:id`に対応。新規
-  外部依存なし（Node標準の`http`のみ）。ローカル専用（`127.0.0.1`
-  のみ）・認証は未実装（将来リモート接続が必要になった時点で追加、
-  ADR 0008参照）
+  `/capture` `/bridge/import` `/external-sources` `/external-knowledge`
+  `/knowledge/retrieve`、`GET /health` `/timeline` `/bridge/export`
+  `/external-sources` `/external-knowledge` `/external-knowledge/search`、
+  `PATCH`/`DELETE`も`/external-sources/:id` `/external-knowledge/:id`
+  に対応。新規外部依存なし（Node標準の`http`のみ）。ローカル専用
+  （`127.0.0.1`のみ）・認証は未実装（将来リモート接続が必要になった
+  時点で追加、ADR 0008参照）
 - **Smart Capture**（`pnpm capture`）— 文章・写真を入力すると、
   キーワード一致による下書き提案（例：「肌」→Skin Log、「買った」→
   Purchase Log、「言われた」→Third Person Evaluation）を表示。Owner
@@ -95,7 +101,7 @@ Gemini/OpenAI連携、実際の画像解析・OCR、Decision Engine、通知機�
 pnpm install
 ```
 
-Version10はローカルJSONファイル + ローカルファイルコピーのみで動作する
+Version11はローカルJSONファイル + ローカルファイルコピーのみで動作する
 ため、追加のセットアップは不要です。Google Calendar/Tasks連携
 （Version3から継続）を使う場合は以下を参照してください。
 
@@ -178,7 +184,9 @@ pnpm run external -- list --status=inbox  # ステータスで絞り込み
 pnpm run external -- show <id>     # 知識の詳細（出典情報込み）を表示
 pnpm run external -- update <id>   # 知識を更新
 pnpm run external -- delete <id>   # 知識を削除
-pnpm run external -- search <キーワード>  # 知識と出典を横断検索
+pnpm run external -- search <キーワード>  # 知識と出典を横断検索（人間向け一覧）
+pnpm run external -- retrieve <キーワード>  # ARCへ渡す想定のスコア順取得（Knowledge Retrieval、Version11）
+pnpm run external -- retrieve --tags=司法試験,行政法  # タグで絞り込み
 pnpm run external -- review <id>   # ステータスをreviewedに変更
 pnpm run external -- archive <id>  # ステータスをarchivedに変更
 

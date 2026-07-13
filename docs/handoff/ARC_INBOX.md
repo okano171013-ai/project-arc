@@ -24,6 +24,10 @@ Version10_Report.md`）。実装指示書はPDFファイル
 （`Project ARC Version10 実装指示書.pdf`）として届いた（原文は
 `docs/handoff/archive/Version10_ARC_Brief.md`に保管）。
 
+**処理済み**：Version11「Knowledge Retrieval」（`docs/reports/
+Version11_Report.md`）。Version10完了報告への応答としてARCから
+届いた（原文は`docs/handoff/archive/Version11_ARC_Brief.md`に保管）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください。
 

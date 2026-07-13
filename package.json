@@ -1,7 +1,7 @@
 {
   "name": "project-arc",
-  "version": "0.10.0",
-  "description": "Project ARC — AI Life Management OS (Version10: External Brain)",
+  "version": "0.11.0",
+  "description": "Project ARC — AI Life Management OS (Version11: Knowledge Retrieval)",
   "type": "module",
   "private": true,
   "engines": {

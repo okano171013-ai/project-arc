@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * pnpm external -- add|list|show|update|delete|search|review|archive
- * External Brain（Version10）
+ * pnpm external -- add|list|show|update|delete|search|retrieve|review|archive
+ * External Brain（Version10）／Knowledge Retrieval（Version11）
  *
  * 出典（ExternalSource）と知識（ExternalKnowledge）はDomain/
  * Application層では分離されているが（ADR 0013）、CLIは日常利用の
@@ -9,6 +9,10 @@
  *
  * Systemは情報の正しさを断定しない（ADR 0012）。confidenceは
  * Ownerが設定する補助的な属性であり、Systemが自動決定しない。
+ *
+ * `retrieve`はVersion11で追加。`search`（人間がCLIで一覧・一致箇所を
+ * 見るためのコマンド）とは別に、ARCへ渡すことを想定したスコア順
+ * ランキング＋Context Builder出力を行う（ADR 0019）。
  */
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout, argv } from 'node:process';
@@ -21,6 +25,8 @@ import { GetExternalKnowledgeUseCase } from '../../application/use-cases/externa
 import { UpdateExternalKnowledgeUseCase } from '../../application/use-cases/external-knowledge/UpdateExternalKnowledge.js';
 import { DeleteExternalKnowledgeUseCase } from '../../application/use-cases/external-knowledge/DeleteExternalKnowledge.js';
 import { SearchExternalKnowledgeUseCase } from '../../application/use-cases/external-knowledge/SearchExternalKnowledge.js';
+import { RetrieveKnowledgeUseCase } from '../../application/use-cases/knowledge-retrieval/RetrieveKnowledge.js';
+import { buildRetrievalContext } from '../../application/use-cases/knowledge-retrieval/BuildRetrievalContext.js';
 import { JsonFileExternalSourceRepository } from '../../adapters/repositories/JsonFileExternalSourceRepository.js';
 import { JsonFileExternalKnowledgeRepository } from '../../adapters/repositories/JsonFileExternalKnowledgeRepository.js';
 import type { ExternalSourceType } from '../../domain/entities/ExternalSource.js';
@@ -428,6 +434,46 @@ async function runSearch(): Promise<void> {
   console.log('');
 }
 
+/** ARCが会話に必要な知識だけを取得する想定のコマンド（Version11、Knowledge Retrieval）。 */
+async function runRetrieve(): Promise<void> {
+  const query = positionalArgs().join(' ');
+  const tagsArg = argv.find((a) => a.startsWith('--tags='))?.split('=')[1];
+  const topicsArg = argv.find((a) => a.startsWith('--topics='))?.split('=')[1];
+  const limitArg = argv.find((a) => a.startsWith('--limit='))?.split('=')[1];
+
+  const repos = buildRepositories();
+  const { results, sources } = await new RetrieveKnowledgeUseCase(
+    repos.knowledgeRepository,
+    repos.sourceRepository,
+  ).execute({
+    query,
+    tags: tagsArg ? tagsArg.split(',').map((t) => t.trim()) : undefined,
+    topics: topicsArg ? topicsArg.split(',').map((t) => t.trim()) : undefined,
+    limit: limitArg ? Number(limitArg) : undefined,
+  });
+
+  console.log('');
+  console.log(line('='));
+  console.log(`  Knowledge Retrieval: 「${query || '(全件)'}」`);
+  console.log(line('='));
+
+  if (results.length === 0) {
+    console.log('\n該当するKnowledgeが見つかりませんでした。');
+    return;
+  }
+
+  console.log(`\n${results.length}件ヒット（出典${sources.length}件）\n`);
+  for (const r of results) {
+    console.log(
+      `■ [score:${r.score}] [${r.knowledge.id.slice(0, 8)}] ${r.knowledge.title}${r.source ? `  出典: ${r.source.title}` : ''}`,
+    );
+  }
+
+  console.log(`\n${line('-')}\n  ARCへ渡す想定のcontext（Context Builder出力）\n${line('-')}\n`);
+  console.log(buildRetrievalContext(results));
+  console.log('');
+}
+
 async function updateStatus(newStatus: ExternalKnowledgeStatus): Promise<void> {
   const id = positionalArgs()[0];
   if (!id) {
@@ -464,6 +510,9 @@ async function main(): Promise<void> {
     case 'search':
       await runSearch();
       break;
+    case 'retrieve':
+      await runRetrieve();
+      break;
     case 'review':
       await updateStatus('reviewed');
       break;
@@ -471,7 +520,9 @@ async function main(): Promise<void> {
       await updateStatus('archived');
       break;
     default:
-      console.log('使い方: pnpm run external -- <add|list|show|update|delete|search|review|archive>');
+      console.log(
+        '使い方: pnpm run external -- <add|list|show|update|delete|search|retrieve|review|archive>',
+      );
       process.exitCode = 1;
   }
 }

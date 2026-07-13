@@ -174,6 +174,27 @@ Version10では以下を意図的に実装しない：外部情報の自動信�
 ADR 0012・0016参照）。詳細は`docs/reports/Version10_Report.md`を
 参照。
 
+## Version11｜Knowledge Retrieval（完了）
+
+**ゴール**：Version10で「蓄積」した外部知識を、ARCが会話の中で
+実際に「取り出せる」ようにする。Version10完了報告に対するARCの
+応答として届いたテーマ提案に基づく（原文は`docs/handoff/archive/
+Version11_ARC_Brief.md`に保管）。
+
+| 機能 | 内容 |
+|---|---|
+| RetrieveKnowledgeUseCase（Query Layer） | query/tags/topics/limitを受け取り、ExternalKnowledge/ExternalSourceをスコア順に取得。Memory/Timeline/findとの統合は行わない（ADR 0019） |
+| Ranking | タイトル一致・タグ一致・Topic一致による機械的スコアリングのみ。Embedding・AIによる関連度判定はなし（ADR 0020） |
+| Context Builder（`buildRetrievalContext`） | 取得結果を「【External Brain】」引用ブロックへ整形する純粋関数。ARCの推論部分は生成しない（ADR 0021） |
+| CLI（`pnpm external -- retrieve`） | クエリ・タグ・トピックで検索し、ランキング結果とContext Builder出力を表示 |
+| HTTP API（`POST /knowledge/retrieve`） | `{results, sources, context}`を返す。AI APIの呼び出しはなし |
+
+Version11では以下を意図的に実装しない：ベクトル検索・RAG・
+Embedding、OpenAI/Claude/Gemini API呼び出し、自動要約・自動タグ・
+自動分類、Memory/Timeline/findとのQuery Layer統合（すべて将来の
+Version、ADR 0019・0021参照）。詳細は`docs/reports/
+Version11_Report.md`を参照。
+
 ---
 
 ## 長期ロードマップ 2.0（Version9完了時、ARC提案）
@@ -191,8 +212,10 @@ Version9完了を受け、ARCから中長期ロードマップの組み替え提
   読む」ことを最優先にする。Context Export/Import、ARC Bridge、MCP
   対応、API、Apple Health・Google Calendar等の外部データ取り込みを
   想定。Version10で最初の土台（ExternalSource/ExternalKnowledgeの
-  保存・検索・Bridge/Timeline連携）が完了。Healthデータ等の実データ
-  連携はこの土台に接続する入力源の1つとして、Version11以降で検討する。
+  保存・検索・Bridge/Timeline連携）、Version11でARCが実際に知識を
+  取り出せるQuery Layer（Knowledge Retrieval）が完了。Healthデータ
+  等の実データ連携・Version12「Decision Support」以降の検討は
+  引き続き先の課題とする。
 - **Phase 3（Version16〜25）Life Management** — 毎日Reflection・
   睡眠・勉強・食事・筋トレ等をチェックし、ARCが未達を指摘する
   （「今週筋トレありません」等）、より踏み込んだ管理機能。

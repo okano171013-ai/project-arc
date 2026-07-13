@@ -43,6 +43,8 @@ import { GetExternalKnowledgeUseCase } from '../../application/use-cases/externa
 import { UpdateExternalKnowledgeUseCase } from '../../application/use-cases/external-knowledge/UpdateExternalKnowledge.js';
 import { DeleteExternalKnowledgeUseCase } from '../../application/use-cases/external-knowledge/DeleteExternalKnowledge.js';
 import { SearchExternalKnowledgeUseCase } from '../../application/use-cases/external-knowledge/SearchExternalKnowledge.js';
+import { RetrieveKnowledgeUseCase } from '../../application/use-cases/knowledge-retrieval/RetrieveKnowledge.js';
+import { buildRetrievalContext } from '../../application/use-cases/knowledge-retrieval/BuildRetrievalContext.js';
 import type { ExternalKnowledgeStatus } from '../../domain/entities/ExternalKnowledge.js';
 
 import { JsonFileReflectionRepository } from '../../adapters/repositories/JsonFileReflectionRepository.js';
@@ -178,6 +180,10 @@ export function buildUseCases(options: BuildAppOptions = {}) {
     ),
     deleteExternalKnowledge: new DeleteExternalKnowledgeUseCase(externalKnowledgeRepository),
     searchExternalKnowledge: new SearchExternalKnowledgeUseCase(
+      externalKnowledgeRepository,
+      externalSourceRepository,
+    ),
+    retrieveKnowledge: new RetrieveKnowledgeUseCase(
       externalKnowledgeRepository,
       externalSourceRepository,
     ),
@@ -427,6 +433,31 @@ export function createApp(options: BuildAppOptions = {}) {
     route('DELETE', '/external-knowledge/:id', async (_req, params) => {
       await useCases.deleteExternalKnowledge.execute({ id: params.id! });
       return ok({ deleted: true });
+    }),
+
+    // --- Knowledge Retrieval（Version11） ---
+    // ARCが会話に必要な知識だけを取得するための入口。スコア順に
+    // ランキングしたKnowledge/Sourceに加え、Context Builderが組んだ
+    // 引用ブロック（contextフィールド）を返す。AIの呼び出しは行わない
+    // （ADR 0019・0021）。
+    route('POST', '/knowledge/retrieve', async (req) => {
+      const body = await readJsonBody(req);
+      const result = await useCases.retrieveKnowledge.execute({
+        query: body.query as string | undefined,
+        tags: body.tags as string[] | undefined,
+        topics: body.topics as string[] | undefined,
+        limit: body.limit as number | undefined,
+      });
+      return ok({
+        results: result.results.map((r) => ({
+          knowledge: serializeExternalKnowledge(r.knowledge),
+          source: r.source ? serializeExternalSource(r.source) : null,
+          score: r.score,
+          matchedIn: r.matchedIn,
+        })),
+        sources: result.sources.map(serializeExternalSource),
+        context: buildRetrievalContext(result.results),
+      });
     }),
 
     route('GET', '/external-sources', async () => {

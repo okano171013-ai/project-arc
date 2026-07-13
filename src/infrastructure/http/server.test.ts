@@ -333,4 +333,30 @@ describe('ARC Connector HTTP API', () => {
     expect(data.entries).toHaveLength(1);
     expect(data.entries[0]?.title).toBe('会社法メモ');
   });
+
+  it('POST /knowledge/retrieve ranks by relevance and returns a Context Builder block', async () => {
+    const source = await call('POST', '/external-sources', {
+      record: { sourceType: 'lecture', title: '〇〇先生の講義' },
+    });
+    const sourceId = (source.json.data as { source: { id: string } }).source.id;
+    await call('POST', '/external-knowledge', {
+      record: { sourceId, title: '行政法の処分性', content: '処分性は〜', capturedAt: '2026-07-13' },
+    });
+    await call('POST', '/external-knowledge', {
+      record: { title: '無関係な知識', content: '料理について', capturedAt: '2026-07-01' },
+    });
+
+    const { status, json } = await call('POST', '/knowledge/retrieve', { query: '処分性' });
+    expect(status).toBe(200);
+    const data = json.data as {
+      results: { knowledge: { record: { title: string } }; score: number }[];
+      sources: unknown[];
+      context: string;
+    };
+    expect(data.results).toHaveLength(1);
+    expect(data.results[0]?.knowledge.record.title).toBe('行政法の処分性');
+    expect(data.sources).toHaveLength(1);
+    expect(data.context).toContain('【External Brain】');
+    expect(data.context).toContain('処分性は〜');
+  });
 });
