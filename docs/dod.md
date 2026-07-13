@@ -141,6 +141,18 @@ challenge/capture、計17コマンド）を実際にサンドボックス上で�
 実機確認を完了した。生成されたJSONファイル・写真コピーの中身も
 目視確認済み。検証用データ・スクリプトは確認後に削除済み。
 
-Version6のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。
+## Version7完了チェックリスト
+
+- [x] `pnpm test` が全て緑（HTTP APIの結合テスト10件を含む、83件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `pnpm run api` が正常に起動し、`GET /health`が応答する（実機確認済み）
+- [x] `POST /reflection` `/skin` `/appearance` `/purchase` `/purchase/:id/start` `/purchase/:id/finish` `/capture/suggest` `/capture` が実際のHTTPリクエストで正常動作する（実機確認済み。Node `fetch`経由で日本語を含む往復も確認。curl経由ではGit Bash側の文字コード問題で日本語が化けることを確認したため、検証は`fetch`で行う運用とする）
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0008（ARC Connector）を記録済み
+- [x] `docs/reports/Version7_Report.md` を生成済み（13章構成）
+- [x] `docs/reports/Version7_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+Version7のDoDは達成済み（HTTP APIは`fetch`ベースの自動テストと実サーバーへの実リクエストで確認済み、対話式CLIのような実機確認待ちの制約がそもそも発生しない）。
 
 Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。

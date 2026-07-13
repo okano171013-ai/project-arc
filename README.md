@@ -17,13 +17,20 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 
-## Version6のスコープ（現在地）
+## Version7のスコープ（現在地）
 
-テーマ：「Smart Capture」— 写真・文章から、どのLogを更新すべきかの
-下書き提案を得られる仕組み。最終的な分類・解釈はOwner/ARCに残し、
-Project ARC（System）は下書き提案の提示と確定済み内容の書き込みに
-役割を限定している（ADR 0007、`docs/ai-roles.md`）。
+テーマ：「ARC Connector」— Project ARCをCLI専用のツールから、ARCが
+利用できるデータ基盤へ進化させる。「ARCが判断し、Project ARCが
+保存する」という責務分離をHTTP API化によって実現した（ADR 0008）。
+「Systemは判断しない」という制約（ADR 0007、`docs/ai-roles.md`）は
+API化後も維持している。
 
+- **ARC Connector**（`pnpm api`）— Application層をHTTP経由で呼び出せる
+  API。`POST /reflection` `/skin` `/purchase` `/purchase/:id/start`
+  `/purchase/:id/finish` `/appearance` `/capture/suggest` `/capture`、
+  `GET /health`。新規外部依存なし（Node標準の`http`のみ）。ローカル
+  専用（`127.0.0.1`のみ）・認証は未実装（将来リモート接続が必要に
+  なった時点で追加、ADR 0008参照）
 - **Smart Capture**（`pnpm capture`）— 文章・写真を入力すると、
   キーワード一致による下書き提案（例：「肌」→Skin Log、「買った」→
   Purchase Log）を表示。Ownerが確認・確定した分だけSkin Log/
@@ -60,7 +67,7 @@ Gemini/OpenAI連携、実際の画像解析・OCR、Decision Engine、通知機�
 pnpm install
 ```
 
-Version6はローカルJSONファイル + ローカルファイルコピーのみで動作する
+Version7はローカルJSONファイル + ローカルファイルコピーのみで動作する
 ため、追加のセットアップは不要です。Google Calendar/Tasks連携
 （Version3から継続）を使う場合は以下を参照してください。
 
@@ -125,6 +132,19 @@ pnpm run capture -- add            # Smart Capture：文章・写真から下書
 pnpm run capture -- list           # Capture Logの実行履歴を一覧表示
 
 pnpm run find <キーワード>          # MemoryとInventoryを横断検索
+
+pnpm run api                       # ARC Connector（HTTP API）を起動（既定ポート3939）
+```
+
+`pnpm run api`起動後の動作確認例（`curl`はGit Bash上で日本語を含む
+リクエストを送ると文字化けすることがあるため、日本語を含む検証には
+Node標準の`fetch`を使うことを推奨します）。
+
+```bash
+curl http://127.0.0.1:3939/health
+curl -X POST http://127.0.0.1:3939/skin \
+  -H "Content-Type: application/json" \
+  -d '{"record":{"date":"2026-07-13","redness":2}}'
 ```
 
 ## ディレクトリ構成
@@ -134,9 +154,11 @@ src/
 ├── domain/          # Entity・value object（外部依存なし）
 ├── application/      # ユースケース・ポート（Repository/Providerインターフェース）
 ├── adapters/          # 実装（JSONファイル / Supabase / Google API / ダミーProvider）
-├── infrastructure/    # CLI・DB・環境変数・Google認証・トークン暗号化・写真ファイル管理
+├── infrastructure/    # CLI・HTTP API（ARC Connector）・DB・環境変数・Google認証・
+│                       トークン暗号化・写真ファイル管理
 └── shared/            # 共通エラー・日付ユーティリティ等
 docs/                  # 思想・設計ドキュメント・セットアップ手順・報告書
+docs/handoff/          # ARC⇄Claude Codeの引き継ぎ（受信箱・送信箱）
 data/                  # ローカルの記録・写真（Git管理外、実行すると自動生成）
 ```
 

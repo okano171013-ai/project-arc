@@ -1,7 +1,7 @@
 {
   "name": "project-arc",
-  "version": "0.6.0",
-  "description": "Project ARC — AI Life Management OS (Version6: smart capture)",
+  "version": "0.7.0",
+  "description": "Project ARC — AI Life Management OS (Version7: ARC connector)",
   "type": "module",
   "private": true,
   "engines": {
@@ -19,6 +19,7 @@
     "purchase": "tsx src/infrastructure/cli/purchase.ts",
     "challenge": "tsx src/infrastructure/cli/challenge.ts",
     "capture": "tsx src/infrastructure/cli/capture.ts",
+    "api": "tsx src/infrastructure/http/server.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",
     "test:watch": "vitest",

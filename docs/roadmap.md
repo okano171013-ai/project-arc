@@ -105,6 +105,21 @@ Version6では以下を意図的に実装しない：Gemini/OpenAI連携、実�
 ADR 0002の再検討ポイント）。詳細は`docs/reports/Version6_Report.md`
 を参照。
 
+## Version7｜ARC Connector（完了）
+
+**ゴール**：Project ARCを「CLIアプリ」から「ARCが利用できるデータ
+基盤」へ進化させる。「ARCが判断し、Project ARCが保存する」という
+責務分離をHTTP API化によって正式に設計する（ARCブリーフ）。
+
+| 機能 | 内容 |
+|---|---|
+| ARC Connector（`pnpm api`） | Application層をHTTP経由で呼び出せるAPI。`POST /reflection` `/skin` `/purchase` `/purchase/:id/start` `/purchase/:id/finish` `/appearance` `/capture/suggest` `/capture`、`GET /health`。新規外部依存なし（Node標準`http`）。ローカル専用・認証未実装（ADR 0008） |
+| TimelineEntry型 | Version8のTimeline機能に向けたEntity設計のみ（永続化・UseCaseは未実装） |
+
+ADR 0007の「Systemは判断しない」という制約はAPI化後も維持した
+（`/capture`は確定済みdestinations必須、`/capture/suggest`は下書き
+提案のみ）。詳細は`docs/reports/Version7_Report.md`を参照。
+
 ---
 
 > 以降のVersion番号は、Version1着手時点で構想していた旧ロードマップ

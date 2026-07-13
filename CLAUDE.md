@@ -58,3 +58,13 @@ Node.jsの`readline/promises`は非TTY標準入力（パイプ・ファイル
 出力を検知してから次の回答を送る簡易自動化スクリプト（本セッションで
 使用したパターン、`child_process.spawn`ベース）を都度作成して駆動する。
 検証用データ・スクリプトは確認後に削除する。
+
+## HTTP API（ARC Connector）の検証について
+
+`pnpm run api`のHTTP APIはCLIと異なりTTYの制約を受けず、Node標準の
+`fetch`で完全に自動テストできる（Version7参照）。ただし**Git Bash上
+で`curl -d`に日本語を含むJSONを渡すと、シェル層の文字コード問題で
+文字化けする**（サーバー・curl自体の不具合ではない）。日本語を含む
+リクエストで動作確認する際は、`curl`ではなく`node -e "fetch(...)"`
+を使うこと。
+
