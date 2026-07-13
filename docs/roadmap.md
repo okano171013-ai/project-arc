@@ -154,10 +154,44 @@ ADR 0007/0008の「Systemは判断しない」という制約はBridge Layerで�
 
 ---
 
+## 長期ロードマップ 2.0（Version9完了時、ARC提案）
+
+Version9完了を受け、ARCから中長期ロードマップの組み替え提案があった
+（`docs/handoff/archive/`参照）。Version10の正式な指示書はまだ届いて
+いないため、以下は方向性の記録であり、確定した実装計画ではない
+（Principle 9: 段階的拡張、Principle 1: 最終決定はOwner）。
+
+- **Phase 1（Version1〜9）Data Foundation** — 完了。人生の事実を
+  保存できる基盤（Reflection/Timeline/Bridge Layer/Third Person
+  Evaluation/Smart Capture/ARC Connector）。
+- **Phase 2（Version10〜15）External Brain** — 「ARCがProject ARCを
+  読む」ことを最優先にする。Context Export/Import、ARC Bridge、MCP
+  対応、API、Apple Health・Google Calendar等の外部データ取り込みを
+  想定。ARC提案により、Version10のテーマは「Health Integration」
+  単体ではなく「External Brain」に広げる方向で検討中（Health
+  データはExternal Brainへ流れ込む入力源の1つと位置づける）。
+- **Phase 3（Version16〜25）Life Management** — 毎日Reflection・
+  睡眠・勉強・食事・筋トレ等をチェックし、ARCが未達を指摘する
+  （「今週筋トレありません」等）、より踏み込んだ管理機能。
+- **Phase 4 Life Analytics** — 記録間の相関分析（例：睡眠低下と
+  肌荒れの関係）。
+- **Phase 5 Prediction** — 記録の傾向からの予測（例：睡眠不足の
+  継続から体調悪化を予測）。
+- **Phase 6 Life OS** — 統合。
+
+Phase 3以降は判断・評価・介入の度合いが強まるため、着手時に
+Principle 1/2/5・`docs/ai-roles.md`との整合性を都度確認すること
+（Systemは判断しない、という原則がどこまで・どう適用されるかは
+Phaseが進むほど慎重な設計判断を要する）。
+
+---
+
 > 以降のVersion番号は、Version1着手時点で構想していた旧ロードマップ
 > （下記）であり、実際の開発順序（上記）とは一致しなくなっている。
 > 「Version5｜司法試験管理」等の記述は現時点では未着手であり、
 > 実施順は今後Owner/ARCと都度合意する（Principle 9: 段階的拡張）。
+> 上記「長期ロードマップ2.0」の方が新しいが、これも未確定の提案
+> である点に注意。
 
 ## Version2｜外部接続
 
