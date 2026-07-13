@@ -19,6 +19,7 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
   長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
+- [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
 ## Version9のスコープ（現在地）
 
