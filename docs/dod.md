@@ -115,4 +115,17 @@ Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる�
 
 Version5のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。
 
+## Version6完了チェックリスト
+
+- [x] `pnpm test` が全て緑（Capture/RuleBasedCaptureClassifierを含む、73件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `pnpm capture -- add/list` が正常動作する（ユースケース層はテストで担保。実ファイルI/Oでの結合スモークテストも実施済み。対話式CLIのサンドボックス実機確認は未実施 — Version3〜6で既知の制約、Owner環境での確認を推奨）
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0007（Smart CaptureにおけるSystem/ARCの責務分担）を記録済み
+- [x] `docs/reports/Version6_Report.md` を生成済み（13章構成）
+- [x] `docs/reports/Version6_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+Version6のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。
+
 Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。

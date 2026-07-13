@@ -1,7 +1,7 @@
 {
   "name": "project-arc",
-  "version": "0.5.0",
-  "description": "Project ARC — AI Life Management OS (Version5: skin/purchase/challenge log)",
+  "version": "0.6.0",
+  "description": "Project ARC — AI Life Management OS (Version6: smart capture)",
   "type": "module",
   "private": true,
   "engines": {
@@ -18,6 +18,7 @@
     "skin": "tsx src/infrastructure/cli/skin.ts",
     "purchase": "tsx src/infrastructure/cli/purchase.ts",
     "challenge": "tsx src/infrastructure/cli/challenge.ts",
+    "capture": "tsx src/infrastructure/cli/capture.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",
     "test:watch": "vitest",

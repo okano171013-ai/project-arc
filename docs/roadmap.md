@@ -82,12 +82,28 @@ Version5では以下を意図的に実装しない：Gemini/OpenAI連携、
 Decision Engine、通知機能、画像解析AI（Version6以降）。
 詳細は `docs/reports/Version5_Report.md` を参照。
 
-## Version6｜Smart Capture（次のVersion）
+## Version6｜Smart Capture（完了）
 
-**ゴール**：「記録して」と言わなくても、ARCが写真・文章から
-どのLogを更新すべきか自動で判断できる仕組みを作る（Owner・ARC
-合意のテーマ）。OCRや画像認識の高度な実装より、判断ロジックの
+**ゴール**：「記録して」と言わなくても、写真・文章からどのLogを
+更新すべきかの下書き提案が得られる仕組みを作る（Owner・ARC合意の
+テーマ）。OCRや画像認識の高度な実装より、判断ロジックの
 Architecture（Entity/UseCase/Repository設計）を優先する。
+
+設計着手時に`docs/ai-roles.md`（Principle 1/2/5/10）を確認した結果、
+「Systemは判断しない、忠実に記録するだけ」という原則との整合性を
+取る必要があった（ADR 0007）。最終的な分類・解釈はOwner/ARCに残し、
+Project ARC（System）は(1)キーワードによる機械的な下書き提案の提示、
+(2)Owner/ARCが確定した振り分け先への忠実な書き込み、の2つに役割を
+限定する設計とした。
+
+| 機能 | 内容 |
+|---|---|
+| Smart Capture（`pnpm capture`） | 文章・写真から、下書き提案（キーワード一致）を表示 → Owner確認 → SkinLog/PurchaseLog/ChallengeLog/AppearanceLogへ書き込み。書き込み履歴はCapture Logとして監査可能（ADR 0007） |
+
+Version6では以下を意図的に実装しない：Gemini/OpenAI連携、実際の
+画像解析・OCR、Decision Engine、通知機能（すべて将来のVersion、
+ADR 0002の再検討ポイント）。詳細は`docs/reports/Version6_Report.md`
+を参照。
 
 ---
 

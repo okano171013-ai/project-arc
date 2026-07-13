@@ -17,11 +17,18 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 
-## Version5のスコープ（現在地）
+## Version6のスコープ（現在地）
 
-テーマ：「Skin Log / Purchase Log / Challenge Log」— Version4の
-Memory/Appearance Logの土台の上に、より粒度の細かい記録先を追加。
+テーマ：「Smart Capture」— 写真・文章から、どのLogを更新すべきかの
+下書き提案を得られる仕組み。最終的な分類・解釈はOwner/ARCに残し、
+Project ARC（System）は下書き提案の提示と確定済み内容の書き込みに
+役割を限定している（ADR 0007、`docs/ai-roles.md`）。
 
+- **Smart Capture**（`pnpm capture`）— 文章・写真を入力すると、
+  キーワード一致による下書き提案（例：「肌」→Skin Log、「買った」→
+  Purchase Log）を表示。Ownerが確認・確定した分だけSkin Log/
+  Purchase Log/Challenge Log/Appearance Logへ書き込む。書き込み
+  履歴はCapture Logとして`list`で確認できる
 - **ARC Memory**（`pnpm memory`）— 持ち物・目標・好み・学歴・
   キャリア・健康・お金・人間関係等、長期間保持する知識を
   追加・一覧・更新・削除。Reflection（その日の記録）とは
@@ -44,8 +51,8 @@ Memory/Appearance Logの土台の上に、より粒度の細かい記録先を�
   Appearance Logは検索対象外、ADR 0005参照）
 - 永続化はローカルJSONファイル（`data/`配下、Git管理外）— ADR 0003参照
 
-Gemini/OpenAI連携、Decision Engine、通知機能、画像解析AIはVersion6
-以降に延期しています（`docs/roadmap.md`参照）。
+Gemini/OpenAI連携、実際の画像解析・OCR、Decision Engine、通知機能は
+将来のVersionに延期しています（`docs/roadmap.md`参照）。
 
 ## セットアップ
 
@@ -53,7 +60,7 @@ Gemini/OpenAI連携、Decision Engine、通知機能、画像解析AIはVersion6
 pnpm install
 ```
 
-Version5はローカルJSONファイル + ローカルファイルコピーのみで動作する
+Version6はローカルJSONファイル + ローカルファイルコピーのみで動作する
 ため、追加のセットアップは不要です。Google Calendar/Tasks連携
 （Version3から継続）を使う場合は以下を参照してください。
 
@@ -70,8 +77,8 @@ supabase db reset
 ## よく使うコマンド
 
 `test`・`typecheck`等は問題ありませんが、`morning`/`reflect`/`inventory`/
-`memory`/`appearance`/`skin`/`purchase`/`challenge`/`find`のような
-独自コマンドは、pnpm組み込みの
+`memory`/`appearance`/`skin`/`purchase`/`challenge`/`capture`/`find`
+のような独自コマンドは、pnpm組み込みの
 コマンド名と偶然一致すると意図せず別の動作をしてしまうことが実機で
 判明しました（`search`→`find`への変更後も再発）。**確実に動かすため、
 すべて`pnpm run`を付けて実行してください。**
@@ -113,6 +120,9 @@ pnpm run purchase -- list          # ステータス別（未使用/使用中/�
 
 pnpm run challenge -- add          # Challenge Logを追加（初めて挑戦したこと）
 pnpm run challenge -- list         # Challenge Logを一覧表示
+
+pnpm run capture -- add            # Smart Capture：文章・写真から下書き提案 → 確認 → 記録
+pnpm run capture -- list           # Capture Logの実行履歴を一覧表示
 
 pnpm run find <キーワード>          # MemoryとInventoryを横断検索
 ```
