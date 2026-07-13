@@ -25,6 +25,8 @@ import { FinishPurchaseUseCase } from '../../application/use-cases/purchase/Fini
 import { AddAppearanceLogUseCase } from '../../application/use-cases/appearance/AddAppearanceLog.js';
 import { SuggestCaptureDestinationsUseCase } from '../../application/use-cases/capture/SuggestCaptureDestinations.js';
 import { RecordCaptureUseCase } from '../../application/use-cases/capture/RecordCapture.js';
+import { GetTimelineUseCase } from '../../application/use-cases/timeline/GetTimeline.js';
+import type { TimelineSource } from '../../domain/value-objects/TimelineEntry.js';
 
 import { JsonFileReflectionRepository } from '../../adapters/repositories/JsonFileReflectionRepository.js';
 import { JsonFileSkinLogRepository } from '../../adapters/repositories/JsonFileSkinLogRepository.js';
@@ -85,6 +87,14 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       purchaseLogRepository,
       challengeLogRepository,
       appearanceLogRepository,
+    ),
+    getTimeline: new GetTimelineUseCase(
+      reflectionRepository,
+      appearanceLogRepository,
+      skinLogRepository,
+      purchaseLogRepository,
+      challengeLogRepository,
+      captureRepository,
     ),
   };
 }
@@ -153,6 +163,16 @@ export function createApp(options: BuildAppOptions = {}) {
 
   const routes: Route[] = [
     route('GET', '/health', async () => ok({ service: 'project-arc', status: 'ok' })),
+
+    route('GET', '/timeline', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const since = url.searchParams.get('since') ?? undefined;
+      const source = (url.searchParams.get('source') ?? undefined) as TimelineSource | undefined;
+      const limitRaw = url.searchParams.get('limit');
+      const limit = limitRaw ? Number(limitRaw) : undefined;
+      const result = await useCases.getTimeline.execute({ since, source, limit });
+      return ok({ entries: result.entries });
+    }),
 
     route('POST', '/reflection', async (req) => {
       const body = await readJsonBody(req);

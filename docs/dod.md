@@ -155,4 +155,19 @@ challenge/capture、計17コマンド）を実際にサンドボックス上で�
 
 Version7のDoDは達成済み（HTTP APIは`fetch`ベースの自動テストと実サーバーへの実リクエストで確認済み、対話式CLIのような実機確認待ちの制約がそもそも発生しない）。
 
+## Version8完了チェックリスト
+
+- [x] `pnpm test` が全て緑（Timelineの結合テストを含む、90件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `pnpm run timeline`（`--since=` `--source=`含む）が正常動作する（実機確認済み。API経由で実データを投入し、CLI・`GET /timeline`両方で日本語含め正しく表示されることを確認）
+- [x] `GET /timeline` がHTTP経由で正常動作する（実機確認済み）
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0009（Timelineの対象範囲とデータ取得方法）を記録済み
+- [x] `docs/reports/Version8_Report.md` を生成済み（13章構成）
+- [x] `docs/reports/Version8_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+- [x] `docs/architecture-diagram.md`（Project ARCアーキテクチャ図）を生成済み
+
+Version8のDoDは達成済み（Timeline CLIは対話式ではないため実データで直接確認、HTTP APIも実サーバーへの実リクエストで確認済み）。
+
 Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。

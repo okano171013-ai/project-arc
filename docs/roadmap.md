@@ -120,6 +120,21 @@ ADR 0007の「Systemは判断しない」という制約はAPI化後も維持し
 （`/capture`は確定済みdestinations必須、`/capture/suggest`は下書き
 提案のみ）。詳細は`docs/reports/Version7_Report.md`を参照。
 
+## Version8｜Timeline（完了）
+
+**ゴール**：Version7で型のみ設計した`TimelineEntry`を実装し、
+各Logを横断した時系列一覧を提供する。
+
+| 機能 | 内容 |
+|---|---|
+| Timeline（`pnpm timeline`、`GET /timeline`） | Reflection/AppearanceLog/SkinLog/PurchaseLog/ChallengeLog/Captureの6Logを横断して日付降順で一覧表示。`--since=` `--source=` `--limit=`で絞り込み可能。Memory/Life Inventoryは対象外（ADR 0009） |
+
+Timeline自体は各Logの記録を集めて並べ替えるだけで、「何が重要か」の
+判断・要約は行わない（ADR 0007/0008から継続する方針）。詳細は
+`docs/reports/Version8_Report.md`、
+[`docs/architecture-diagram.md`](./architecture-diagram.md)（Owner
+提案によるアーキテクチャ図）を参照。
+
 ---
 
 > 以降のVersion番号は、Version1着手時点で構想していた旧ロードマップ

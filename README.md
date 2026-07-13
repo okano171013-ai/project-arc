@@ -17,20 +17,22 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 
-## Version7のスコープ（現在地）
+## Version8のスコープ（現在地）
 
-テーマ：「ARC Connector」— Project ARCをCLI専用のツールから、ARCが
-利用できるデータ基盤へ進化させる。「ARCが判断し、Project ARCが
-保存する」という責務分離をHTTP API化によって実現した（ADR 0008）。
-「Systemは判断しない」という制約（ADR 0007、`docs/ai-roles.md`）は
-API化後も維持している。
+テーマ：「Timeline」— Version7で型のみ設計した`TimelineEntry`を
+実装し、各Logを横断した時系列一覧を提供する（ADR 0009）。
+アーキテクチャ全体像は[`docs/architecture-diagram.md`](./docs/architecture-diagram.md)を参照。
 
+- **Timeline**（`pnpm timeline`、`GET /timeline`）— Reflection/
+  AppearanceLog/SkinLog/PurchaseLog/ChallengeLog/Captureの6Logを
+  横断して日付降順で一覧表示。`--since=` `--source=` `--limit=`で
+  絞り込み可能。Memory/Life Inventoryは対象外（ADR 0009）
 - **ARC Connector**（`pnpm api`）— Application層をHTTP経由で呼び出せる
   API。`POST /reflection` `/skin` `/purchase` `/purchase/:id/start`
   `/purchase/:id/finish` `/appearance` `/capture/suggest` `/capture`、
-  `GET /health`。新規外部依存なし（Node標準の`http`のみ）。ローカル
-  専用（`127.0.0.1`のみ）・認証は未実装（将来リモート接続が必要に
-  なった時点で追加、ADR 0008参照）
+  `GET /health` `/timeline`。新規外部依存なし（Node標準の`http`のみ）。
+  ローカル専用（`127.0.0.1`のみ）・認証は未実装（将来リモート接続が
+  必要になった時点で追加、ADR 0008参照）
 - **Smart Capture**（`pnpm capture`）— 文章・写真を入力すると、
   キーワード一致による下書き提案（例：「肌」→Skin Log、「買った」→
   Purchase Log）を表示。Ownerが確認・確定した分だけSkin Log/
@@ -67,7 +69,7 @@ Gemini/OpenAI連携、実際の画像解析・OCR、Decision Engine、通知機�
 pnpm install
 ```
 
-Version7はローカルJSONファイル + ローカルファイルコピーのみで動作する
+Version8はローカルJSONファイル + ローカルファイルコピーのみで動作する
 ため、追加のセットアップは不要です。Google Calendar/Tasks連携
 （Version3から継続）を使う場合は以下を参照してください。
 
@@ -84,8 +86,8 @@ supabase db reset
 ## よく使うコマンド
 
 `test`・`typecheck`等は問題ありませんが、`morning`/`reflect`/`inventory`/
-`memory`/`appearance`/`skin`/`purchase`/`challenge`/`capture`/`find`
-のような独自コマンドは、pnpm組み込みの
+`memory`/`appearance`/`skin`/`purchase`/`challenge`/`capture`/
+`timeline`/`find`のような独自コマンドは、pnpm組み込みの
 コマンド名と偶然一致すると意図せず別の動作をしてしまうことが実機で
 判明しました（`search`→`find`への変更後も再発）。**確実に動かすため、
 すべて`pnpm run`を付けて実行してください。**
@@ -132,6 +134,10 @@ pnpm run capture -- add            # Smart Capture：文章・写真から下書
 pnpm run capture -- list           # Capture Logの実行履歴を一覧表示
 
 pnpm run find <キーワード>          # MemoryとInventoryを横断検索
+
+pnpm run timeline                  # 各Logを横断した時系列一覧
+pnpm run timeline --since=2026-07-01  # 日付で絞り込み
+pnpm run timeline --source=SkinLog    # ソースで絞り込み
 
 pnpm run api                       # ARC Connector（HTTP API）を起動（既定ポート3939）
 ```

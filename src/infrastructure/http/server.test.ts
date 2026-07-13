@@ -107,6 +107,35 @@ describe('ARC Connector HTTP API', () => {
     );
   });
 
+  it('GET /timeline merges entries from multiple Logs sorted by date descending', async () => {
+    await call('POST', '/skin', { record: { date: '2026-07-01', redness: 2 } });
+    // /captureはChallengeLogへの書き込みと、Capture自体の監査記録の
+    // 2件をどちらも同じcapturedAtで作るため、Timelineにも2件現れる。
+    await call('POST', '/capture', {
+      text: '赤福を初めて食べた',
+      capturedAt: '2026-07-10',
+      destinations: [{ logType: 'ChallengeLog', fields: { title: '赤福' } }],
+    });
+
+    const { status, json } = await call('GET', '/timeline');
+    expect(status).toBe(200);
+    const data = json.data as { entries: { date: string; source: string }[] };
+    expect(data.entries.map((e) => e.date)).toEqual(['2026-07-10', '2026-07-10', '2026-07-01']);
+    expect(data.entries.map((e) => e.source).sort()).toEqual(
+      ['Capture', 'ChallengeLog', 'SkinLog'].sort(),
+    );
+  });
+
+  it('GET /timeline?source= filters to a single source', async () => {
+    await call('POST', '/skin', { record: { date: '2026-07-01', redness: 2 } });
+    await call('POST', '/appearance', { record: { date: '2026-07-02', overallRating: 4 } });
+
+    const { json } = await call('GET', '/timeline?source=SkinLog');
+    const data = json.data as { entries: { source: string }[] };
+    expect(data.entries).toHaveLength(1);
+    expect(data.entries[0]?.source).toBe('SkinLog');
+  });
+
   it('POST /capture/suggest returns suggestions without writing anything', async () => {
     const { status, json } = await call('POST', '/capture/suggest', {
       text: 'メラノCC買った',
