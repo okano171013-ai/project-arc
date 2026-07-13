@@ -241,4 +241,28 @@ Version11のDoDは達成済み（非対話CLI・HTTP APIは実リクエスト/�
 
 Version12のDoDは達成済み（対話式・非対話式CLI、HTTP APIともに実機確認済み）。
 
+## Version13完了チェックリスト
+
+- [x] `pnpm test` が全て緑（IntentDetector/ConversationGatewayのテストを含む、181件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `pnpm conversation -- "<質問>"`（直接指定）・`pnpm conversation`（対話式、擬似expectドライバで駆動）が正常動作する（実機確認済み）
+- [x] ブリーフの4つの実機確認例（前に保存した行政法の記事は？／今日は何を勉強する？／こんにちは／この参考書買う？）全てでConversationContextが正しいIntent（Retrieval/Decision/None）で生成されることを確認済み
+- [x] `POST /conversation/context` がHTTP経由で正常動作する（実機確認済み、日本語データの往復含む）
+- [x] Context Injectionが【Retrieved Knowledge】【Decision Context】【Sources】の3セクションのみで構成され、「【ARC】」に相当する解釈・結論を一切含まないことを確認済み
+- [x] limitが必ず指定され、全件検索が行われないことを確認済み（実機確認・テスト両方）
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0026〜0029（ConversationGatewayのApplication層配置・ConversationContextをVOにした理由・「Systemは判断しない」との整合性・IntentDetectorのパターンマッチング設計）を記録済み
+- [x] `docs/architecture-diagram.md` を更新済み
+- [x] `docs/reports/Version13_Report.md` を生成済み（14章構成）
+- [x] `docs/reports/Version13_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+実機確認の過程で、RetrieveKnowledgeUseCaseへ質問文をそのまま
+`query`として渡すと、フィールド側が質問文全体を部分文字列として
+含むことが稀なため実質的にヒットしないバグを発見・修正した
+（既存topicとの逆方向一致をtopicsフィルタとして併用する形に修正、
+詳細は`docs/reports/Version13_Report.md`7章参照）。
+
+Version13のDoDは達成済み（対話式・非対話式CLI、HTTP APIともに実機確認済み）。
+
 Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。

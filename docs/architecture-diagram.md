@@ -1,13 +1,14 @@
 # Project ARC アーキテクチャ図
 
 Version7完了時にOwnerから提案された、レイヤー構成・データの流れ・
-ARCとの接続点を示す図（2026年7月、Version12時点の実装を反映。
+ARCとの接続点を示す図（2026年7月、Version13時点の実装を反映。
 Version9でBridge Layer・ThirdPersonEvaluation、Version10で
 External Brain（ExternalSource/ExternalKnowledge）、Version11で
 Knowledge Retrieval（RetrieveKnowledgeUseCase・Context Builder）、
 Version12でDecision Support（DecisionEngineUseCase・
-DecisionContext）を追加）。文章での説明は
-[`docs/architecture.md`](./architecture.md)を参照。
+DecisionContext）、Version13でConversational Integration
+（ConversationGatewayUseCase・ConversationContext）を追加）。
+文章での説明は[`docs/architecture.md`](./architecture.md)を参照。
 
 ---
 
@@ -25,13 +26,14 @@ graph TB
         Bridge["Bridge Layer\nImportLogsUseCase / ExportLogsUseCase\n(Version9, ADR 0010)"]
         Retrieval["Knowledge Retrieval\nRetrieveKnowledgeUseCase (QueryEngine) /\nbuildRetrievalContext (Context Builder)\n(Version11, ADR 0019-0021)"]
         Decision["Decision Support\nDecisionEngineUseCase (CandidateBuilder /\nEvidenceCollector / ComparisonBuilder)\n(Version12, ADR 0022-0025)"]
+        Conversation["Conversational Integration\nConversationGatewayUseCase (IntentDetector /\nTool Selection) / buildConversationContextText\n(Version13, ADR 0026-0029)"]
         Serializers["serializers.ts\n(Entity→プレーンオブジェクト、CLI/HTTP共有)"]
         Ports["Ports (interfaces)\n*Repository, CaptureClassifier,\nCalendarProvider, TaskProvider, ..."]
     end
 
     subgraph Domain["Domain層（外部依存なし）"]
         Entities["Entities\nReflection, MemoryEntry, InventoryItem,\nAppearanceLog, SkinLog, PurchaseLog,\nChallengeLog, Capture, ThirdPersonEvaluation,\nExternalSource, ExternalKnowledge (Version10)"]
-        VO["Value Objects\nTimelineEntry, CalendarEvent,\nDailyPlan, TaskItem,\nDecisionContext (Version12, ADR 0024)"]
+        VO["Value Objects\nTimelineEntry, CalendarEvent,\nDailyPlan, TaskItem,\nDecisionContext (Version12, ADR 0024),\nConversationContext (Version13, ADR 0027)"]
     end
 
     subgraph Adapters["Adapters層"]
@@ -44,10 +46,12 @@ graph TB
     CLI --> Bridge
     CLI --> Retrieval
     CLI --> Decision
+    CLI --> Conversation
     HTTP --> UC
     HTTP --> Bridge
     HTTP --> Retrieval
     HTTP --> Decision
+    HTTP --> Conversation
     Bridge --> UC
     Bridge --> Serializers
     Retrieval --> Ports
@@ -56,6 +60,10 @@ graph TB
     Decision --> Ports
     Decision --> VO
     Decision --> Serializers
+    Conversation --> Retrieval
+    Conversation --> Decision
+    Conversation --> VO
+    Conversation --> Serializers
     UC --> Ports
     UC --> Entities
     Ports -.実装.-> JsonRepo
@@ -76,7 +84,12 @@ ExternalSourceRepositoryをそのまま使い、新しい永続化層は追加�
 （Version12）はRetrieveKnowledgeUseCaseをそのまま再利用し、新しい
 検索ロジックは持たない——DecisionContextはRepositoryを持たない
 Value Object（永続化しない一時生成物、ADR 0024）であり、Bridgeの
-対象にも含めない（ADR 0025）。
+対象にも含めない（ADR 0025）。Conversational Integration
+（Version13）のConversationGatewayUseCaseは、RetrieveKnowledgeUseCase
+とDecisionEngineUseCaseの「どちらを呼ぶか」を選ぶだけで、両者の
+内部ロジックには一切手を入れない（ADR 0026・0028）。CLI/HTTP APIの
+どちらからもConversationGatewayUseCase 1つを経由する、という点で
+ARC Connectorの唯一の入口として機能する。
 
 ---
 
@@ -122,16 +135,20 @@ sequenceDiagram
 ```
 
 **Systemは判断しない**（`docs/ai-roles.md`、ADR 0007/0008/0010/0012/
-0021/0023）：UseCase層・Bridge Layerはどのログに書くべきかを判断せず、
-確定済みの入力を忠実に保存するだけ。External Brainのconfidence・
-重複検知も同様に、Systemは材料を示すだけでOwner/ARCが最終判断する
-（ADR 0012）。Knowledge Retrieval（Version11）のContext Builderも
-「【External Brain】」の引用ブロックまでしか生成せず、そこから
-先の解釈・結論（「【ARC】」部分）はARCが会話の中で行う（ADR 0021）。
-Decision Support（Version12）のDecisionEngineも、選択肢の整理・
-根拠からのメリット/デメリット抽出までに留め、優先順位付けや結論は
-生成しない（ADR 0023）。判断・解釈は常にARCまたはOwnerの側で
-行われる。
+0021/0023/0028）：UseCase層・Bridge Layerはどのログに書くべきかを
+判断せず、確定済みの入力を忠実に保存するだけ。External Brainの
+confidence・重複検知も同様に、Systemは材料を示すだけでOwner/ARCが
+最終判断する（ADR 0012）。Knowledge Retrieval（Version11）の
+Context Builderも「【External Brain】」の引用ブロックまでしか生成
+せず、そこから先の解釈・結論（「【ARC】」部分）はARCが会話の中で
+行う（ADR 0021）。Decision Support（Version12）のDecisionEngineも、
+選択肢の整理・根拠からのメリット/デメリット抽出までに留め、優先
+順位付けや結論は生成しない（ADR 0023）。Conversational Integration
+（Version13）のConversationGatewayも、Intent判定（どのツールを
+呼ぶか）だけを行い、回答内容の生成は一切しない——Context Injection
+も同じ3セクション構造（【Retrieved Knowledge】【Decision Context】
+【Sources】）までに留める（ADR 0028）。判断・解釈は常にARCまたは
+Ownerの側で行われる。
 
 ---
 
@@ -176,12 +193,13 @@ Captureを除く10種別（上段7つ + Memory + Inventory + ExternalSource）
 
 ## 4. ARCとの接続点（現状と将来）
 
-| 接続点 | 現状（2026年7月、Version12時点） | 将来 |
+| 接続点 | 現状（2026年7月、Version13時点） | 将来 |
 |---|---|---|
 | 指示の受け渡し | `docs/handoff/ARC_INBOX.md`にOwnerが手動で貼り付け（テキスト・PDF両対応） | 変更なし（人間による意思決定の窓口として維持、Principle 1） |
 | フィードバックの受け渡し | `docs/reports/VersionN_ARC_Feedback.md`をOwnerが手動でコピー | 変更なし |
 | データの一括受け渡し | `pnpm bridge -- import`でOwnerがARCの提案をJSONファイル経由で一括登録（ExternalSource/ExternalKnowledge含む）。`GET /bridge/export`で全データをJSON取得可能 | ARCが直接`POST /bridge/import`を呼べるようになる可能性（認証の実装が前提、ADR 0008/0010） |
 | 知識の取得 | `POST /knowledge/retrieve`でquery/tags/topicsを渡すと、スコア順のKnowledge/Sourcesと引用ブロック（context）が返る（Version11、Owner経由で手動呼び出し） | ARCが直接`POST /knowledge/retrieve`を呼び、会話に必要な知識だけをその場で取得できるようになる可能性（認証実装が前提） |
 | 意思決定支援 | `POST /decision/support`でquestionを渡すと、選択肢・比較・根拠を整理したDecisionContextが返る（Version12、Owner経由で手動呼び出し）。ARCの解釈・優先順位提案はDecisionContextを受け取ったARC自身が会話の中で書く | ARCが直接`POST /decision/support`を呼び、DecisionContextを踏まえた比較・提案をその場で会話に組み込めるようになる可能性（認証実装が前提） |
+| 会話への統合 | `POST /conversation/context`でquestionを渡すと、Intent判定に応じてRetrieve/Decisionへ自動的に振り分けられたConversationContextが返る（Version13、Owner経由で手動呼び出し）。Ownerが結果をコピペしてARCへ渡す運用は変わらない | ARCが直接`POST /conversation/context`を呼べば、Intent判定からツール呼び出しまでを1リクエストで済ませられる（認証実装が前提、Version13時点でARC Connector自体の認証方式は変更なし） |
 | 個別の読み書き | ARCから直接は不可能。ARC ConnectorはOwnerがCLIまたは`curl`/`fetch`で手動操作する前提（`/external-sources`・`/external-knowledge`含む） | ChatGPT Actions・MCP等でARCが直接`POST /skin`等を呼べるようになる可能性 |
-| 判断・分類 | 常にARCまたはOwner（Systemは判断しない、ADR 0007/0008/0010/0012/0021/0023） | 変わらない（Project ARCの根幹原則、`docs/ai-roles.md`） |
+| 判断・分類 | 常にARCまたはOwner（Systemは判断しない、ADR 0007/0008/0010/0012/0021/0023/0028） | 変わらない（Project ARCの根幹原則、`docs/ai-roles.md`） |

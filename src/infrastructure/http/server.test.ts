@@ -395,4 +395,33 @@ describe('ARC Connector HTTP API', () => {
     expect(data.decisionContext.comparisons).toHaveLength(2);
     expect(data.decisionContext.pointsForOwnerToDecide[0]).toContain('最終的な判断はOwner自身が行ってください');
   });
+
+  it('POST /conversation/context routes by Intent (Retrieval/Decision/None) and never returns ARC-authored text', async () => {
+    await call('POST', '/external-knowledge', {
+      record: {
+        title: '会社法メモ',
+        content: '招集通知期間の改正について',
+        capturedAt: '2026-07-01',
+        topics: ['会社法'],
+      },
+    });
+
+    const retrieval = await call('POST', '/conversation/context', {
+      question: '前に保存した会社法のメモは？',
+    });
+    expect(retrieval.status).toBe(200);
+    const retrievalData = retrieval.json.data as {
+      conversationContext: { intent: string; retrievedKnowledge: unknown[]; decisionContext: unknown };
+    };
+    expect(retrievalData.conversationContext.intent).toBe('Retrieval');
+    expect(retrievalData.conversationContext.retrievedKnowledge).toHaveLength(1);
+    expect(retrievalData.conversationContext.decisionContext).toBeNull();
+
+    const none = await call('POST', '/conversation/context', { question: 'こんにちは' });
+    const noneData = none.json.data as {
+      conversationContext: { intent: string; warnings: string[] };
+    };
+    expect(noneData.conversationContext.intent).toBe('None');
+    expect(noneData.conversationContext.warnings.length).toBeGreaterThan(0);
+  });
 });

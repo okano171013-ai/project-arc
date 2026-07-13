@@ -15,21 +15,29 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/ai-roles.md`](./docs/ai-roles.md) — 人間・ARC・Gemini・Claude Code・
   システム自体の責務分担
 - [`docs/architecture.md`](./docs/architecture.md) — 技術設計
-- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜12のロードマップ・
+- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜13のロードマップ・
   長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version12のスコープ（現在地）
+## Version13のスコープ（現在地）
 
-テーマ：「Decision Support」— Version11で取得できるようになった
-External Brainの知識を使い、選択肢の整理・比較材料の提示という形で
-Ownerの意思決定を支援する（長期ロードマップ2.0 Phase 2の続き）。
-「知識を持つ」から「より良い判断を支援する」へ。アーキテクチャ
-全体像は[`docs/architecture-diagram.md`](./docs/architecture-diagram.md)
-を参照。
+テーマ：「Conversational Integration」— 「Owner→CLI→コピペ→ARC」
+という手作業の橋を、1回の質問応答で完結する形に近づける（長期
+ロードマップ2.0 Phase 2の続き）。「Project ARCを、初めて日常会話の
+中で自然に使えるようにする。」アーキテクチャ全体像は
+[`docs/architecture-diagram.md`](./docs/architecture-diagram.md)を参照。
 
+- **Conversational Integration**（`pnpm conversation`、`POST
+  /conversation/context`）— 質問文をIntent（Retrieval/Decision/
+  None）へ機械的パターン一致で分類し（ADR 0029）、対応するツール
+  （`RetrieveKnowledgeUseCase`または`DecisionEngineUseCase`）を
+  呼び出して`ConversationContext`を生成する。回答内容の生成・優先
+  順位の提案は行わない——【Retrieved Knowledge】【Decision
+  Context】【Sources】の3セクションまでで、「【ARC】」に相当する
+  解釈・結論はARC自身が書く（ADR 0028）。会話自体は保存しない
+  （ADR 0027）
 - **Decision Support**（`pnpm decision`、`POST /decision/support`）—
   質問文から選択肢（candidates、優先順位なし）を機械的パターン一致
   で導き（ADR 0022）、各候補についてExternal Brainの根拠・メリット・
@@ -67,12 +75,13 @@ Ownerの意思決定を支援する（長期ロードマップ2.0 Phase 2の続�
   API。`POST /reflection` `/skin` `/purchase` `/purchase/:id/start`
   `/purchase/:id/finish` `/appearance` `/evaluation` `/capture/suggest`
   `/capture` `/bridge/import` `/external-sources` `/external-knowledge`
-  `/knowledge/retrieve` `/decision/support`、`GET /health` `/timeline`
-  `/bridge/export` `/external-sources` `/external-knowledge`
-  `/external-knowledge/search`、`PATCH`/`DELETE`も`/external-sources/:id`
-  `/external-knowledge/:id`に対応。新規外部依存なし（Node標準の
-  `http`のみ）。ローカル専用（`127.0.0.1`のみ）・認証は未実装
-  （将来リモート接続が必要になった時点で追加、ADR 0008参照）
+  `/knowledge/retrieve` `/decision/support` `/conversation/context`、
+  `GET /health` `/timeline` `/bridge/export` `/external-sources`
+  `/external-knowledge` `/external-knowledge/search`、`PATCH`/`DELETE`
+  も`/external-sources/:id` `/external-knowledge/:id`に対応。新規
+  外部依存なし（Node標準の`http`のみ）。ローカル専用（`127.0.0.1`
+  のみ）・認証は未実装（将来リモート接続が必要になった時点で追加、
+  ADR 0008参照）
 - **Smart Capture**（`pnpm capture`）— 文章・写真を入力すると、
   キーワード一致による下書き提案（例：「肌」→Skin Log、「買った」→
   Purchase Log、「言われた」→Third Person Evaluation）を表示。Owner
@@ -110,7 +119,7 @@ Gemini/OpenAI連携、実際の画像解析・OCR、Decision Engine、通知機�
 pnpm install
 ```
 
-Version12はローカルJSONファイル + ローカルファイルコピーのみで動作する
+Version13はローカルJSONファイル + ローカルファイルコピーのみで動作する
 ため、追加のセットアップは不要です。Google Calendar/Tasks連携
 （Version3から継続）を使う場合は以下を参照してください。
 
@@ -128,7 +137,7 @@ supabase db reset
 
 `test`・`typecheck`等は問題ありませんが、`morning`/`reflect`/`inventory`/
 `memory`/`appearance`/`skin`/`purchase`/`challenge`/`capture`/
-`timeline`/`evaluation`/`bridge`/`external`/`decision`/`find`のような独自コマンドは、pnpm組み込みの
+`timeline`/`evaluation`/`bridge`/`external`/`decision`/`conversation`/`find`のような独自コマンドは、pnpm組み込みの
 コマンド名と偶然一致すると意図せず別の動作をしてしまうことが実機で
 判明しました（`search`→`find`への変更後も再発）。**確実に動かすため、
 すべて`pnpm run`を付けて実行してください。**
@@ -201,6 +210,9 @@ pnpm run external -- archive <id>  # ステータスをarchivedに変更
 
 pnpm run decision -- "<質問>"       # 質問から選択肢・比較材料（DecisionContext）を生成（Version12）
 pnpm run decision                  # 引数なしなら対話式に質問を聞く
+
+pnpm run conversation -- "<質問>"   # 質問のIntentを判定し、Retrieve/DecisionへルーティングしてConversationContextを生成（Version13）
+pnpm run conversation              # 引数なしなら対話式に質問を聞く
 
 pnpm run api                       # ARC Connector（HTTP API）を起動（既定ポート3939）
 ```

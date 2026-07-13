@@ -46,6 +46,7 @@ import { SearchExternalKnowledgeUseCase } from '../../application/use-cases/exte
 import { RetrieveKnowledgeUseCase } from '../../application/use-cases/knowledge-retrieval/RetrieveKnowledge.js';
 import { buildRetrievalContext } from '../../application/use-cases/knowledge-retrieval/BuildRetrievalContext.js';
 import { DecisionEngineUseCase } from '../../application/use-cases/decision-support/DecisionEngine.js';
+import { ConversationGatewayUseCase } from '../../application/use-cases/conversation-gateway/ConversationGateway.js';
 import type { ExternalKnowledgeStatus } from '../../domain/entities/ExternalKnowledge.js';
 
 import { JsonFileReflectionRepository } from '../../adapters/repositories/JsonFileReflectionRepository.js';
@@ -71,6 +72,7 @@ import {
   serializeExternalSource,
   serializeExternalKnowledge,
   serializeDecisionContext,
+  serializeConversationContext,
 } from '../../application/serializers.js';
 
 export interface BuildAppOptions {
@@ -190,6 +192,10 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       externalSourceRepository,
     ),
     decisionSupport: new DecisionEngineUseCase(externalKnowledgeRepository, externalSourceRepository),
+    conversationGateway: new ConversationGatewayUseCase(
+      externalKnowledgeRepository,
+      externalSourceRepository,
+    ),
   };
 }
 
@@ -479,6 +485,21 @@ export function createApp(options: BuildAppOptions = {}) {
         retrievedKnowledge: result.retrievedKnowledge.map(serializeExternalKnowledge),
         sources: result.sources.map(serializeExternalSource),
       });
+    }),
+
+    // --- Conversational Integration（Version13） ---
+    // ARC Connectorのうち、ARCとの日常会話から呼び出すことを想定した
+    // 唯一の入口。Intent判定に応じてRetrieve/Decisionへ振り分けるのみで、
+    // 回答文は生成しない（ADR 0028）。認証方式はVersion8から変更なし
+    // （127.0.0.1限定）。
+    route('POST', '/conversation/context', async (req) => {
+      const body = await readJsonBody(req);
+      const result = await useCases.conversationGateway.execute({
+        question: body.question as string,
+        conversation: body.conversation as string | undefined,
+        limit: body.limit as number | undefined,
+      });
+      return ok({ conversationContext: serializeConversationContext(result.conversationContext) });
     }),
 
     route('GET', '/external-sources', async () => {

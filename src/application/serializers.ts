@@ -23,6 +23,7 @@ import type { ThirdPersonEvaluation } from '../domain/entities/ThirdPersonEvalua
 import type { ExternalSource } from '../domain/entities/ExternalSource.js';
 import type { ExternalKnowledge } from '../domain/entities/ExternalKnowledge.js';
 import type { DecisionContext, DecisionEvidence } from '../domain/value-objects/DecisionContext.js';
+import type { ConversationContext } from '../domain/value-objects/ConversationContext.js';
 
 export function serializeReflection(reflection: Reflection) {
   return {
@@ -155,5 +156,16 @@ export function serializeDecisionContext(context: DecisionContext) {
     evidenceList: context.evidenceList.map(serializeDecisionEvidence),
     missingInformation: context.missingInformation,
     pointsForOwnerToDecide: context.pointsForOwnerToDecide,
+  };
+}
+
+export function serializeConversationContext(context: ConversationContext) {
+  return {
+    question: context.question,
+    intent: context.intent,
+    retrievedKnowledge: context.retrievedKnowledge.map(serializeDecisionEvidence),
+    decisionContext: context.decisionContext ? serializeDecisionContext(context.decisionContext) : null,
+    sources: context.sources.map(serializeExternalSource),
+    warnings: context.warnings,
   };
 }

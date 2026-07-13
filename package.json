@@ -1,7 +1,7 @@
 {
   "name": "project-arc",
-  "version": "0.12.0",
-  "description": "Project ARC — AI Life Management OS (Version12: Decision Support)",
+  "version": "0.13.0",
+  "description": "Project ARC — AI Life Management OS (Version13: Conversational Integration)",
   "type": "module",
   "private": true,
   "engines": {
@@ -24,6 +24,7 @@
     "bridge": "tsx src/infrastructure/cli/bridge.ts",
     "external": "tsx src/infrastructure/cli/external.ts",
     "decision": "tsx src/infrastructure/cli/decision.ts",
+    "conversation": "tsx src/infrastructure/cli/conversation.ts",
     "api": "tsx src/infrastructure/http/server.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",

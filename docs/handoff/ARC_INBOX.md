@@ -32,6 +32,11 @@ Version11_Report.md`）。Version10完了報告への応答としてARCから
 Version12_Report.md`）。Version11完了報告への応答としてARCから
 届いた（原文は`docs/handoff/archive/Version12_ARC_Brief.md`に保管）。
 
+**処理済み**：Version13「Conversational Integration」（`docs/
+reports/Version13_Report.md`）。Version12完了報告への応答として
+ARCから届いた（原文は`docs/handoff/archive/Version13_ARC_Brief.md`
+に保管）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください。
 

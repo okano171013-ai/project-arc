@@ -218,6 +218,30 @@ Version12では以下を意図的に実装しない：AI API呼び出し・自�
 DecisionContext統合（一時生成物のため、ADR 0025参照）。詳細は
 `docs/reports/Version12_Report.md`を参照。
 
+## Version13｜Conversational Integration（完了）
+
+**ゴール**：「Owner→CLI→コピペ→ARC」という手作業の橋を、1回の
+質問応答で完結する形に近づける。Version12完了報告に対するARCの
+応答として届いたテーマ提案に基づく（原文は`docs/handoff/archive/
+Version13_ARC_Brief.md`に保管）。「Project ARCを、初めて日常会話の
+中で自然に使えるようにする。」
+
+| 機能 | 内容 |
+|---|---|
+| ConversationGatewayUseCase | Conversation→Intent Detection→Tool Selection→Retrieve/Decision→ConversationContextという流れの唯一の入口。CLI/HTTP APIから共通で呼ばれる（ADR 0026） |
+| IntentDetector | 質問をRetrieval/Decision/Noneへ機械的パターン一致で分類。AIは使わない（ADR 0029） |
+| Tool Selection | Intentに応じてRetrieveKnowledgeUseCase/DecisionEngineUseCaseのどちらを呼ぶかだけを選択。回答内容は生成しない（ADR 0028） |
+| ConversationContext（Value Object） | question/intent/retrievedKnowledge/decisionContext/sources/warningsを持つ、永続化しない一時生成物。会話自体も保存しない（ADR 0027） |
+| Context Injection（`buildConversationContextText`） | 【Retrieved Knowledge】【Decision Context】【Sources】の3セクションのみを生成。「【ARC】」部分はARC自身が書く（ADR 0028） |
+| CLI（`pnpm conversation`） | 質問を渡すか対話式に聞き、ConversationContextを3セクション形式で表示 |
+| HTTP API（`POST /conversation/context`） | `{conversationContext}`を返す。認証方式はVersion8から変更なし（127.0.0.1限定） |
+
+Version13では以下を意図的に実装しない：ChatGPT Actions・MCP・
+Claude/OpenAI/Gemini API呼び出し、自動保存・自動更新・自動
+Reflection・自動Memory更新、会話履歴保存、自動要約・自動推論
+（すべて将来のVersion、ADR 0027・0028・0029参照）。詳細は
+`docs/reports/Version13_Report.md`を参照。
+
 ---
 
 ## 長期ロードマップ 2.0（Version9完了時、ARC提案）
@@ -237,9 +261,12 @@ Version9完了を受け、ARCから中長期ロードマップの組み替え提
   想定。Version10で最初の土台（ExternalSource/ExternalKnowledgeの
   保存・検索・Bridge/Timeline連携）、Version11でARCが実際に知識を
   取り出せるQuery Layer（Knowledge Retrieval）、Version12で取得した
-  知識を比較・整理して判断材料を作るDecision Supportが完了。
-  Healthデータ等の実データ連携・ARCが直接呼び出せる接続経路
-  （MCP・ChatGPT Actions等）は引き続き先の課題とする。
+  知識を比較・整理して判断材料を作るDecision Support、Version13で
+  1回の質問応答でRetrieve/Decisionを呼び分けるConversational
+  Integration（ConversationGateway）が完了。Healthデータ等の実
+  データ連携・ARCが直接呼び出せる接続経路（MCP・ChatGPT Actions等）
+  は引き続き先の課題とする（Version13時点ではOwnerが手動で
+  `pnpm conversation`/`POST /conversation/context`を呼ぶ運用）。
 - **Phase 3（Version16〜25）Life Management** — 毎日Reflection・
   睡眠・勉強・食事・筋トレ等をチェックし、ARCが未達を指摘する
   （「今週筋トレありません」等）、より踏み込んだ管理機能。
