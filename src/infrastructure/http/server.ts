@@ -47,7 +47,13 @@ import { RetrieveKnowledgeUseCase } from '../../application/use-cases/knowledge-
 import { buildRetrievalContext } from '../../application/use-cases/knowledge-retrieval/BuildRetrievalContext.js';
 import { DecisionEngineUseCase } from '../../application/use-cases/decision-support/DecisionEngine.js';
 import { ConversationGatewayUseCase } from '../../application/use-cases/conversation-gateway/ConversationGateway.js';
+import { ReadGatewayUseCase } from '../../application/use-cases/read-gateway/ReadGateway.js';
+import { WriteProposalGatewayUseCase } from '../../application/use-cases/write-proposal-gateway/WriteProposalGateway.js';
+import { AddManagementFeedbackUseCase } from '../../application/use-cases/management-feedback/AddManagementFeedback.js';
+import { ListManagementFeedbackUseCase } from '../../application/use-cases/management-feedback/ListManagementFeedback.js';
+import { ResolveManagementFeedbackUseCase } from '../../application/use-cases/management-feedback/ResolveManagementFeedback.js';
 import type { ExternalKnowledgeStatus } from '../../domain/entities/ExternalKnowledge.js';
+import type { ProposalType, Proposal } from '../../domain/value-objects/Proposal.js';
 
 import { JsonFileReflectionRepository } from '../../adapters/repositories/JsonFileReflectionRepository.js';
 import { JsonFileMemoryRepository } from '../../adapters/repositories/JsonFileMemoryRepository.js';
@@ -60,6 +66,7 @@ import { JsonFileCaptureRepository } from '../../adapters/repositories/JsonFileC
 import { JsonFileThirdPersonEvaluationRepository } from '../../adapters/repositories/JsonFileThirdPersonEvaluationRepository.js';
 import { JsonFileExternalSourceRepository } from '../../adapters/repositories/JsonFileExternalSourceRepository.js';
 import { JsonFileExternalKnowledgeRepository } from '../../adapters/repositories/JsonFileExternalKnowledgeRepository.js';
+import { JsonFileManagementFeedbackRepository } from '../../adapters/repositories/JsonFileManagementFeedbackRepository.js';
 import { RuleBasedCaptureClassifier } from '../../adapters/providers/RuleBasedCaptureClassifier.js';
 
 import {
@@ -73,7 +80,15 @@ import {
   serializeExternalKnowledge,
   serializeDecisionContext,
   serializeConversationContext,
+  serializeProposal,
+  serializeMemoryEntry,
+  serializeManagementFeedback,
 } from '../../application/serializers.js';
+import type { Reflection } from '../../domain/entities/Reflection.js';
+import type { MemoryEntry } from '../../domain/entities/MemoryEntry.js';
+import type { ExternalKnowledge } from '../../domain/entities/ExternalKnowledge.js';
+import type { AppearanceLog } from '../../domain/entities/AppearanceLog.js';
+import type { ManagementFeedback } from '../../domain/entities/ManagementFeedback.js';
 
 export interface BuildAppOptions {
   /** テスト時に本番の`data/`と隔離するためのディレクトリ差し替え。 */
@@ -112,6 +127,9 @@ export function buildUseCases(options: BuildAppOptions = {}) {
   );
   const externalKnowledgeRepository = new JsonFileExternalKnowledgeRepository(
     repoPath(dataDir, 'external-knowledge.json'),
+  );
+  const managementFeedbackRepository = new JsonFileManagementFeedbackRepository(
+    repoPath(dataDir, 'management-feedback.json'),
   );
   const classifier = new RuleBasedCaptureClassifier();
 
@@ -196,6 +214,28 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       externalKnowledgeRepository,
       externalSourceRepository,
     ),
+    addManagementFeedback: new AddManagementFeedbackUseCase(managementFeedbackRepository),
+    listManagementFeedback: new ListManagementFeedbackUseCase(managementFeedbackRepository),
+    resolveManagementFeedback: new ResolveManagementFeedbackUseCase(managementFeedbackRepository),
+    readGateway: new ReadGatewayUseCase(
+      reflectionRepository,
+      appearanceLogRepository,
+      skinLogRepository,
+      purchaseLogRepository,
+      challengeLogRepository,
+      captureRepository,
+      thirdPersonEvaluationRepository,
+      externalKnowledgeRepository,
+      externalSourceRepository,
+    ),
+    writeProposalGateway: new WriteProposalGatewayUseCase(
+      reflectionRepository,
+      memoryRepository,
+      externalKnowledgeRepository,
+      externalSourceRepository,
+      appearanceLogRepository,
+      managementFeedbackRepository,
+    ),
   };
 }
 
@@ -226,6 +266,54 @@ async function readJsonBody(req: IncomingMessage): Promise<Record<string, unknow
     return JSON.parse(raw) as Record<string, unknown>;
   } catch {
     throw new Error('invalid JSON body');
+  }
+}
+
+/**
+ * Read Layer（Version14）専用。`limit`は必須クエリパラメータとし、
+ * 未指定・数値でない場合は400にする（`ReadGatewayUseCase`自体も
+ * 上限超過を検証するが、ここでは「そもそも指定されているか」を
+ * HTTP層のバリデーションとして先に弾く）。
+ */
+function requireLimit(url: URL): number {
+  const raw = url.searchParams.get('limit');
+  if (!raw) {
+    throw new Error('limit is required');
+  }
+  const limit = Number(raw);
+  if (!Number.isInteger(limit)) {
+    throw new Error('limit must be an integer');
+  }
+  return limit;
+}
+
+/**
+ * `WriteProposalGatewayUseCase.approveProposal()`が返す`result`は、
+ * 対応する既存UseCaseの生の出力（Entityインスタンスを含む）である。
+ * 他のルート同様、Entityの`private`フィールドをそのまま
+ * `JSON.stringify`に漏らさないよう、必ずここでpublicなgetter経由の
+ * シリアライズ関数を通す（`serializers.ts`冒頭のコメント参照）。
+ */
+function serializeApproveResult(type: ProposalType, result: unknown): unknown {
+  switch (type) {
+    case 'Reflection': {
+      const r = result as { reflection: Reflection; hasMinimumRoutine: boolean; score: number; previousScore: number | undefined; scoreDelta: number | undefined };
+      return {
+        reflection: serializeReflection(r.reflection),
+        hasMinimumRoutine: r.hasMinimumRoutine,
+        score: r.score,
+        previousScore: r.previousScore,
+        scoreDelta: r.scoreDelta,
+      };
+    }
+    case 'Memory':
+      return { entry: serializeMemoryEntry((result as { entry: MemoryEntry }).entry) };
+    case 'ExternalKnowledge':
+      return { knowledge: serializeExternalKnowledge((result as { knowledge: ExternalKnowledge }).knowledge) };
+    case 'Appearance':
+      return { log: serializeAppearanceLog((result as { log: AppearanceLog }).log) };
+    case 'ManagementFeedback':
+      return { feedback: serializeManagementFeedback((result as { feedback: ManagementFeedback }).feedback) };
   }
 }
 
@@ -500,6 +588,99 @@ export function createApp(options: BuildAppOptions = {}) {
         limit: body.limit as number | undefined,
       });
       return ok({ conversationContext: serializeConversationContext(result.conversationContext) });
+    }),
+
+    // --- Read Layer（Version14） ---
+    // ARCが会話の中で必要最小限のデータだけを取得するための入口。
+    // `limit`未指定・不正値は400にする（指示書13章「limit必須」）。
+    route('GET', '/read/reflection', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const limit = requireLimit(url);
+      const result = await useCases.readGateway.readReflection({ limit });
+      return ok({ reflections: result.reflections.map(serializeReflection) });
+    }),
+
+    route('GET', '/read/timeline', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const limit = requireLimit(url);
+      const since = url.searchParams.get('since') ?? undefined;
+      const source = (url.searchParams.get('source') ?? undefined) as TimelineSource | undefined;
+      const result = await useCases.readGateway.readTimeline({ limit, since, source });
+      return ok({ entries: result.entries });
+    }),
+
+    route('GET', '/read/external', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const limit = requireLimit(url);
+      const query = url.searchParams.get('q') ?? undefined;
+      const tags = url.searchParams.getAll('tags');
+      const topics = url.searchParams.getAll('topics');
+      const result = await useCases.readGateway.readExternal({
+        limit,
+        query,
+        tags: tags.length > 0 ? tags : undefined,
+        topics: topics.length > 0 ? topics : undefined,
+      });
+      return ok({
+        results: result.results.map((r) => ({
+          knowledge: serializeExternalKnowledge(r.knowledge),
+          source: r.source ? serializeExternalSource(r.source) : null,
+          score: r.score,
+          matchedIn: r.matchedIn,
+        })),
+        sources: result.sources.map(serializeExternalSource),
+      });
+    }),
+
+    route('GET', '/read/decision', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const limit = requireLimit(url);
+      const question = url.searchParams.get('question');
+      if (!question) throw new Error('question is required');
+      const candidates = url.searchParams.getAll('candidates');
+      const tags = url.searchParams.getAll('tags');
+      const topics = url.searchParams.getAll('topics');
+      const result = await useCases.readGateway.readDecision({
+        question,
+        limit,
+        candidates: candidates.length > 0 ? candidates : undefined,
+        tags: tags.length > 0 ? tags : undefined,
+        topics: topics.length > 0 ? topics : undefined,
+      });
+      return ok({
+        decisionContext: serializeDecisionContext(result.decisionContext),
+        retrievedKnowledge: result.retrievedKnowledge.map(serializeExternalKnowledge),
+        sources: result.sources.map(serializeExternalSource),
+      });
+    }),
+
+    // --- Write Proposal Layer（Version14） ---
+    // ARCは/proposal/createで提案を組み立てるだけで、保存は一切行わない。
+    // Ownerが承認した場合のみ、同じProposalを/proposal/approveへ再送する
+    // ことで初めてRepositoryへ書き込まれる（Constitution第2条・第4条）。
+    route('POST', '/proposal/create', async (req) => {
+      const body = await readJsonBody(req);
+      const proposal = useCases.writeProposalGateway.createProposal({
+        type: body.type as ProposalType,
+        target: body.target as string,
+        payload: body.payload as Record<string, unknown>,
+        reason: body.reason as string,
+      });
+      return ok({ proposal: serializeProposal(proposal) }, 201);
+    }),
+
+    route('POST', '/proposal/approve', async (req) => {
+      const body = await readJsonBody(req);
+      const proposal = body as unknown as Proposal;
+      const { type, result } = await useCases.writeProposalGateway.approveProposal(proposal);
+      return ok({ type, result: serializeApproveResult(type, result) });
+    }),
+
+    route('POST', '/proposal/reject', async (req) => {
+      const body = await readJsonBody(req);
+      const proposal = body as unknown as Proposal;
+      const result = useCases.writeProposalGateway.rejectProposal(proposal);
+      return ok(result);
     }),
 
     route('GET', '/external-sources', async () => {

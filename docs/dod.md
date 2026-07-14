@@ -266,3 +266,29 @@ Version12のDoDは達成済み（対話式・非対話式CLI、HTTP APIともに
 Version13のDoDは達成済み（対話式・非対話式CLI、HTTP APIともに実機確認済み）。
 
 Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる、上記注記の通り）。
+
+## Version14完了チェックリスト
+
+- [x] `pnpm test` が全て緑（ManagementFeedback/ReadGateway/WriteProposalGatewayのテストを含む、217件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `pnpm propose`（対話式、擬似expectドライバで駆動）でProposal作成→表示→Approveの一連が正常動作する（実機確認済み）
+- [x] `pnpm propose list-feedback`・`pnpm propose resolve <id> <resolution>`が正常動作する（実機確認済み。Open→Acceptedの遷移を実データで確認）
+- [x] `GET /read/reflection` `/read/timeline` `/read/external` `/read/decision`が`limit`未指定時に400を返し、指定時は正常動作する（実機確認済み、日本語データの往復含む）
+- [x] `POST /proposal/create` → `/proposal/approve`（または`/proposal/reject`）の一連がHTTP経由で正常動作する（実機確認済み）。`createProposal`単体ではRepositoryに一切書き込みが発生しないことを確認済み
+- [x] 5つのProposal種別（Reflection/Memory/ExternalKnowledge/Appearance/ManagementFeedback）すべてでapproveProposal時に対応するRepositoryへ保存されることを確認済み（テスト・実機確認両方）
+- [x] ManagementFeedbackのresolution状態機械（Open→Accepted→Implemented→Closed、Open/Accepted→Rejected）が正しい遷移のみ許可することを確認済み
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0030〜0033（Read/Write Gatewayの分離理由・Write Proposal Layerを追加した理由・ManagementFeedbackをReflectionと分離した理由・ManagementFeedbackをTimelineに載せない理由）を記録済み
+- [x] `docs/architecture-diagram.md` を更新済み
+- [x] `docs/reports/Version14_Report.md` を生成済み（14章構成）
+- [x] `docs/reports/Version14_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+実機確認の過程で、`POST /proposal/approve`のレスポンスが
+`approveProposal()`の生の出力（Entityインスタンス）をそのまま
+`JSON.stringify`していたため、`_id`・`_record`等のprivateフィールド名が
+そのまま漏れるバグを発見・修正した（他のルート同様、`serializers.ts`の
+`serialize*`関数を経由するよう`serializeApproveResult()`を追加、
+詳細は`docs/reports/Version14_Report.md`7章参照）。
+
+Version14のDoDは達成済み（対話式・非対話式CLI、HTTP APIともに実機確認済み）。

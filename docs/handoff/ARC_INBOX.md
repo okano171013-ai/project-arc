@@ -37,6 +37,12 @@ reports/Version13_Report.md`）。Version12完了報告への応答として
 ARCから届いた（原文は`docs/handoff/archive/Version13_ARC_Brief.md`
 に保管）。
 
+**処理済み**：Version14「ARC Integration」（`docs/
+reports/Version14_Report.md`）。Owner自身が「ARCが直接POSTする」案を
+撤回し、Write Proposal Layer（`ARC → Write Proposal → Owner承認 →
+Project ARC`）を新設する方針へ修正した指示書（原文は
+`docs/handoff/archive/Version14_ARC_Brief.md`に保管）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください。
 

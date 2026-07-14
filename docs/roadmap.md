@@ -242,6 +242,46 @@ Reflection・自動Memory更新、会話履歴保存、自動要約・自動推�
 （すべて将来のVersion、ADR 0027・0028・0029参照）。詳細は
 `docs/reports/Version13_Report.md`を参照。
 
+## Version14｜ARC Integration
+
+Version13完了時点で、Project ARCは「記録→検索→比較→Conversation」
+まで完成したが、ARC（ChatGPT）とProject ARCのやり取りは依然として
+Ownerによる手動コピペのみで、直接の読み書きはできなかった。Owner
+指示書（2026年7月14日、`docs/handoff/archive/Version14_ARC_Brief.md`）
+は当初「ARCが直接POSTする」案を提示したが、Owner自身がこれを撤回し、
+Constitution第2条（Systemは判断しない）・第4条（Ownerが最終決定
+する）をより厳密に守るため、`ARC → Write Proposal → Owner承認 →
+Project ARC`という中間層を新設する方針へ修正した。この方針は
+Version13時点の予測（「継続的マネジメント」）とは異なる新方針であり、
+本セクションとしてVersion14の内容をroadmapへ新規追加する。
+
+- **ReadGateway**（`ReadGatewayUseCase`、ADR 0030）：ARCが会話の中で
+  必要最小限のデータだけを取得できる読み取り専用の入口。
+  `GET /read/reflection`・`/read/timeline`・`/read/external`・
+  `/read/decision`はいずれも`limit`を必須とし、既存の
+  GetTimeline/RetrieveKnowledge/DecisionEngineUseCaseへ委譲するのみ。
+- **Write Proposal Layer**（`WriteProposalGatewayUseCase`、ADR 0031）：
+  `createProposal`→Owner承認→`approveProposal`という2段階の書き込み
+  経路。Proposal自体はRepositoryを持たず、Systemは一切保存しない
+  ——承認時にOwnerがProposal全体を再送することで初めて既存UseCase
+  経由の書き込みが実行される。`rejectProposal`は何も永続化しない。
+  対応するProposal種別：Reflection/Memory/ExternalKnowledge/
+  Appearance/ManagementFeedback。
+- **ManagementFeedback**（新Entity、ADR 0032・0033）：ARC視点の
+  Project ARC運用改善提案を表すEntity。Reflection（Owner視点の
+  振り返り）とは別Entityとし、`resolution`（Open→Accepted→
+  Implemented→Closed、またはRejected）という状態機械を持つ。
+  Timelineには含めない（継続的な管理対象であり「ある瞬間の
+  出来事」ではないため）。
+- **CLI**：`pnpm propose`で対話式にProposalを作成→表示→Approve確認
+  の流れを実行できる。`pnpm propose list-feedback`・
+  `pnpm propose resolve <id> <resolution>`でManagementFeedbackの
+  一覧表示・状態遷移も可能。
+
+MCP・ChatGPT Actions・Claude API・Gemini API接続、自動Approve、
+自動保存、AI推論はVersion14の対象外（指示書18章）。詳細は
+`docs/reports/Version14_Report.md`参照。
+
 ---
 
 ## 長期ロードマップ 2.0（Version9完了時、ARC提案）
@@ -263,10 +303,14 @@ Version9完了を受け、ARCから中長期ロードマップの組み替え提
   取り出せるQuery Layer（Knowledge Retrieval）、Version12で取得した
   知識を比較・整理して判断材料を作るDecision Support、Version13で
   1回の質問応答でRetrieve/Decisionを呼び分けるConversational
-  Integration（ConversationGateway）が完了。Healthデータ等の実
-  データ連携・ARCが直接呼び出せる接続経路（MCP・ChatGPT Actions等）
-  は引き続き先の課題とする（Version13時点ではOwnerが手動で
-  `pnpm conversation`/`POST /conversation/context`を呼ぶ運用）。
+  Integration（ConversationGateway）、Version14でARCが安全に読み
+  書きできるRead Layer/Write Proposal Layer（ARC Integration）が
+  完了。Healthデータ等の実データ連携・ARCが直接呼び出せる接続経路
+  （MCP・ChatGPT Actions等）は引き続き先の課題とする（Version14
+  時点でもOwnerが手動でCLI/HTTP APIを呼ぶ運用は変わらない——
+  Write Proposal LayerもOwnerの明示的な承認操作を経由する設計の
+  ため、認証未実装のままでも「ARCが誤って書き込む」リスクは
+  構造的に生じない）。
 - **Phase 3（Version16〜25）Life Management** — 毎日Reflection・
   睡眠・勉強・食事・筋トレ等をチェックし、ARCが未達を指摘する
   （「今週筋トレありません」等）、より踏み込んだ管理機能。

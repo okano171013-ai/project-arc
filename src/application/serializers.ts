@@ -24,6 +24,8 @@ import type { ExternalSource } from '../domain/entities/ExternalSource.js';
 import type { ExternalKnowledge } from '../domain/entities/ExternalKnowledge.js';
 import type { DecisionContext, DecisionEvidence } from '../domain/value-objects/DecisionContext.js';
 import type { ConversationContext } from '../domain/value-objects/ConversationContext.js';
+import type { Proposal } from '../domain/value-objects/Proposal.js';
+import type { ManagementFeedback } from '../domain/entities/ManagementFeedback.js';
 
 export function serializeReflection(reflection: Reflection) {
   return {
@@ -156,6 +158,27 @@ export function serializeDecisionContext(context: DecisionContext) {
     evidenceList: context.evidenceList.map(serializeDecisionEvidence),
     missingInformation: context.missingInformation,
     pointsForOwnerToDecide: context.pointsForOwnerToDecide,
+  };
+}
+
+export function serializeProposal(proposal: Proposal) {
+  return {
+    type: proposal.type,
+    target: proposal.target,
+    payload: proposal.payload,
+    reason: proposal.reason,
+    createdAt: proposal.createdAt,
+  };
+}
+
+export function serializeManagementFeedback(feedback: ManagementFeedback) {
+  return {
+    id: feedback.id,
+    record: feedback.record,
+    createdAt: feedback.createdAt.toISOString(),
+    resolution: feedback.resolution,
+    resolved: feedback.resolved,
+    resolvedAt: feedback.resolvedAt?.toISOString(),
   };
 }
 

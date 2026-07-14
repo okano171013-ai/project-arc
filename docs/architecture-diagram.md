@@ -1,13 +1,15 @@
 # Project ARC アーキテクチャ図
 
 Version7完了時にOwnerから提案された、レイヤー構成・データの流れ・
-ARCとの接続点を示す図（2026年7月、Version13時点の実装を反映。
+ARCとの接続点を示す図（2026年7月、Version14時点の実装を反映。
 Version9でBridge Layer・ThirdPersonEvaluation、Version10で
 External Brain（ExternalSource/ExternalKnowledge）、Version11で
 Knowledge Retrieval（RetrieveKnowledgeUseCase・Context Builder）、
 Version12でDecision Support（DecisionEngineUseCase・
 DecisionContext）、Version13でConversational Integration
-（ConversationGatewayUseCase・ConversationContext）を追加）。
+（ConversationGatewayUseCase・ConversationContext）、Version14で
+ARC Integration（ReadGatewayUseCase・WriteProposalGatewayUseCase・
+ManagementFeedback）を追加）。
 文章での説明は[`docs/architecture.md`](./architecture.md)を参照。
 
 ---
@@ -27,13 +29,15 @@ graph TB
         Retrieval["Knowledge Retrieval\nRetrieveKnowledgeUseCase (QueryEngine) /\nbuildRetrievalContext (Context Builder)\n(Version11, ADR 0019-0021)"]
         Decision["Decision Support\nDecisionEngineUseCase (CandidateBuilder /\nEvidenceCollector / ComparisonBuilder)\n(Version12, ADR 0022-0025)"]
         Conversation["Conversational Integration\nConversationGatewayUseCase (IntentDetector /\nTool Selection) / buildConversationContextText\n(Version13, ADR 0026-0029)"]
+        ReadGW["ReadGateway\nReadGatewayUseCase\n(Version14, ADR 0030)"]
+        WriteGW["Write Proposal Gateway\nWriteProposalGatewayUseCase\n(Version14, ADR 0031)"]
         Serializers["serializers.ts\n(Entity→プレーンオブジェクト、CLI/HTTP共有)"]
         Ports["Ports (interfaces)\n*Repository, CaptureClassifier,\nCalendarProvider, TaskProvider, ..."]
     end
 
     subgraph Domain["Domain層（外部依存なし）"]
-        Entities["Entities\nReflection, MemoryEntry, InventoryItem,\nAppearanceLog, SkinLog, PurchaseLog,\nChallengeLog, Capture, ThirdPersonEvaluation,\nExternalSource, ExternalKnowledge (Version10)"]
-        VO["Value Objects\nTimelineEntry, CalendarEvent,\nDailyPlan, TaskItem,\nDecisionContext (Version12, ADR 0024),\nConversationContext (Version13, ADR 0027)"]
+        Entities["Entities\nReflection, MemoryEntry, InventoryItem,\nAppearanceLog, SkinLog, PurchaseLog,\nChallengeLog, Capture, ThirdPersonEvaluation,\nExternalSource, ExternalKnowledge (Version10),\nManagementFeedback (Version14, ADR 0032)"]
+        VO["Value Objects\nTimelineEntry, CalendarEvent,\nDailyPlan, TaskItem,\nDecisionContext (Version12, ADR 0024),\nConversationContext (Version13, ADR 0027),\nProposal (Version14, ADR 0031)"]
     end
 
     subgraph Adapters["Adapters層"]
@@ -47,11 +51,14 @@ graph TB
     CLI --> Retrieval
     CLI --> Decision
     CLI --> Conversation
+    CLI --> WriteGW
     HTTP --> UC
     HTTP --> Bridge
     HTTP --> Retrieval
     HTTP --> Decision
     HTTP --> Conversation
+    HTTP --> ReadGW
+    HTTP --> WriteGW
     Bridge --> UC
     Bridge --> Serializers
     Retrieval --> Ports
@@ -64,6 +71,13 @@ graph TB
     Conversation --> Decision
     Conversation --> VO
     Conversation --> Serializers
+    ReadGW --> UC
+    ReadGW --> Retrieval
+    ReadGW --> Decision
+    ReadGW --> Ports
+    WriteGW --> UC
+    WriteGW --> VO
+    WriteGW --> Ports
     UC --> Ports
     UC --> Entities
     Ports -.実装.-> JsonRepo
@@ -105,7 +119,7 @@ sequenceDiagram
     participant UC as UseCase
     participant Data as data/*.json
 
-    Note over Owner,ARC: 現状: ARC↔Claude Codeの直接API連携はない（Version9時点）
+    Note over Owner,ARC: 現状: ARC↔Claude Codeの直接API連携はない（Version14時点も継続）
 
     Owner->>ARC: 会話（文脈理解・振り分け判断はARCの責務）
     ARC-->>Owner: 提案・記録すべき内容（{type, data}形式で複数件のことも）
@@ -128,6 +142,19 @@ sequenceDiagram
         UC->>Data: Repository経由で保存
     end
 
+    alt Write Proposal Layer経由で書き込む場合（Version14、ADR 0031）
+        Owner->>CC: pnpm propose（対話式、または POST /proposal/create）
+        CC->>UC: WriteProposalGateway.createProposal()（保存しない）
+        UC-->>Owner: Proposalを表示
+        Owner->>CC: Approve? y/n
+        alt y（承認）
+            CC->>UC: WriteProposalGateway.approveProposal(proposal)
+            UC->>Data: 対応する既存UseCase経由で保存
+        else n（却下）
+            CC-->>Owner: 何も保存しない
+        end
+    end
+
     Owner->>Handoff: ARC_INBOX.mdに指示書を貼る
     CC->>Handoff: セッション開始時に確認
     CC->>Handoff: Version完了時にARC_Feedback.mdを更新
@@ -148,7 +175,12 @@ Context Builderも「【External Brain】」の引用ブロックまでしか生
 呼ぶか）だけを行い、回答内容の生成は一切しない——Context Injection
 も同じ3セクション構造（【Retrieved Knowledge】【Decision Context】
 【Sources】）までに留める（ADR 0028）。判断・解釈は常にARCまたは
-Ownerの側で行われる。
+Ownerの側で行われる。ARC Integration（Version14）のReadGatewayは
+Timeline/Retrieval/Decisionへ`limit`必須で委譲するだけであり
+（ADR 0030）、WriteProposalGatewayはOwnerが承認したProposalを
+既存UseCaseへそのまま渡すだけで、Proposal自体は保存しない
+（ADR 0031）——Systemが判断するのは「payloadの構造が正しいか」の
+みで、内容の当否はOwnerが決める。
 
 ---
 
@@ -171,6 +203,7 @@ graph LR
         Memory["MemoryEntry\n(時間に紐づかない知識、ADR 0005)"]
         Inventory["InventoryItem\n(耐久品の状態管理、ADR 0006)"]
         ExternalSource["ExternalSource\n(出典の書誌情報、Version10/ADR 0013・0017)"]
+        ManagementFeedback["ManagementFeedback\n(ARCからの運用改善提案、Version14/ADR 0032・0033\nresolutionの状態遷移を持つ)"]
     end
 
     Capture -.確定済みdestinations経由で書き込み.-> SkinLog
@@ -193,13 +226,15 @@ Captureを除く10種別（上段7つ + Memory + Inventory + ExternalSource）
 
 ## 4. ARCとの接続点（現状と将来）
 
-| 接続点 | 現状（2026年7月、Version13時点） | 将来 |
+| 接続点 | 現状（2026年7月、Version14時点） | 将来 |
 |---|---|---|
 | 指示の受け渡し | `docs/handoff/ARC_INBOX.md`にOwnerが手動で貼り付け（テキスト・PDF両対応） | 変更なし（人間による意思決定の窓口として維持、Principle 1） |
 | フィードバックの受け渡し | `docs/reports/VersionN_ARC_Feedback.md`をOwnerが手動でコピー | 変更なし |
 | データの一括受け渡し | `pnpm bridge -- import`でOwnerがARCの提案をJSONファイル経由で一括登録（ExternalSource/ExternalKnowledge含む）。`GET /bridge/export`で全データをJSON取得可能 | ARCが直接`POST /bridge/import`を呼べるようになる可能性（認証の実装が前提、ADR 0008/0010） |
 | 知識の取得 | `POST /knowledge/retrieve`でquery/tags/topicsを渡すと、スコア順のKnowledge/Sourcesと引用ブロック（context）が返る（Version11、Owner経由で手動呼び出し） | ARCが直接`POST /knowledge/retrieve`を呼び、会話に必要な知識だけをその場で取得できるようになる可能性（認証実装が前提） |
 | 意思決定支援 | `POST /decision/support`でquestionを渡すと、選択肢・比較・根拠を整理したDecisionContextが返る（Version12、Owner経由で手動呼び出し）。ARCの解釈・優先順位提案はDecisionContextを受け取ったARC自身が会話の中で書く | ARCが直接`POST /decision/support`を呼び、DecisionContextを踏まえた比較・提案をその場で会話に組み込めるようになる可能性（認証実装が前提） |
-| 会話への統合 | `POST /conversation/context`でquestionを渡すと、Intent判定に応じてRetrieve/Decisionへ自動的に振り分けられたConversationContextが返る（Version13、Owner経由で手動呼び出し）。Ownerが結果をコピペしてARCへ渡す運用は変わらない | ARCが直接`POST /conversation/context`を呼べば、Intent判定からツール呼び出しまでを1リクエストで済ませられる（認証実装が前提、Version13時点でARC Connector自体の認証方式は変更なし） |
-| 個別の読み書き | ARCから直接は不可能。ARC ConnectorはOwnerがCLIまたは`curl`/`fetch`で手動操作する前提（`/external-sources`・`/external-knowledge`含む） | ChatGPT Actions・MCP等でARCが直接`POST /skin`等を呼べるようになる可能性 |
-| 判断・分類 | 常にARCまたはOwner（Systemは判断しない、ADR 0007/0008/0010/0012/0021/0023/0028） | 変わらない（Project ARCの根幹原則、`docs/ai-roles.md`） |
+| 会話への統合 | `POST /conversation/context`でquestionを渡すと、Intent判定に応じてRetrieve/Decisionへ自動的に振り分けられたConversationContextが返る（Version13、Owner経由で手動呼び出し）。Ownerが結果をコピペしてARCへ渡す運用は変わらない | ARCが直接`POST /conversation/context`を呼べば、Intent判定からツール呼び出しまでを1リクエストで済ませられる（認証実装が前提、Version14時点でもARC Connector自体の認証方式は変更なし） |
+| 読み取り（最小限） | `GET /read/reflection`・`/read/timeline`・`/read/external`・`/read/decision`が`limit`必須で最小限のデータを返す（Version14、ReadGatewayUseCase、ADR 0030）。Owner経由で手動呼び出し | ARCが直接呼べるようになる可能性（認証実装が前提、UseCase自体は変更不要） |
+| 書き込みの提案・承認 | `POST /proposal/create`でProposalを組み立て（保存されない）、Ownerが内容を確認した上で同じProposalを`POST /proposal/approve`（または`/reject`）へ再送して初めて書き込まれる（Version14、WriteProposalGatewayUseCase、ADR 0031）。`pnpm propose`でCLIからも同じ流れを実行可能 | ARCが`createProposal`まで直接呼び、Owner承認のUIだけを別途用意する形へ拡張できる可能性（承認ステップはUseCaseのインターフェースが強制するため設計変更は不要） |
+| 個別の読み書き | ARCから直接は不可能。ARC ConnectorはOwnerがCLIまたは`curl`/`fetch`で手動操作する前提（`/external-sources`・`/external-knowledge`含む） | ChatGPT Actions・MCP等でARCが直接呼べるようになる可能性（Read Layerはそのまま、Write LayerはProposal経由のみ） |
+| 判断・分類 | 常にARCまたはOwner（Systemは判断しない、ADR 0007/0008/0010/0012/0021/0023/0028/0030/0031） | 変わらない（Project ARCの根幹原則、`docs/ai-roles.md`） |

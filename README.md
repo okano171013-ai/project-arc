@@ -15,20 +15,42 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/ai-roles.md`](./docs/ai-roles.md) — 人間・ARC・Gemini・Claude Code・
   システム自体の責務分担
 - [`docs/architecture.md`](./docs/architecture.md) — 技術設計
-- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜13のロードマップ・
+- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜14のロードマップ・
   長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version13のスコープ（現在地）
+## Version14のスコープ（現在地）
 
-テーマ：「Conversational Integration」— 「Owner→CLI→コピペ→ARC」
-という手作業の橋を、1回の質問応答で完結する形に近づける（長期
-ロードマップ2.0 Phase 2の続き）。「Project ARCを、初めて日常会話の
-中で自然に使えるようにする。」アーキテクチャ全体像は
+テーマ：「ARC Integration」— 「ARCがProject ARCを安全に読み、Ownerの
+承認のもとで書き込めるようにする。」ARCへ直接の書き込み権限を
+与えず、`ARC → Write Proposal → Owner承認 → Project ARC`という
+Write Proposal Layerを挟むことで、Constitution第2条（Systemは
+判断しない）・第4条（Ownerが最終決定する）を保ったまま読み書きの
+入口を整備する（長期ロードマップ2.0 Phase 2の続き）。アーキテクチャ
+全体像は
 [`docs/architecture-diagram.md`](./docs/architecture-diagram.md)を参照。
 
+- **Read Layer**（`ReadGatewayUseCase`、`GET /read/reflection`
+  `/read/timeline` `/read/external` `/read/decision`）— ARCが会話の
+  中で必要最小限のデータだけを取得できる読み取り専用の入口。`limit`
+  を必須とし、既存のGetTimeline/RetrieveKnowledge/
+  DecisionEngineUseCaseへ委譲するのみ（新しい判断ロジックは持たない、
+  ADR 0030）
+- **Write Proposal Layer**（`WriteProposalGatewayUseCase`、`pnpm
+  propose`、`POST /proposal/create` `/proposal/approve`
+  `/proposal/reject`）— ARCは`createProposal`でProposalを組み立てる
+  だけで、Systemはこれを一切保存しない。Ownerが内容を確認し、同じ
+  Proposalを`approveProposal`へ再送して初めて対応する既存UseCase
+  経由で書き込まれる。`rejectProposal`は何も永続化しない
+  （ADR 0031）。対応するProposal種別：Reflection/Memory/
+  ExternalKnowledge/Appearance/ManagementFeedback
+- **ManagementFeedback**（`pnpm propose list-feedback`・
+  `pnpm propose resolve`）— ARC視点のProject ARC運用改善提案を表す
+  新Entity。Reflection（Owner視点）とは別Entityとし（ADR 0032）、
+  `resolution`（Open→Accepted→Implemented→Closed、または
+  Rejected）という状態機械を持つ。Timelineには含めない（ADR 0033）
 - **Conversational Integration**（`pnpm conversation`、`POST
   /conversation/context`）— 質問文をIntent（Retrieval/Decision/
   None）へ機械的パターン一致で分類し（ADR 0029）、対応するツール
@@ -75,9 +97,11 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
   API。`POST /reflection` `/skin` `/purchase` `/purchase/:id/start`
   `/purchase/:id/finish` `/appearance` `/evaluation` `/capture/suggest`
   `/capture` `/bridge/import` `/external-sources` `/external-knowledge`
-  `/knowledge/retrieve` `/decision/support` `/conversation/context`、
+  `/knowledge/retrieve` `/decision/support` `/conversation/context`
+  `/proposal/create` `/proposal/approve` `/proposal/reject`、
   `GET /health` `/timeline` `/bridge/export` `/external-sources`
-  `/external-knowledge` `/external-knowledge/search`、`PATCH`/`DELETE`
+  `/external-knowledge` `/external-knowledge/search` `/read/reflection`
+  `/read/timeline` `/read/external` `/read/decision`、`PATCH`/`DELETE`
   も`/external-sources/:id` `/external-knowledge/:id`に対応。新規
   外部依存なし（Node標準の`http`のみ）。ローカル専用（`127.0.0.1`
   のみ）・認証は未実装（将来リモート接続が必要になった時点で追加、
@@ -213,6 +237,10 @@ pnpm run decision                  # 引数なしなら対話式に質問を聞�
 
 pnpm run conversation -- "<質問>"   # 質問のIntentを判定し、Retrieve/DecisionへルーティングしてConversationContextを生成（Version13）
 pnpm run conversation              # 引数なしなら対話式に質問を聞く
+
+pnpm run propose                   # 対話式にProposalを作成→表示→Approve確認（Version14、Write Proposal Layer）
+pnpm run propose list-feedback     # ManagementFeedbackの一覧を表示
+pnpm run propose resolve <id> <Accepted|Implemented|Closed|Rejected>  # resolutionを遷移
 
 pnpm run api                       # ARC Connector（HTTP API）を起動（既定ポート3939）
 ```

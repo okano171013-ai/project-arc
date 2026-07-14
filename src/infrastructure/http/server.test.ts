@@ -424,4 +424,136 @@ describe('ARC Connector HTTP API', () => {
     expect(noneData.conversationContext.intent).toBe('None');
     expect(noneData.conversationContext.warnings.length).toBeGreaterThan(0);
   });
+
+  // --- Read Layer（Version14） ---
+
+  it('GET /read/reflection requires limit', async () => {
+    const { status, json } = await call('GET', '/read/reflection');
+    expect(status).toBe(400);
+    expect(json.error).toMatch(/limit is required/);
+  });
+
+  it('GET /read/reflection returns at most `limit` reflections, newest first', async () => {
+    await call('POST', '/reflection', { date: '2026-07-12', record: { studyMinutes: 30 } });
+    await call('POST', '/reflection', { date: '2026-07-13', record: { studyMinutes: 60 } });
+
+    const { status, json } = await call('GET', '/read/reflection?limit=1');
+    expect(status).toBe(200);
+    const data = json.data as { reflections: { date: string }[] };
+    expect(data.reflections).toHaveLength(1);
+    expect(data.reflections[0]?.date).toBe('2026-07-13');
+  });
+
+  it('GET /read/timeline requires limit and delegates to Timeline', async () => {
+    await call('POST', '/skin', { record: { date: '2026-07-01', redness: 2 } });
+    await call('POST', '/appearance', { record: { date: '2026-07-02', overallRating: 4 } });
+
+    const missing = await call('GET', '/read/timeline');
+    expect(missing.status).toBe(400);
+
+    const { status, json } = await call('GET', '/read/timeline?limit=1');
+    expect(status).toBe(200);
+    const data = json.data as { entries: { date: string }[] };
+    expect(data.entries).toHaveLength(1);
+    expect(data.entries[0]?.date).toBe('2026-07-02');
+  });
+
+  it('GET /read/external requires limit and delegates to Knowledge Retrieval', async () => {
+    await call('POST', '/external-knowledge', {
+      record: { title: 'タイトル', content: '内容', capturedAt: '2026-07-01' },
+    });
+
+    const missing = await call('GET', '/read/external');
+    expect(missing.status).toBe(400);
+
+    const { status, json } = await call('GET', '/read/external?limit=10');
+    expect(status).toBe(200);
+    const data = json.data as { results: unknown[] };
+    expect(data.results).toHaveLength(1);
+  });
+
+  it('GET /read/decision requires limit and delegates to Decision Support', async () => {
+    await call('POST', '/external-knowledge', {
+      record: { title: '行政法メモ', content: '内容', capturedAt: '2026-07-01', topics: ['行政法'] },
+    });
+    await call('POST', '/external-knowledge', {
+      record: { title: '民訴法メモ', content: '内容', capturedAt: '2026-07-02', topics: ['民訴法'] },
+    });
+
+    const missing = await call('GET', '/read/decision?question=どっち？');
+    expect(missing.status).toBe(400);
+
+    const { status, json } = await call(
+      'GET',
+      '/read/decision?limit=1&question=' + encodeURIComponent('行政法と民訴法どっち？'),
+    );
+    expect(status).toBe(200);
+    const data = json.data as { decisionContext: { candidates: string[] }; retrievedKnowledge: unknown[] };
+    expect(data.decisionContext.candidates.sort()).toEqual(['民訴法', '行政法'].sort());
+    expect(data.retrievedKnowledge.length).toBeLessThanOrEqual(1);
+  });
+
+  // --- Write Proposal Layer（Version14） ---
+
+  it('POST /proposal/create builds a Proposal without persisting anything', async () => {
+    const { status, json } = await call('POST', '/proposal/create', {
+      type: 'Memory',
+      target: '新しいMemory: シェーバー',
+      payload: { record: { category: 'Assets', title: 'シェーバー', content: 'PHILIPS 5000' } },
+      reason: '会話で言及されたため',
+    });
+    expect(status).toBe(201);
+    const data = json.data as { proposal: { type: string; createdAt: string } };
+    expect(data.proposal.type).toBe('Memory');
+    expect(data.proposal.createdAt).toBeTruthy();
+
+    const list = await call('GET', '/external-knowledge');
+    expect((list.json.data as { knowledge: unknown[] }).knowledge).toHaveLength(0);
+  });
+
+  it('POST /proposal/create rejects a structurally invalid payload', async () => {
+    const { status, json } = await call('POST', '/proposal/create', {
+      type: 'Memory',
+      target: '不正な提案',
+      payload: { record: { title: '見出しのみ' } },
+      reason: '理由',
+    });
+    expect(status).toBe(400);
+    expect(json.error).toMatch(/Invalid proposal payload/);
+  });
+
+  it('POST /proposal/approve persists only after the full proposal is resent (Owner承認後のみ書き込む)', async () => {
+    const created = await call('POST', '/proposal/create', {
+      type: 'ManagementFeedback',
+      target: 'Daily Reviewの生成時刻を早める提案',
+      payload: {
+        record: {
+          author: 'ARC',
+          category: 'Process',
+          content: 'Daily Reviewをもっと早い時間に生成してほしい',
+          reason: '22時だとOwnerが確認しないまま日付が変わることが多いため',
+        },
+      },
+      reason: '22時だとOwnerが確認しないまま日付が変わることが多いため',
+    });
+    const proposal = (created.json.data as { proposal: unknown }).proposal;
+
+    const approved = await call('POST', '/proposal/approve', proposal);
+    expect(approved.status).toBe(200);
+    expect((approved.json.data as { type: string }).type).toBe('ManagementFeedback');
+  });
+
+  it('POST /proposal/reject persists nothing', async () => {
+    const created = await call('POST', '/proposal/create', {
+      type: 'Memory',
+      target: '対象',
+      payload: { record: { category: 'Assets', title: 't', content: 'c' } },
+      reason: '理由',
+    });
+    const proposal = (created.json.data as { proposal: unknown }).proposal;
+
+    const rejected = await call('POST', '/proposal/reject', proposal);
+    expect(rejected.status).toBe(200);
+    expect(rejected.json.data).toEqual({ rejected: true, type: 'Memory' });
+  });
 });
