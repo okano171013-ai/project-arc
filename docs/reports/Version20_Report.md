@@ -1,5 +1,7 @@
 # Version20 Report: Collaboration Runner + 常駐運用基盤
 
+**コミットハッシュ**：`36f52e6`（`feature/v4-v6-smart-capture`ブランチ）
+
 `docs/reports/TEMPLATE.md`の14章構成に準拠。
 
 ## 1. Version概要
