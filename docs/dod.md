@@ -405,3 +405,25 @@ Version19のDoDは達成済み。新規Entity・UseCase・スキーマフィー�
 整備と、既存のWrite Proposal Layer・MCP toolを実際に呼び出しての
 クローズドループ実演（ManagementFeedbackの解決・AgentMessageでの
 完了報告）が中心。
+
+## Version20完了チェックリスト
+
+- [x] `pnpm test` が全て緑（256件、Collaboration Runnerのテスト6件を含む）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `src/infrastructure/runner/collaborationRunner.ts`（機械的な新着検知・通知のみ、AI推論なし、ADR 0046）を実装済み
+- [x] Collaboration Runnerのテスト（初回全件検知・2回目新着なし・3回目差分検知・ロック機構）を実装済み
+- [x] `scripts/start-all.ps1`・`scripts/stop-all.ps1`を実装済み
+- [x] `scripts/register-scheduled-tasks.ps1`を実装し、`ProjectARC-CollaborationRunner`タスクは実際に登録・実機確認済み（`Start-ScheduledTask`で手動発火、`LastTaskResult: 0`確認済み）
+- [ ] `ProjectARC-AutoStart`タスクの登録はOwner自身の1ステップ操作として引き継ぎ済み（Claude Codeの実行環境の制約、ADR 0047に明記）——Owner実行待ち
+- [x] ADR 0046（Runner v1スコープ）・ADR 0047（自動起動）を記録済み
+- [x] `docs/setup/collaboration-runner.md`を作成済み
+- [x] `docs/setup/chatgpt-mcp-connection.md`の「検証後は停止」記述を常時稼働運用向けに更新済み
+- [x] `docs/handoff/archive/Version20_ARC_Brief.md`を作成済み（2件のAgentMessage原文を保管）
+- [x] `docs/handoff/ARC_INBOX.md`に処理済みエントリを追記済み
+- [x] README / docsに実装との乖離がない
+- [x] AgentMessage（`direction: "ToARC"`、id `0662fae9-...`）で完了報告をProject ARCへ保存済み（Owner承認経由）
+- [x] `docs/reports/Version20_Report.md` を生成済み（14章構成）
+- [x] `docs/reports/Version20_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+`ProjectARC-AutoStart`タスクの実登録（Owner操作）以外は完了済み。

@@ -81,6 +81,18 @@ archive/Version19_ARC_Brief.md`に保管）。「ManagementFeedbackを
 分析し指示書を生成する」対象をSystem/Claude Codeではなくスコープを
 絞り、ARC自身がその作業を担う運用の完成に限定した（ADR 0045）。
 
+**処理済み**：Version20「Collaboration Runner + 常駐運用基盤」
+（`docs/reports/Version20_Report.md`）。AgentMessage（id
+`33274dc6-...`）による指示。無人稼働中のAI推論（内容の解釈・実装
+方針の提案）はConstitution第2条・ADR 0045に抵触するため、Runner v1は
+機械的な新着検知・通知のみに限定した（ADR 0046）。ログオン時自動
+起動（`pnpm run api`・`mcp:remote`・ngrok）はOwner確認の上で導入
+したが、タスクスケジューラへの登録はClaude Codeの実行環境の制約で
+一部完遂できず、Owner自身の1ステップ操作として引き継いだ（ADR
+0047）。同日届いた100項目の長期バックログ（id `8df72fe4-...`）は
+`docs/roadmap.md`の長期セクションへ要約を記録するに留めた（原文は
+`docs/handoff/archive/Version20_ARC_Brief.md`に保管）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください
 （またはARCが直接AgentMessageとして送ってくることもあります

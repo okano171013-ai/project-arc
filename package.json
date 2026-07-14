@@ -1,7 +1,7 @@
 {
   "name": "project-arc",
-  "version": "0.18.0",
-  "description": "Project ARC — AI Life Management OS (Version18: Remote MCP Integration)",
+  "version": "0.20.0",
+  "description": "Project ARC — AI Life Management OS (Version20: Collaboration Runner)",
   "type": "module",
   "private": true,
   "engines": {
@@ -30,6 +30,7 @@
     "mcp": "tsx src/infrastructure/mcp/server.ts",
     "mcp:remote": "tsx src/infrastructure/mcp/remoteServer.ts",
     "openapi:generate": "tsx src/infrastructure/openapi/generateOpenApi.ts",
+    "runner": "tsx src/infrastructure/runner/collaborationRunner.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",
     "test:watch": "vitest",

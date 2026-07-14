@@ -474,6 +474,49 @@ Version19はその運用が機能するために欠けていたインフラ・�
 
 ---
 
+## Version20｜Collaboration Runner + 常駐運用基盤
+
+Version19完了後、ARCから「Collaboration Runnerと常駐運用基盤を最優先で
+実装してください」という指示（AgentMessage `33274dc6-...`）が届いた。
+PCを起動したまま放置しても、Project ARC上の未読AgentMessage・
+ManagementFeedbackを監視し、承認不要の範囲でClaude Codeが対応を
+進める仕組みと、`pnpm run api`/`pnpm run mcp:remote`/`ngrok http 3940`
+のログオン時自動起動を求めた。
+
+**スコープの絞り込み（ADR 0046）**：無人稼働のまま内容を「解釈」し
+実装方針を決めることはConstitution第2条・ADR 0045の境界に抵触しかね
+ない。着手前にOwnerへ確認（AskUserQuestion）し、「Runnerは監視・
+下書き作成まで（実際のコード変更・commitはOwnerの`do`承認まで
+実行しない）」との回答を得て、Runner v1を**機械的な新着検知・通知
+のみ**に限定した。
+
+- **Collaboration Runner**（`src/infrastructure/runner/
+  collaborationRunner.ts`、`pnpm run runner`）：`agent_message_list`・
+  `management_feedback_list`の新着を検知し、`data/runner-
+  notifications/`へ機械的な一覧を書き出す。内容の解釈・実装方針の
+  提案は一切しない。1回実行して終了するスクリプトとして実装し、
+  繰り返し実行はWindowsタスクスケジューラに委ねる（独自の常駐
+  ループ・重複防止ロジックは作り込まない、YAGNI）。
+- **ログオン時自動起動**（`scripts/start-all.ps1`・`stop-all.ps1`）：
+  Owner確認の上、ngrokを含む3サービスを自動起動する方針とした
+  （ADR 0047）——Remote MCPは無認証設計（ADR 0044）のため、これは
+  ほぼ常時の公開を意味する常時公開リスクの受け入れ。
+- **実機で発覚した制約**：タスクスケジューラへの登録スクリプト
+  （`scripts/register-scheduled-tasks.ps1`）を実行したところ、
+  15分間隔のCollaboration Runnerタスクは登録できたが、ログオン
+  トリガーの自動起動タスクはClaude Codeの実行環境の権限制約により
+  登録できなかった（`docs/adr/0047-boot-time-autostart.md`参照）。
+  Owner自身が同スクリプトを対話的なPowerShellセッションから一度
+  実行する、という1ステップの手順として引き継いだ
+  （`docs/setup/collaboration-runner.md`参照）。
+- **長期バックログの記録**：同日届いた100項目の長期バックログ
+  （AgentMessage `8df72fe4-...`、A〜Jの10カテゴリ）は、「一括実装
+  せず最小縦切りで進める」という指示書自身の方針に従い、全項目の
+  評価はせず参照として記録するに留めた（原文は`docs/handoff/
+  archive/Version20_ARC_Brief.md`に保管）。
+
+---
+
 ## 長期ロードマップ 2.0（Version9完了時、ARC提案）
 
 Version9完了を受け、ARCから中長期ロードマップの組み替え提案があった

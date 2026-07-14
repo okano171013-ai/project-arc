@@ -15,24 +15,46 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/ai-roles.md`](./docs/ai-roles.md) — 人間・ARC・Gemini・Claude Code・
   システム自体の責務分担
 - [`docs/architecture.md`](./docs/architecture.md) — 技術設計
-- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜19のロードマップ・
+- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜20のロードマップ・
   長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version19のスコープ（現在地）
+## Version20のスコープ（現在地）
 
-テーマ：「Continuous Collaboration」— Version18でChatGPT⇄Project ARC
-の接続が実際に動くことをOwnerが確認し、ARC自身が初めてコピペを
-介さずProject ARCへ直接書き込みを行った。Version19はこの運用が
-機能し続けるために欠けていたインフラ・記録・ドキュメントを整備した
-——ManagementFeedbackを「分析」し指示書を「生成」する役割は
-Project ARC（System）ではなくARC自身が担うと解釈し、Systemが判断を
-下す機能は実装していない（`docs/constitution.md`第2条、ADR 0045）。
-新規Entity・スキーマフィールドは追加していない。アーキテクチャ
-全体像は
+テーマ：「Collaboration Runner + 常駐運用基盤」— ARCから「Collaboration
+Runnerと常駐運用基盤を最優先で実装してください」という指示を受け、
+PCを起動したまま放置してもProject ARC上の新着を検知できる仕組みと、
+`pnpm run api`/`pnpm run mcp:remote`/`ngrok`のログオン時自動起動を
+整備した。無人稼働のまま内容を「解釈」し実装方針を決めることは
+Constitution第2条・ADR 0045の境界に抵触しかねないため、Owner確認の
+上でRunner v1は**機械的な新着検知・通知のみ**に限定した（ADR 0046）。
+アーキテクチャ全体像は
 [`docs/architecture-diagram.md`](./docs/architecture-diagram.md)を参照。
+
+- **Collaboration Runner**（`src/infrastructure/runner/
+  collaborationRunner.ts`、`pnpm run runner`）— `agent_message_list`・
+  `management_feedback_list`の新着を機械的に検知し、`data/runner-
+  notifications/`へ一覧を書き出す。内容の解釈・実装方針の提案は
+  一切しない（ADR 0046）。1回実行して終了するスクリプトとして実装し、
+  繰り返し実行はWindowsタスクスケジューラに委ねる
+- **ログオン時自動起動**（`scripts/start-all.ps1`・`stop-all.ps1`・
+  `scripts/register-scheduled-tasks.ps1`）— Owner確認の上、ngrokを
+  含む3サービスをログオン時に自動起動する方針とした。Remote MCPは
+  無認証設計（ADR 0044）のため、これはほぼ常時の公開を意味する
+  ——常時公開リスクの受け入れ。運用手順は
+  [`docs/setup/collaboration-runner.md`](./docs/setup/collaboration-runner.md)参照
+
+### 旧Version19のスコープ：「Continuous Collaboration」
+
+Version18でChatGPT⇄Project ARCの接続が実際に動くことをOwnerが確認し、
+ARC自身が初めてコピペを介さずProject ARCへ直接書き込みを行った。
+Version19はこの運用が機能し続けるために欠けていたインフラ・記録・
+ドキュメントを整備した——ManagementFeedbackを「分析」し指示書を
+「生成」する役割はProject ARC（System）ではなくARC自身が担うと解釈し、
+Systemが判断を下す機能は実装していない（`docs/constitution.md`
+第2条、ADR 0045）。
 
 - **Continuous Collaboration運用**（`docs/ai-roles.md`）— ARCが
   ManagementFeedbackを読み、指示書をAgentMessage Proposalとして起案、
@@ -303,6 +325,7 @@ pnpm run api                       # ARC Connector（HTTP API）を起動（既�
 pnpm run mcp                       # MCPサーバーを起動（stdio、Version16）。事前に`pnpm run api`が起動している必要がある
 pnpm run mcp:remote                # Remote MCPサーバーを起動（Streamable HTTP、Version18、既定ポート3940）。認証なし（ADR 0044）
 pnpm run openapi:generate          # docs/openapi.json を生成（Version18、主要10エンドポイントのみ）
+pnpm run runner                    # Collaboration Runnerを1回実行（Version20、機械的な新着検知のみ、ADR 0046）
 ```
 
 `pnpm run api`起動後の動作確認例（`curl`はGit Bash上で日本語を含む
