@@ -72,8 +72,19 @@ reports/Version18_Report.md`）。「ARCが初めてProject ARCを直接
 （フルOAuth 2.1は見送り。原文は`docs/handoff/archive/
 Version18_ARC_Brief.md`に保管）。
 
+**処理済み**：Version19「Continuous Collaboration」（`docs/
+reports/Version19_Report.md`）。**このファイルへの貼り付けを経由
+せず**、ARC自身がRemote MCP（Version18・ADR 0044）経由で
+`AgentMessage`（id `b0adb087-...`、direction: ToClaudeCode）として
+直接Project ARCへ保存した初めての指示書（原文は`docs/handoff/
+archive/Version19_ARC_Brief.md`に保管）。「ManagementFeedbackを
+分析し指示書を生成する」対象をSystem/Claude Codeではなくスコープを
+絞り、ARC自身がその作業を担う運用の完成に限定した（ADR 0045）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
-「ここにARCの指示書を貼り付け」以下を置き換えてください。
+「ここにARCの指示書を貼り付け」以下を置き換えてください
+（またはARCが直接AgentMessageとして送ってくることもあります
+——`agent_message_list`も必ず確認すること）。
 
 ---
 

@@ -15,31 +15,44 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/ai-roles.md`](./docs/ai-roles.md) — 人間・ARC・Gemini・Claude Code・
   システム自体の責務分担
 - [`docs/architecture.md`](./docs/architecture.md) — 技術設計
-- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜18のロードマップ・
+- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜19のロードマップ・
   長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version18のスコープ（現在地）
+## Version19のスコープ（現在地）
 
-テーマ：「Remote MCP Integration」— 「ARCが初めてProject ARCを直接
-利用する。」Version17完了報告へのARCからの正式な指示書に基づき、
-ChatGPTがProject ARCへ直接接続できる環境を整えた。「おとのコピペを
-減らすこと」が唯一の成功指標——Project ARC本体の設計変更ではなく、
-接続環境の完成のみが目的。事前調査の結果、ChatGPT Developer Modeの
-ネイティブな認証はOAuth 2.0/2.1または「認証なし」であり、フルの
-OAuth 2.1 Authorization Serverは今回実装していない（簡易Bearer認証
-のみ、ADR 0041）。アーキテクチャ全体像は
+テーマ：「Continuous Collaboration」— Version18でChatGPT⇄Project ARC
+の接続が実際に動くことをOwnerが確認し、ARC自身が初めてコピペを
+介さずProject ARCへ直接書き込みを行った。Version19はこの運用が
+機能し続けるために欠けていたインフラ・記録・ドキュメントを整備した
+——ManagementFeedbackを「分析」し指示書を「生成」する役割は
+Project ARC（System）ではなくARC自身が担うと解釈し、Systemが判断を
+下す機能は実装していない（`docs/constitution.md`第2条、ADR 0045）。
+新規Entity・スキーマフィールドは追加していない。アーキテクチャ
+全体像は
 [`docs/architecture-diagram.md`](./docs/architecture-diagram.md)を参照。
 
+- **Continuous Collaboration運用**（`docs/ai-roles.md`）— ARCが
+  ManagementFeedbackを読み、指示書をAgentMessage Proposalとして起案、
+  Ownerが「do」で承認、Claude Codeが実装、完了報告もAgentMessageで
+  保存、という閉ループをドキュメント化。ManagementFeedback↔
+  AgentMessageのトレーサビリティは既存の`tags?: string[]`を再利用
+  した`mf:<id>`規約で実現し、スキーマ変更はしていない（ADR 0045）
+- **セッション開始チェックの補完**（`CLAUDE.md`）— ARCからの指示書は
+  `docs/handoff/ARC_INBOX.md`だけでなく`agent_message_list`
+  （`direction: "ToClaudeCode"`）経由でも届くようになったため、
+  両方を確認するチェックリストに更新
 - **Remote MCPサーバー**（`src/infrastructure/mcp/remoteServer.ts`、
   `pnpm run mcp:remote`）— MCP公式仕様のStreamable HTTP transportで
-  実装。stdio版（`pnpm run mcp`、Claude Code用）とは独立した
-  エントリポイントで、既存の`.mcp.json`・stdio接続は無変更のまま
-  共存する。`ARC_API_KEY`は必須（未設定時は起動エラー、ADR 0041）。
-  実際にChatGPTから到達させるには公開HTTPSトンネルが必要——
-  セットアップ手順は
+  実装（Version18）。stdio版（`pnpm run mcp`、Claude Code用）とは
+  独立したエントリポイントで、既存の`.mcp.json`・stdio接続は無変更の
+  まま共存する。`/mcp`エンドポイントは認証を行わない——ChatGPTの
+  「認証なし」モードは`Authorization`ヘッダーを送らないため、Bearer
+  必須では接続できないことが実機検証で判明し撤回した（ADR 0044、
+  ADR 0041を一部訂正）。実際にChatGPTから到達させるには公開HTTPS
+  トンネルが必要——セットアップ手順は
   [`docs/setup/chatgpt-mcp-connection.md`](./docs/setup/chatgpt-mcp-connection.md)参照（トンネルサービスへの登録はOwner自身の操作が必要）
 - **OpenAPI 3.x生成**（`pnpm run openapi:generate`、`docs/openapi.json`）—
   ARC向けの主要10エンドポイントに絞ってoperationId・request・
@@ -288,7 +301,7 @@ pnpm run propose list-messages     # AgentMessageの一覧を表示（Version17�
 pnpm run api                       # ARC Connector（HTTP API）を起動（既定ポート3939）
 
 pnpm run mcp                       # MCPサーバーを起動（stdio、Version16）。事前に`pnpm run api`が起動している必要がある
-pnpm run mcp:remote                # Remote MCPサーバーを起動（Streamable HTTP、Version18、既定ポート3940）。ARC_API_KEY必須
+pnpm run mcp:remote                # Remote MCPサーバーを起動（Streamable HTTP、Version18、既定ポート3940）。認証なし（ADR 0044）
 pnpm run openapi:generate          # docs/openapi.json を生成（Version18、主要10エンドポイントのみ）
 ```
 

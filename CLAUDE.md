@@ -11,8 +11,15 @@ Principleの順に立ち返る。
 1. `docs/handoff/ARC_INBOX.md` — ARC（ChatGPT）からの最新の指示書が
    更新されていないか確認する。更新されていれば、それが最新の
    作業指示である（Ownerに聞き直さなくてよい）。
-2. `docs/dod.md` — 直近Versionの完了チェックリストの状態。
-3. `git log` / `git status` — 前回セッションでの未完了・未コミット
+2. **`agent_message_list`（`direction: "ToClaudeCode"`）** — Version19
+   以降、ARCはRemote MCP経由でProject ARCへ直接指示書を書き込める
+   （ADR 0044・0045）。`ARC_INBOX.md`を経由しない指示書が届くことが
+   あるため、`.mcp.json`経由で接続済みのstdio MCP tool
+   （`agent_message_list`）で未対応のメッセージがないか必ず確認する。
+   対応したら`docs/handoff/archive/VersionN_ARC_Brief.md`へ保管する
+   （手順は`docs/handoff/README.md`参照）。
+3. `docs/dod.md` — 直近Versionの完了チェックリストの状態。
+4. `git log` / `git status` — 前回セッションでの未完了・未コミット
    作業がないか。
 
 ## 進め方（Owner指示、2026年7月）
@@ -21,10 +28,12 @@ Principleの順に立ち返る。
   ドキュメント構成など、ルーティンな判断はOwnerに確認を取らずに
   Claude Codeが決めてよい。
 - **ARCとの設計相談が必要な場面でも、Claude Codeが判断して進める**。
-  ARC（ChatGPT）とは現時点でAPI連携がなく、この場から直接相談する
-  ことはできない（`docs/handoff/README.md`参照）。判断根拠は
-  Version Report・ADR・`docs/handoff/`に記録し、後からOwner/ARCが
-  検証できるようにする。
+  Version19以降、ARCとはRemote MCP経由の生きた接続があるが（ADR
+  0044）、それでも設計判断はこの場（Claude Codeのセッション）で
+  完結させ、ARCの同期的な応答を待たない——応答が来る保証がない
+  ため（`docs/handoff/README.md`参照）。判断根拠はVersion Report・
+  ADR・`docs/handoff/`に記録し、後からOwner/ARCが検証できるように
+  する。
 - 確認・承認が必要なのは、真に不可逆または前提を左右する判断のみ
   （破壊的なgit操作、Project ARC自身のガバナンス原則
   （`docs/ai-roles.md`）と衝突しかねない設計判断、等）。
@@ -33,9 +42,16 @@ Principleの順に立ち返る。
 
 詳細は[`docs/handoff/README.md`](./docs/handoff/README.md)。要約：
 
-- **受信**：`docs/handoff/ARC_INBOX.md`にARCの指示書が来る。
+- **受信（2経路が併存）**：①`docs/handoff/ARC_INBOX.md`にARCの
+  指示書が貼り付けられる（従来からのファイルベース経路）。②Version19
+  以降、ARCがRemote MCP経由で`AgentMessage`（`direction:
+  "ToClaudeCode"`）として直接書き込む（上記チェックリスト参照）。
+  どちらも同格に扱い、両方を確認する。
 - **送信**：Version完了ごとに`docs/reports/VersionN_ARC_Feedback.md`
-  を生成し、`docs/handoff/LATEST_ARC_FEEDBACK.md`のポインタを更新する。
+  を生成し、`docs/handoff/LATEST_ARC_FEEDBACK.md`のポインタを更新する
+  （ファイルベース経路）。あわせて`AgentMessage`（`direction:
+  "ToARC"`）でも完了報告をProject ARCへ保存する（Owner承認必須、
+  ライブ経路）。
 
 ## Version完了時の標準フロー
 

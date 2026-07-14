@@ -123,3 +123,56 @@ Project ARCにおける各エージェント（人間 + 3AI + システム自体
 この責務分担が前提となる。「同じ処理を別のAIに任せられるか」
 ではなく、「その処理はそもそもどの役割の仕事か」を先に問うこと
 （Principle 10, ADR 0002参照）。
+
+---
+
+## Continuous Collaboration（Version19〜）の運用
+
+Version18でRemote MCP接続が完成し、ARCがProject ARCへ直接読み書き
+できるようになったことを受け、ARC↔Owner↔Claude Codeの協調ループを
+以下のように運用する（ADR 0044・0045）。
+
+```
+ARCがManagementFeedbackを読む（management_feedback_list）
+        │　※「分析」「解釈」はARC自身の責務（第3条）。
+        │　　Project ARC（System）・Claude Codeはこの分析を代行しない。
+        ▼
+ARCが指示書をAgentMessage Proposalとして起案
+（proposal_create, type: AgentMessage, direction: ToClaudeCode）
+        │
+        ▼
+Ownerが「do」で承認（proposal_approve） ← 第4条：Ownerが最終決定する
+        │
+        ▼
+Claude Codeが実装
+        │
+        ▼
+Claude CodeがAgentMessageで完了報告
+（proposal_create → Ownerの「do」→ proposal_approve, direction: ToARC）
+        │
+        ▼
+Owner/ARCが次回レビューでManagementFeedbackをOpen→Accepted→
+Implemented→Closedへ遷移（第4条：resolutionの遷移はOwnerの判断の記録）
+        │
+        └─→ 次のManagementFeedbackへ
+```
+
+**このループのどの段階でも、Project ARC（System）自身は「読み取って
+分析する」役を持たない**——`management_feedback_list`・
+`agent_message_list`は忠実にデータを返すだけであり、重要度判定・
+要約・指示書の自動生成は行わない（第5節「Project ARC（システムその
+もの）」の「意思決定範囲：一切なし」を参照）。
+
+### トレーサビリティ：`tags`によるManagementFeedback ↔ AgentMessageの紐付け
+
+新しいEntityフィールドは追加しない（Principle 9のYAGNI、
+`AgentMessage.ts`自体が意図的に最小限の設計）。既存の
+`tags?: string[]`（`ManagementFeedbackRecord`・`AgentMessageRecord`
+双方に既存）を再利用し、以下の規約とする。
+
+- あるManagementFeedbackを起点に書かれたAgentMessageには、
+  `tags: ["mf:<ManagementFeedbackのid>"]`を付与する。
+
+この規約はデータの形式であり、Systemがこれを解釈・検証すること
+はない——あくまで人間・AIが読んだときに関連付けを追える程度の
+軽量な記録に留める。

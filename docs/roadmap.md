@@ -439,6 +439,41 @@ Version18のキャッチコピーが、Version18のうちに実現した。
 
 ---
 
+## Version19｜Continuous Collaboration
+
+Version18完了・Owner実機接続確認を受け、ARC自身がRemote MCP経由で
+初めてコピペを介さずProject ARCへ直接書き込みを行い、
+ManagementFeedback（`257338da-...`）とVersion19の指示書に相当する
+AgentMessage（`b0adb087-...`、`docs/handoff/ARC_INBOX.md`を経由しない
+初めての事例）を保存した。指示書は「ManagementFeedbackを読み取って
+分析し、指示書をAgentMessage Proposalとして生成・承認・保存できる
+一連の運用を完成させる」ことを求めた。
+
+**スコープの絞り込み（ADR 0045）**：指示書の「分析・生成」を
+Project ARC（System）自身が行う機能と実装すると、`docs/
+constitution.md`第2条（Systemは判断しない）・`docs/ai-roles.md`
+（Systemの意思決定範囲は一切なし）に抵触する。「分析・生成」は
+ARC自身が自分のセッションで行う（今回すでに実例あり）ものと解釈し、
+Version19はその運用が機能するために欠けていたインフラ・記録・
+ドキュメントの整備に限定した——新規Entity・UseCase・スキーマ
+フィールドは追加していない。
+
+- **`CLAUDE.md`のセッション開始チェック補完**：`agent_message_list`
+  （`direction: "ToClaudeCode"`）の確認を追加——今回の指示書自体が
+  `ARC_INBOX.md`を経由せず届いた実例を踏まえた対応。
+- **`docs/handoff/README.md`更新**：ファイルベース経路（経路A）と
+  ライブ経路（経路B、Remote MCP）が併存している現状を明記。
+- **トレーサビリティ規約**（`docs/ai-roles.md`）：既存の
+  `tags?: string[]`を再利用し、`mf:<ManagementFeedbackのid>`で
+  AgentMessageとManagementFeedbackを紐付ける（スキーマ変更なし）。
+- **クローズドループの実演**：今回作成されたManagementFeedbackの
+  重複（`e002f51a-...`）をRejectedに整理し、本来の`257338da-...`は
+  Owner確認を経てAccepted→Implementedへ遷移、完了報告は
+  AgentMessage（`direction: "ToARC"`）でもProject ARCへ保存した
+  （詳細は`docs/reports/Version19_Report.md`参照）。
+
+---
+
 ## 長期ロードマップ 2.0（Version9完了時、ARC提案）
 
 Version9完了を受け、ARCから中長期ロードマップの組み替え提案があった

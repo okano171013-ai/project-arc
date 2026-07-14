@@ -381,3 +381,27 @@ Version17のDoDは達成済み（自動テスト＋実サーバー・実MCPサ�
 - [x] `docs/reports/Version18_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
 
 Version18のDoDは達成済み（自動テスト＋実サーバー・実Remote MCPサブプロセスへの実リクエストで確認済み。「ChatGPT→Remote MCP」の実接続はOwner自身の操作が必要なため対象外）。
+
+## Version19完了チェックリスト
+
+- [x] `pnpm test` が全て緑（新規Entity・スキーマ変更なし、250件のまま）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `CLAUDE.md`のセッション開始チェックリストに`agent_message_list`確認ステップを追加済み
+- [x] `docs/handoff/README.md`にファイルベース経路（経路A）・ライブ経路（経路B）の併存を明記済み
+- [x] `docs/handoff/archive/Version19_ARC_Brief.md`を作成済み（AgentMessage経由の指示書を保管）
+- [x] `docs/handoff/ARC_INBOX.md`に処理済みエントリを追記済み
+- [x] `docs/ai-roles.md`に`tags`によるManagementFeedback↔AgentMessageトレーサビリティ規約（`mf:<id>`）を記録済み
+- [x] ADR 0045（Version19のスコープをガバナンス境界に沿って絞り込んだ理由）を記録済み
+- [x] ManagementFeedback（`e002f51a-...`、重複分）をRejectedに遷移済み
+- [x] ManagementFeedback（`257338da-...`）をOwner確認後にAccepted→Implementedへ遷移済み（Closedは次回レビューに委ねる）
+- [x] AgentMessage（`direction: "ToARC"`、id `795c971a-...`）で完了報告をProject ARCへ保存済み（Owner承認経由）
+- [x] README / docsに実装との乖離がない
+- [x] `docs/reports/Version19_Report.md` を生成済み（14章構成）
+- [x] `docs/reports/Version19_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+Version19のDoDは達成済み。新規Entity・UseCase・スキーマフィールドは
+追加していない（ADR 0045参照、意図的なスコープ限定）——ドキュメント
+整備と、既存のWrite Proposal Layer・MCP toolを実際に呼び出しての
+クローズドループ実演（ManagementFeedbackの解決・AgentMessageでの
+完了報告）が中心。
