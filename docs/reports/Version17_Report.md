@@ -2,6 +2,8 @@
 
 `docs/reports/TEMPLATE.md`の14章構成に準拠。
 
+**コミットハッシュ**：`6c3100e`（`feature/v4-v6-smart-capture`ブランチ）
+
 ## 1. Version概要
 
 **テーマ**：Agent Collaboration Layer — 「まず無料・ローカルで
