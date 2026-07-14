@@ -52,6 +52,7 @@ describe('Project ARC MCP Server', () => {
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual(
       [
+        'agent_message_list',
         'management_feedback_list',
         'management_feedback_resolve',
         'proposal_approve',
@@ -149,5 +150,31 @@ describe('Project ARC MCP Server', () => {
     });
     expect(result.isError).toBe(true);
     expect(textOf(result)).toContain('not found');
+  });
+
+  it('drives AgentMessage proposal_create -> approve -> agent_message_list (Version17)', async () => {
+    const created = await client.callTool({
+      name: 'proposal_create',
+      arguments: {
+        type: 'AgentMessage',
+        target: 'Version17指示書',
+        payload: {
+          record: { direction: 'ToClaudeCode', content: '指示書の内容', relatedVersion: 'Version17' },
+        },
+        reason: 'ARCからの指示',
+      },
+    });
+    expect(created.isError).toBeFalsy();
+    const proposal = JSON.parse(textOf(created));
+
+    const approved = await client.callTool({ name: 'proposal_approve', arguments: proposal });
+    expect(approved.isError).toBeFalsy();
+    expect(JSON.parse(textOf(approved)).type).toBe('AgentMessage');
+
+    const list = await client.callTool({ name: 'agent_message_list', arguments: {} });
+    expect(list.isError).toBeFalsy();
+    const messages = JSON.parse(textOf(list)).messages;
+    expect(messages).toHaveLength(1);
+    expect(messages[0].record.direction).toBe('ToClaudeCode');
   });
 });

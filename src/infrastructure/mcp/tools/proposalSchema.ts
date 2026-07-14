@@ -12,6 +12,7 @@ export const PROPOSAL_TYPES = [
   'ExternalKnowledge',
   'Appearance',
   'ManagementFeedback',
+  'AgentMessage',
 ] as const;
 
 export const proposalShape = {

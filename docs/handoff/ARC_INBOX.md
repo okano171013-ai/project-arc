@@ -55,6 +55,13 @@ reports/Version16_Report.md`）。「ARCが初めてProject ARCを直接
 依存）と9個のMCP Toolを追加した指示書（原文は
 `docs/handoff/archive/Version16_ARC_Brief.md`に保管）。
 
+**処理済み**：Version17「Agent Collaboration Layer」（`docs/
+reports/Version17_Report.md`）。ARCとClaude Codeの役割分担を明確化
+した上で、ARC↔Claude Code間の指示書・Feedbackの往復記録
+（AgentMessage）をProject ARC自身に保存できるようにした指示書
+（フィールド定義等の具体仕様はなく、Claude Codeが設計。原文は
+`docs/handoff/archive/Version17_ARC_Brief.md`に保管）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください。
 

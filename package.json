@@ -1,7 +1,7 @@
 {
   "name": "project-arc",
-  "version": "0.16.0",
-  "description": "Project ARC — AI Life Management OS (Version16: MCP Integration)",
+  "version": "0.17.0",
+  "description": "Project ARC — AI Life Management OS (Version17: Agent Collaboration Layer)",
   "type": "module",
   "private": true,
   "engines": {

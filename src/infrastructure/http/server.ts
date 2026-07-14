@@ -53,6 +53,8 @@ import { WriteProposalGatewayUseCase } from '../../application/use-cases/write-p
 import { AddManagementFeedbackUseCase } from '../../application/use-cases/management-feedback/AddManagementFeedback.js';
 import { ListManagementFeedbackUseCase } from '../../application/use-cases/management-feedback/ListManagementFeedback.js';
 import { ResolveManagementFeedbackUseCase } from '../../application/use-cases/management-feedback/ResolveManagementFeedback.js';
+import { AddAgentMessageUseCase } from '../../application/use-cases/agent-message/AddAgentMessage.js';
+import { ListAgentMessagesUseCase } from '../../application/use-cases/agent-message/ListAgentMessages.js';
 import type { ExternalKnowledgeStatus } from '../../domain/entities/ExternalKnowledge.js';
 import type { ProposalType, Proposal } from '../../domain/value-objects/Proposal.js';
 
@@ -68,6 +70,7 @@ import { JsonFileThirdPersonEvaluationRepository } from '../../adapters/reposito
 import { JsonFileExternalSourceRepository } from '../../adapters/repositories/JsonFileExternalSourceRepository.js';
 import { JsonFileExternalKnowledgeRepository } from '../../adapters/repositories/JsonFileExternalKnowledgeRepository.js';
 import { JsonFileManagementFeedbackRepository } from '../../adapters/repositories/JsonFileManagementFeedbackRepository.js';
+import { JsonFileAgentMessageRepository } from '../../adapters/repositories/JsonFileAgentMessageRepository.js';
 import { RuleBasedCaptureClassifier } from '../../adapters/providers/RuleBasedCaptureClassifier.js';
 import { isAuthorized } from '../security/apiKeyAuth.js';
 import { loadEnv } from '../config/env.js';
@@ -86,6 +89,7 @@ import {
   serializeProposal,
   serializeMemoryEntry,
   serializeManagementFeedback,
+  serializeAgentMessage,
 } from '../../application/serializers.js';
 import type { Reflection } from '../../domain/entities/Reflection.js';
 import type { MemoryEntry } from '../../domain/entities/MemoryEntry.js';
@@ -95,6 +99,7 @@ import type {
   ManagementFeedback,
   ManagementFeedbackResolution,
 } from '../../domain/entities/ManagementFeedback.js';
+import type { AgentMessage, AgentMessageDirection } from '../../domain/entities/AgentMessage.js';
 
 export interface BuildAppOptions {
   /** テスト時に本番の`data/`と隔離するためのディレクトリ差し替え。 */
@@ -143,6 +148,9 @@ export function buildUseCases(options: BuildAppOptions = {}) {
   );
   const managementFeedbackRepository = new JsonFileManagementFeedbackRepository(
     repoPath(dataDir, 'management-feedback.json'),
+  );
+  const agentMessageRepository = new JsonFileAgentMessageRepository(
+    repoPath(dataDir, 'agent-messages.json'),
   );
   const classifier = new RuleBasedCaptureClassifier();
 
@@ -230,6 +238,8 @@ export function buildUseCases(options: BuildAppOptions = {}) {
     addManagementFeedback: new AddManagementFeedbackUseCase(managementFeedbackRepository),
     listManagementFeedback: new ListManagementFeedbackUseCase(managementFeedbackRepository),
     resolveManagementFeedback: new ResolveManagementFeedbackUseCase(managementFeedbackRepository),
+    addAgentMessage: new AddAgentMessageUseCase(agentMessageRepository),
+    listAgentMessages: new ListAgentMessagesUseCase(agentMessageRepository),
     readGateway: new ReadGatewayUseCase(
       reflectionRepository,
       appearanceLogRepository,
@@ -248,6 +258,7 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       externalSourceRepository,
       appearanceLogRepository,
       managementFeedbackRepository,
+      agentMessageRepository,
     ),
   };
 }
@@ -327,6 +338,8 @@ function serializeApproveResult(type: ProposalType, result: unknown): unknown {
       return { log: serializeAppearanceLog((result as { log: AppearanceLog }).log) };
     case 'ManagementFeedback':
       return { feedback: serializeManagementFeedback((result as { feedback: ManagementFeedback }).feedback) };
+    case 'AgentMessage':
+      return { message: serializeAgentMessage((result as { message: AgentMessage }).message) };
   }
 }
 
@@ -751,6 +764,20 @@ export function createApp(options: BuildAppOptions = {}) {
         resolution: body.resolution as ManagementFeedbackResolution,
       });
       return ok({ feedback: serializeManagementFeedback(result.feedback) });
+    }),
+
+    // --- AgentMessage（Version17、Agent Collaboration Layer） ---
+    // ARC↔Claude Code間の指示書・Feedbackの往復記録。書き込みは
+    // 既存のPOST /proposal/*（type: 'AgentMessage'）をそのまま使う
+    // ——management-feedbackと同様、一覧取得のみ専用ルートを持つ。
+    route('GET', '/agent-messages', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const direction = (url.searchParams.get('direction') ?? undefined) as
+        | AgentMessageDirection
+        | undefined;
+      const relatedVersion = url.searchParams.get('relatedVersion') ?? undefined;
+      const result = await useCases.listAgentMessages.execute({ direction, relatedVersion });
+      return ok({ messages: result.messages.map(serializeAgentMessage) });
     }),
   ];
 

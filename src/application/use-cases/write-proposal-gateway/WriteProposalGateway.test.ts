@@ -5,6 +5,7 @@ import type { MemoryEntry } from '../../../domain/entities/MemoryEntry.js';
 import type { ExternalKnowledge } from '../../../domain/entities/ExternalKnowledge.js';
 import type { AppearanceLog } from '../../../domain/entities/AppearanceLog.js';
 import type { ManagementFeedback } from '../../../domain/entities/ManagementFeedback.js';
+import type { AgentMessage } from '../../../domain/entities/AgentMessage.js';
 import type { ExternalSource } from '../../../domain/entities/ExternalSource.js';
 import type { ReflectionRepository } from '../../ports/ReflectionRepository.js';
 import type { MemoryRepository } from '../../ports/MemoryRepository.js';
@@ -12,6 +13,7 @@ import type { ExternalKnowledgeRepository } from '../../ports/ExternalKnowledgeR
 import type { ExternalSourceRepository } from '../../ports/ExternalSourceRepository.js';
 import type { AppearanceLogRepository } from '../../ports/AppearanceLogRepository.js';
 import type { ManagementFeedbackRepository } from '../../ports/ManagementFeedbackRepository.js';
+import type { AgentMessageRepository } from '../../ports/AgentMessageRepository.js';
 
 class FakeReflectionRepository implements ReflectionRepository {
   store = new Map<string, Reflection>();
@@ -103,6 +105,19 @@ class FakeManagementFeedbackRepository implements ManagementFeedbackRepository {
   }
 }
 
+class FakeAgentMessageRepository implements AgentMessageRepository {
+  store = new Map<string, AgentMessage>();
+  async save(message: AgentMessage): Promise<void> {
+    this.store.set(message.id, message);
+  }
+  async findById(id: string): Promise<AgentMessage | null> {
+    return this.store.get(id) ?? null;
+  }
+  async findAll(): Promise<AgentMessage[]> {
+    return [...this.store.values()];
+  }
+}
+
 function buildGateway() {
   const reflectionRepo = new FakeReflectionRepository();
   const memoryRepo = new FakeMemoryRepository();
@@ -110,6 +125,7 @@ function buildGateway() {
   const sourceRepo = new FakeExternalSourceRepository();
   const appearanceRepo = new FakeAppearanceLogRepository();
   const feedbackRepo = new FakeManagementFeedbackRepository();
+  const agentMessageRepo = new FakeAgentMessageRepository();
   const gateway = new WriteProposalGatewayUseCase(
     reflectionRepo,
     memoryRepo,
@@ -117,8 +133,18 @@ function buildGateway() {
     sourceRepo,
     appearanceRepo,
     feedbackRepo,
+    agentMessageRepo,
   );
-  return { gateway, reflectionRepo, memoryRepo, knowledgeRepo, sourceRepo, appearanceRepo, feedbackRepo };
+  return {
+    gateway,
+    reflectionRepo,
+    memoryRepo,
+    knowledgeRepo,
+    sourceRepo,
+    appearanceRepo,
+    feedbackRepo,
+    agentMessageRepo,
+  };
 }
 
 describe('WriteProposalGatewayUseCase', () => {
@@ -187,6 +213,11 @@ describe('WriteProposalGatewayUseCase', () => {
       'ManagementFeedback' as const,
       { record: { author: 'ARC', category: 'Process', content: '内容', reason: '理由' } },
       (ctx: ReturnType<typeof buildGateway>) => ctx.feedbackRepo.store.size,
+    ],
+    [
+      'AgentMessage' as const,
+      { record: { direction: 'ToClaudeCode', content: '指示書の内容' } },
+      (ctx: ReturnType<typeof buildGateway>) => ctx.agentMessageRepo.store.size,
     ],
   ])('approveProposal persists a %s proposal via the corresponding UseCase (承認時の保存)', async (type, payload, countOf) => {
     const proposal = ctx.gateway.createProposal({

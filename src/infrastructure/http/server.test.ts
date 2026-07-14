@@ -607,6 +607,41 @@ describe('ARC Connector HTTP API', () => {
       'Accepted',
     );
   });
+
+  // --- AgentMessage（Version17、Agent Collaboration Layer） ---
+
+  it('POST /proposal/create+approve (type: AgentMessage) then GET /agent-messages lists it, filterable', async () => {
+    const created = await call('POST', '/proposal/create', {
+      type: 'AgentMessage',
+      target: 'Version17指示書',
+      payload: {
+        record: { direction: 'ToClaudeCode', content: '指示書の内容', relatedVersion: 'Version17' },
+      },
+      reason: 'ARCからの指示',
+    });
+    expect(created.status).toBe(201);
+
+    const approved = await call(
+      'POST',
+      '/proposal/approve',
+      (created.json.data as { proposal: unknown }).proposal,
+    );
+    expect(approved.status).toBe(200);
+    expect((approved.json.data as { type: string }).type).toBe('AgentMessage');
+
+    const all = await call('GET', '/agent-messages');
+    expect(all.status).toBe(200);
+    expect((all.json.data as { messages: unknown[] }).messages).toHaveLength(1);
+
+    const toClaudeOnly = await call('GET', '/agent-messages?direction=ToClaudeCode');
+    expect((toClaudeOnly.json.data as { messages: unknown[] }).messages).toHaveLength(1);
+
+    const toArcOnly = await call('GET', '/agent-messages?direction=ToARC');
+    expect((toArcOnly.json.data as { messages: unknown[] }).messages).toHaveLength(0);
+
+    const byVersion = await call('GET', '/agent-messages?relatedVersion=Version17');
+    expect((byVersion.json.data as { messages: unknown[] }).messages).toHaveLength(1);
+  });
 });
 
 describe('ARC Connector HTTP API — API Key Authentication (Version15)', () => {

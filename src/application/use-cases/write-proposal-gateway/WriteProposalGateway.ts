@@ -6,11 +6,13 @@ import type { ExternalKnowledgeRepository } from '../../ports/ExternalKnowledgeR
 import type { ExternalSourceRepository } from '../../ports/ExternalSourceRepository.js';
 import type { AppearanceLogRepository } from '../../ports/AppearanceLogRepository.js';
 import type { ManagementFeedbackRepository } from '../../ports/ManagementFeedbackRepository.js';
+import type { AgentMessageRepository } from '../../ports/AgentMessageRepository.js';
 import { RecordDailyReflectionUseCase } from '../reflection/RecordDailyReflection.js';
 import { AddMemoryEntryUseCase } from '../memory/AddMemoryEntry.js';
 import { AddExternalKnowledgeUseCase } from '../external-knowledge/AddExternalKnowledge.js';
 import { AddAppearanceLogUseCase } from '../appearance/AddAppearanceLog.js';
 import { AddManagementFeedbackUseCase } from '../management-feedback/AddManagementFeedback.js';
+import { AddAgentMessageUseCase } from '../agent-message/AddAgentMessage.js';
 
 /**
  * typeごとのpayload構造だけを検証するzodスキーマ。ここでの検証は
@@ -83,6 +85,14 @@ const payloadSchemas: Record<ProposalType, z.ZodTypeAny> = {
       tags: z.array(z.string()).optional(),
     }),
   }),
+  AgentMessage: z.object({
+    record: z.object({
+      direction: z.enum(['ToClaudeCode', 'ToARC']),
+      content: z.string().min(1),
+      relatedVersion: z.string().optional(),
+      tags: z.array(z.string()).optional(),
+    }),
+  }),
 };
 
 export interface CreateProposalInput {
@@ -118,6 +128,7 @@ export class WriteProposalGatewayUseCase {
   private readonly addExternalKnowledge: AddExternalKnowledgeUseCase;
   private readonly addAppearanceLog: AddAppearanceLogUseCase;
   private readonly addManagementFeedback: AddManagementFeedbackUseCase;
+  private readonly addAgentMessage: AddAgentMessageUseCase;
 
   constructor(
     reflectionRepository: ReflectionRepository,
@@ -126,6 +137,7 @@ export class WriteProposalGatewayUseCase {
     externalSourceRepository: ExternalSourceRepository,
     appearanceLogRepository: AppearanceLogRepository,
     managementFeedbackRepository: ManagementFeedbackRepository,
+    agentMessageRepository: AgentMessageRepository,
   ) {
     this.recordDailyReflection = new RecordDailyReflectionUseCase(reflectionRepository);
     this.addMemoryEntry = new AddMemoryEntryUseCase(memoryRepository);
@@ -135,6 +147,7 @@ export class WriteProposalGatewayUseCase {
     );
     this.addAppearanceLog = new AddAppearanceLogUseCase(appearanceLogRepository);
     this.addManagementFeedback = new AddManagementFeedbackUseCase(managementFeedbackRepository);
+    this.addAgentMessage = new AddAgentMessageUseCase(agentMessageRepository);
   }
 
   createProposal(input: CreateProposalInput): Proposal {
@@ -185,6 +198,12 @@ export class WriteProposalGatewayUseCase {
       case 'ManagementFeedback': {
         const result = await this.addManagementFeedback.execute(
           payload as unknown as Parameters<AddManagementFeedbackUseCase['execute']>[0],
+        );
+        return { type: proposal.type, result };
+      }
+      case 'AgentMessage': {
+        const result = await this.addAgentMessage.execute(
+          payload as unknown as Parameters<AddAgentMessageUseCase['execute']>[0],
         );
         return { type: proposal.type, result };
       }

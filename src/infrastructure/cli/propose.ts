@@ -11,23 +11,33 @@
  * `pnpm propose list-feedback`: ManagementFeedback一覧表示
  * `pnpm propose resolve <id> <Accepted|Implemented|Closed|Rejected>`:
  *   ManagementFeedbackのresolutionを遷移させる
+ * `pnpm propose list-messages`: AgentMessage一覧表示（Version17）
  */
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout, argv } from 'node:process';
 import { WriteProposalGatewayUseCase } from '../../application/use-cases/write-proposal-gateway/WriteProposalGateway.js';
 import { ListManagementFeedbackUseCase } from '../../application/use-cases/management-feedback/ListManagementFeedback.js';
 import { ResolveManagementFeedbackUseCase } from '../../application/use-cases/management-feedback/ResolveManagementFeedback.js';
+import { ListAgentMessagesUseCase } from '../../application/use-cases/agent-message/ListAgentMessages.js';
 import { JsonFileReflectionRepository } from '../../adapters/repositories/JsonFileReflectionRepository.js';
 import { JsonFileMemoryRepository } from '../../adapters/repositories/JsonFileMemoryRepository.js';
 import { JsonFileExternalKnowledgeRepository } from '../../adapters/repositories/JsonFileExternalKnowledgeRepository.js';
 import { JsonFileExternalSourceRepository } from '../../adapters/repositories/JsonFileExternalSourceRepository.js';
 import { JsonFileAppearanceLogRepository } from '../../adapters/repositories/JsonFileAppearanceLogRepository.js';
 import { JsonFileManagementFeedbackRepository } from '../../adapters/repositories/JsonFileManagementFeedbackRepository.js';
+import { JsonFileAgentMessageRepository } from '../../adapters/repositories/JsonFileAgentMessageRepository.js';
 import type { ProposalType, Proposal } from '../../domain/value-objects/Proposal.js';
 import type { ManagementFeedbackResolution } from '../../domain/entities/ManagementFeedback.js';
 import type { MemoryCategory } from '../../domain/entities/MemoryEntry.js';
 
-const TYPES: ProposalType[] = ['Reflection', 'Memory', 'ExternalKnowledge', 'Appearance', 'ManagementFeedback'];
+const TYPES: ProposalType[] = [
+  'Reflection',
+  'Memory',
+  'ExternalKnowledge',
+  'Appearance',
+  'ManagementFeedback',
+  'AgentMessage',
+];
 const MEMORY_CATEGORIES: MemoryCategory[] = [
   'Assets', 'Appearance', 'Goals', 'Preferences', 'Education',
   'Career', 'Health', 'Finance', 'Relationships', 'Misc',
@@ -46,6 +56,7 @@ function buildGateway(): WriteProposalGatewayUseCase {
     new JsonFileExternalSourceRepository(),
     new JsonFileAppearanceLogRepository(),
     new JsonFileManagementFeedbackRepository(),
+    new JsonFileAgentMessageRepository(),
   );
 }
 
@@ -122,6 +133,20 @@ async function promptPayload(rl: Rl, type: ProposalType): Promise<Record<string,
         },
       };
     }
+    case 'AgentMessage': {
+      const direction = await rl.question('方向 (1=ToClaudeCode/ARC→クロコ, 2=ToARC/クロコ→ARC): ');
+      const content = await rl.question('内容: ');
+      const relatedVersion = await rl.question('関連Version (任意, 例: Version17): ');
+      const tagsRaw = await rl.question('タグ (カンマ区切り, 任意): ');
+      return {
+        record: {
+          direction: direction.trim() === '2' ? 'ToARC' : 'ToClaudeCode',
+          content,
+          relatedVersion: relatedVersion || undefined,
+          tags: tagsRaw ? tagsRaw.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
+        },
+      };
+    }
   }
 }
 
@@ -191,6 +216,27 @@ async function runListFeedback(): Promise<void> {
   console.log('');
 }
 
+async function runListMessages(): Promise<void> {
+  const useCase = new ListAgentMessagesUseCase(new JsonFileAgentMessageRepository());
+  const { messages } = await useCase.execute();
+
+  console.log('');
+  console.log(line('='));
+  console.log('  Agent Messages');
+  console.log(line('='));
+
+  if (messages.length === 0) {
+    console.log('\nまだメッセージはありません。');
+    return;
+  }
+  for (const m of messages) {
+    console.log(
+      `\n  [${m.id}] (${m.record.direction}) ${m.record.relatedVersion ?? ''}: ${m.record.content}`,
+    );
+  }
+  console.log('');
+}
+
 async function runResolve(id: string, resolutionRaw: string): Promise<void> {
   const resolution = resolutionRaw as ManagementFeedbackResolution;
   if (!RESOLUTIONS.includes(resolution)) {
@@ -215,6 +261,9 @@ async function main(): Promise<void> {
     case 'list-feedback':
       await runListFeedback();
       break;
+    case 'list-messages':
+      await runListMessages();
+      break;
     case 'resolve': {
       const [, id, resolution] = args;
       if (!id || !resolution) {
@@ -226,7 +275,7 @@ async function main(): Promise<void> {
       break;
     }
     default:
-      console.log('使い方: pnpm propose [create|list-feedback|resolve <id> <resolution>]');
+      console.log('使い方: pnpm propose [create|list-feedback|resolve <id> <resolution>|list-messages]');
       process.exitCode = 1;
   }
 }

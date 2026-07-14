@@ -19,7 +19,8 @@ export type ConnectorProposalType =
   | 'Memory'
   | 'ExternalKnowledge'
   | 'Appearance'
-  | 'ManagementFeedback';
+  | 'ManagementFeedback'
+  | 'AgentMessage';
 
 export interface ConnectorProposal {
   readonly type: ConnectorProposalType;
@@ -58,6 +59,14 @@ export interface ConnectorManagementFeedback {
   readonly resolution: ManagementFeedbackResolution;
   readonly resolved: boolean;
   readonly resolvedAt?: string;
+}
+
+export type AgentMessageDirection = 'ToClaudeCode' | 'ToARC';
+
+export interface ConnectorAgentMessage {
+  readonly id: string;
+  readonly record: Record<string, unknown>;
+  readonly createdAt: string;
 }
 
 export interface ReadTimelineInput {
@@ -167,6 +176,21 @@ export class Connector {
     return this.request('POST', `/management-feedback/${encodeURIComponent(id)}/resolve`, {
       resolution,
     });
+  }
+
+  // --- AgentMessage（Version17、Agent Collaboration Layer） ---
+  // 書き込みはcreateProposal/approveProposal（type: 'AgentMessage'）を
+  // そのまま使う。読み取りのみ専用メソッドを持つ。
+
+  async listAgentMessages(
+    direction?: AgentMessageDirection,
+    relatedVersion?: string,
+  ): Promise<{ messages: ConnectorAgentMessage[] }> {
+    const params = new URLSearchParams();
+    if (direction) params.set('direction', direction);
+    if (relatedVersion) params.set('relatedVersion', relatedVersion);
+    const query = params.toString();
+    return this.request('GET', `/agent-messages${query ? `?${query}` : ''}`);
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {

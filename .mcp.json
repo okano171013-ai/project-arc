@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "project-arc": {
+      "command": "npx",
+      "args": ["tsx", "src/infrastructure/mcp/server.ts"]
+    }
+  }
+}

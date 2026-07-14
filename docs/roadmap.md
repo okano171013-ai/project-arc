@@ -340,10 +340,49 @@ MCPもChatGPT Actionsも同じConnectorをラップするだけで後から追�
 - **新規依存**：`@modelcontextprotocol/sdk`を追加、zodを`^3.25.76`へ
   引き上げ（ADR 0037）。
 
-OpenAPIスキーマ生成・ChatGPT Actions対応・HTTPS公開はVersion17へ
-先送り。Project ARC本体（Connector/HTTP API/ReadGateway/
-WriteProposalGateway/UseCase/Domain）への変更は一切なし。詳細は
-`docs/reports/Version16_Report.md`参照。
+OpenAPIスキーマ生成・ChatGPT Actions対応・HTTPS公開は当初Version17へ
+先送りする想定だったが、Version16完了後のARCからの応答により
+Version18へさらに繰り下がった（下記Version17参照）。Project ARC
+本体（Connector/HTTP API/ReadGateway/WriteProposalGateway/UseCase/
+Domain）への変更は一切なし。詳細は`docs/reports/Version16_Report.md`
+参照。
+
+---
+
+## Version17｜Agent Collaboration Layer
+
+「まず無料・ローカルでAgent Collaboration Layerを実装し、Claude Code
+との往復を成立させる。」Version16完了報告へのARCからの応答
+（`docs/handoff/archive/Version17_ARC_Brief.md`）に基づく。ARCは
+役割分担を明確化した上で（ARCは設計・調査・レビュー・運用判断、
+Claude Codeは実装・PC上の設定）、ChatGPT接続のためのRemote MCP化
+（≒当初Version17として想定されていたOpenAPI/Actions対応）を
+Version18へ先送りし、先にARC↔Claude Code間の指示書・Feedbackを
+Project ARC自身のデータとして保存できるようにすることを提案した
+——この着手順の変更により、ARCが当初構想していたロードマップ
+（旧Version17=Actions対応、旧Version18=Continuous Management）は
+それぞれVersion18・Version19へ繰り下がる。
+
+- **AgentMessage**（新Entity）：ARC↔Claude Code間の指示書・Feedback
+  の往復記録。Version14で確立した「新しいProposal種別を1つ追加する」
+  パターン（ManagementFeedbackと同型）をそのまま踏襲した
+  （ADR 0039）。`resolution`状態機械は持たない（単純な往復記録）。
+- **`agent_message_list`**（新規MCP Tool、`GET /agent-messages`）：
+  一覧取得のみ専用に追加。書き込みは既存の`proposal_create`/
+  `approve`/`reject`が`type: 'AgentMessage'`を受け付けるだけで済み、
+  新規の書き込みツールは不要だった。
+- **Claude CodeのMCP接続**：`.mcp.json`をプロジェクトへ追加し、
+  既存のstdio MCPサーバー（Version16）へClaude Code自身を接続した
+  （Owner承認済み、次回Claude Code再起動時に有効化）。
+- **AgentTask・Artifactは今回実装しない**（ADR 0040）：ARCのメッセージ
+  が挙げた3概念のうちAgentMessageのみが「まずやる順番」①〜③の
+  文面上要求されており、AgentTask（作業単位管理）・Artifact
+  （生成物カタログ化）は具体的仕様がなく、YAGNIにより先送りした。
+
+Project ARC本体の既存部分（Connector/HTTP API/ReadGateway/
+WriteProposalGateway）への変更は最小限（`AgentMessage`をProposal
+種別に追加しただけ）に留めた。詳細は`docs/reports/
+Version17_Report.md`参照。
 
 ---
 

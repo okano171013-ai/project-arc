@@ -15,31 +15,39 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/ai-roles.md`](./docs/ai-roles.md) — 人間・ARC・Gemini・Claude Code・
   システム自体の責務分担
 - [`docs/architecture.md`](./docs/architecture.md) — 技術設計
-- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜16のロードマップ・
+- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜17のロードマップ・
   長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version16のスコープ（現在地）
+## Version17のスコープ（現在地）
 
-テーマ：「MCP Integration」— 「ARCが初めてProject ARCを直接利用する。」
-Version15で完成したConnector・API Key認証の上に、stdioベースのMCP
-（Model Context Protocol）サーバーを「薄いアダプタ」として追加した
-（長期ロードマップ2.0 Phase 2の完成）。ChatGPT Actions対応（HTTPS
-公開・OpenAPI必須）はVersion17へ先送りし、ローカル完結するMCPを
-優先した。アーキテクチャ全体像は
+テーマ：「Agent Collaboration Layer」— 「まず無料・ローカルで
+Agent Collaboration Layerを実装し、Claude Codeとの往復を成立させる。」
+Version16完了報告へのARCからの応答に基づき、ARC↔Claude Code間の
+指示書・Feedbackの往復記録（`AgentMessage`）をProject ARC自身の
+データとして保存・MCP経由で読み取れるようにした。ChatGPT接続の
+ためのRemote MCP化（OpenAPI生成・Actions対応）はVersion18へ
+先送りされた。アーキテクチャ全体像は
 [`docs/architecture-diagram.md`](./docs/architecture-diagram.md)を参照。
 
+- **AgentMessage**（`GET /agent-messages`、MCP Tool `agent_message_list`、
+  `pnpm propose list-messages`）— ARC↔Claude Code間の指示書・Feedback
+  の往復記録。Version14で確立した「新しいProposal種別を1つ追加する」
+  パターン（ManagementFeedbackと同型）で実装し、書き込みは既存の
+  `proposal_create`/`approve`/`reject`が`type: 'AgentMessage'`を
+  受け付けるだけで済んだ（ADR 0039）。AgentTask・Artifactは今回
+  実装していない（ADR 0040、YAGNI）
 - **MCPサーバー**（`src/infrastructure/mcp/server.ts`、`pnpm run mcp`）—
   ARCが会話の中で直接Project ARCを呼び出せるstdioベースのMCPサーバー。
   `Connector`（Version15）のみに依存し、Application/Domain層は一切
-  importしない（ADR 0038）。9個のMCP Tool（`read_reflection`・
+  importしない（ADR 0038）。10個のMCP Tool（`read_reflection`・
   `read_external`・`read_timeline`・`read_decision`・
   `proposal_create`・`proposal_approve`・`proposal_reject`・
-  `management_feedback_list`・`management_feedback_resolve`）を提供。
-  起動前に`pnpm run api`（ARC Connector HTTP API）が別プロセスとして
-  起動済みである必要がある
+  `management_feedback_list`・`management_feedback_resolve`・
+  `agent_message_list`）を提供。起動前に`pnpm run api`（ARC Connector
+  HTTP API）が別プロセスとして起動済みである必要がある
 - **Connector**（`src/infrastructure/connector/Connector.ts`）— ARC
   Connector HTTP APIをHTTP経由でのみ呼び出すクライアントモジュール。
   Application/Domain層の型を一切importしない、独立したHTTPクライアント
@@ -122,7 +130,7 @@ Version15で完成したConnector・API Key認証の上に、stdioベースのMC
   `GET /health` `/timeline` `/bridge/export` `/external-sources`
   `/external-knowledge` `/external-knowledge/search` `/read/reflection`
   `/read/timeline` `/read/external` `/read/decision`
-  `/management-feedback`、`PATCH`/`DELETE`
+  `/management-feedback` `/agent-messages`、`PATCH`/`DELETE`
   も`/external-sources/:id` `/external-knowledge/:id`に対応。新規
   外部依存なし（Node標準の`http`のみ）。ローカル専用（`127.0.0.1`
   のみ）・`ARC_API_KEY`設定時のみAPI Key認証を強制（Version15、
@@ -259,9 +267,10 @@ pnpm run decision                  # 引数なしなら対話式に質問を聞�
 pnpm run conversation -- "<質問>"   # 質問のIntentを判定し、Retrieve/DecisionへルーティングしてConversationContextを生成（Version13）
 pnpm run conversation              # 引数なしなら対話式に質問を聞く
 
-pnpm run propose                   # 対話式にProposalを作成→表示→Approve確認（Version14、Write Proposal Layer）
+pnpm run propose                   # 対話式にProposalを作成→表示→Approve確認（Version14、Write Proposal Layer。Version17でAgentMessage種別も追加）
 pnpm run propose list-feedback     # ManagementFeedbackの一覧を表示
 pnpm run propose resolve <id> <Accepted|Implemented|Closed|Rejected>  # resolutionを遷移
+pnpm run propose list-messages     # AgentMessageの一覧を表示（Version17）
 
 pnpm run api                       # ARC Connector（HTTP API）を起動（既定ポート3939）
 

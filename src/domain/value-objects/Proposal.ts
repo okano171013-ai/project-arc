@@ -14,7 +14,13 @@
  * へ再送するステートレスなラウンドトリップでのみ成立する。ADR 0031参照。
  */
 
-export type ProposalType = 'Reflection' | 'Memory' | 'ExternalKnowledge' | 'Appearance' | 'ManagementFeedback';
+export type ProposalType =
+  | 'Reflection'
+  | 'Memory'
+  | 'ExternalKnowledge'
+  | 'Appearance'
+  | 'ManagementFeedback'
+  | 'AgentMessage';
 
 export interface Proposal {
   readonly type: ProposalType;
@@ -27,6 +33,7 @@ export interface Proposal {
    * - ExternalKnowledge: `{ record: ExternalKnowledgeInputRecord }`
    * - Appearance: `{ record: AppearanceLogRecord }`
    * - ManagementFeedback: `{ record: ManagementFeedbackRecord }`
+   * - AgentMessage: `{ record: AgentMessageRecord }`
    */
   readonly payload: Record<string, unknown>;
   /** なぜこの提案をするのか（ARCの説明）。 */

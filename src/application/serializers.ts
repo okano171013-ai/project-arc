@@ -26,6 +26,7 @@ import type { DecisionContext, DecisionEvidence } from '../domain/value-objects/
 import type { ConversationContext } from '../domain/value-objects/ConversationContext.js';
 import type { Proposal } from '../domain/value-objects/Proposal.js';
 import type { ManagementFeedback } from '../domain/entities/ManagementFeedback.js';
+import type { AgentMessage } from '../domain/entities/AgentMessage.js';
 
 export function serializeReflection(reflection: Reflection) {
   return {
@@ -179,6 +180,14 @@ export function serializeManagementFeedback(feedback: ManagementFeedback) {
     resolution: feedback.resolution,
     resolved: feedback.resolved,
     resolvedAt: feedback.resolvedAt?.toISOString(),
+  };
+}
+
+export function serializeAgentMessage(message: AgentMessage) {
+  return {
+    id: message.id,
+    record: message.record,
+    createdAt: message.createdAt.toISOString(),
   };
 }
 

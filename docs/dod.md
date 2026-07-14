@@ -343,3 +343,21 @@ Version15のDoDは達成済み（自動テスト＋実サーバーへのConnecto
 `docs/reports/Version16_Report.md`7章参照）。
 
 Version16のDoDは達成済み（自動テスト＋実サーバー・実MCPサブプロセスへの実リクエストで確認済み）。
+
+## Version17完了チェックリスト
+
+- [x] `pnpm test` が全て緑（AgentMessage関連テストを含む、246件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `proposal_create`（type: AgentMessage）→`proposal_approve`→`agent_message_list`の一連がMCP Tool経由で正常動作する（実機確認済み。実サブプロセスとして起動した`pnpm run mcp`を実MCP Client経由で駆動）
+- [x] `GET /agent-messages`がHTTP経由で正常動作する（`direction`・`relatedVersion`絞り込み含む、テスト・実機確認両方）
+- [x] `pnpm propose`でAgentMessage種別のProposal作成・`list-messages`が正常動作する（実機確認済み、擬似expectドライバで駆動）
+- [x] AgentMessageがWrite Proposal Layerの既存制約（保存せず全体を再送、Owner承認後のみ書き込み）を満たしていることを確認済み
+- [x] `.mcp.json`でClaude Codeが既存MCPサーバーへ接続できる設定になっていることを確認済み（次回Claude Code再起動時に有効化）
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0039〜0040（AgentMessageをProposalパターンで実装した理由・AgentTask/Artifactを今回実装しない理由）を記録済み
+- [x] `docs/architecture-diagram.md` を更新済み
+- [x] `docs/reports/Version17_Report.md` を生成済み（14章構成）
+- [x] `docs/reports/Version17_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+Version17のDoDは達成済み（自動テスト＋実サーバー・実MCPサブプロセス・実CLIプロセスへの実リクエストで確認済み）。
