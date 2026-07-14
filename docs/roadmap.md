@@ -386,6 +386,49 @@ Version17_Report.md`参照。
 
 ---
 
+## Version18｜Remote MCP Integration
+
+「ARCが初めてProject ARCを直接利用する。」Version17完了報告への
+ARCからの正式な指示書（`docs/handoff/archive/
+Version18_ARC_Brief.md`）に基づく。「おとのコピペを減らすこと」を
+唯一の成功指標とし、Project ARC本体の設計変更ではなく接続環境の
+完成のみを目的とした。指示書自身が求めた事前調査の結果、ChatGPT
+Developer Modeのネイティブな認証方式はOAuth 2.0/2.1または
+「認証なし」であり、指示書が想定していた「Bearer認証」との
+ズレが判明——Owner確認の結果、簡易Bearer認証のみを実装し、フルの
+OAuth 2.1 Authorization Serverは見送る方針で進めた（ADR 0041）。
+
+- **Remote MCPサーバー**（`src/infrastructure/mcp/remoteServer.ts`、
+  `pnpm run mcp:remote`）：MCP公式仕様の現行Remote transport
+  （Streamable HTTP）を実装。Version16のstdio版（`server.ts`、
+  Claude Code用）とは独立した新規エントリポイントであり、既存の
+  `.mcp.json`・stdio接続は一切変更しない（Claude Codeとの共存を
+  確認済み）。`ARC_API_KEY`はopt-inではなく必須とし、未設定時は
+  起動時エラーとする安全側の設計（ADR 0041）。
+- **OpenAPI 3.x生成**（`pnpm run openapi:generate`、`docs/openapi.json`）：
+  ARCが実際に利用する主要10エンドポイント（Read Layer・Write
+  Proposal Layer・ManagementFeedback・AgentMessage）に絞って
+  operationId・request・responseを生成する独立スクリプト。
+  `http/server.ts`本体は変更しない（ADR 0043）。
+- **HTTPS公開方式の比較**（ADR 0042）：Cloudflare Tunnel/Tailscale
+  Funnel/ngrokを比較し、初回検証はngrok・恒久運用はCloudflare
+  Tunnelを推奨。**いずれも実際の導入・アカウント作成はOwner自身の
+  操作が必要**（Claude Codeは外部サービスへの契約を代行できない）。
+- **運用ドキュメント**（`docs/setup/chatgpt-mcp-connection.md`）：
+  起動順・`.env`設定・トンネル起動方法・ChatGPT接続手順・
+  トラブルシューティングを記載。
+
+**実機確認の範囲について**：ローカルで`pnpm run api`＋
+`pnpm run mcp:remote`を起動し、実HTTP MCP Client
+（`StreamableHTTPClientTransport`）経由でRead→Proposal→Approveの
+一連を確認した（指示書15章のローカル版）。**「ChatGPT → Remote MCP」
+の実接続確認は、公開HTTPS・ChatGPT Developer Modeでの実UI操作を
+要するため、Claude Codeでは実施できない**——`docs/setup/
+chatgpt-mcp-connection.md`の手順に従ってOwner自身が確認する。詳細は
+`docs/reports/Version18_Report.md`参照。
+
+---
+
 ## 長期ロードマップ 2.0（Version9完了時、ARC提案）
 
 Version9完了を受け、ARCから中長期ロードマップの組み替え提案があった

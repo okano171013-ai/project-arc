@@ -361,3 +361,23 @@ Version16のDoDは達成済み（自動テスト＋実サーバー・実MCPサ�
 - [x] `docs/reports/Version17_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
 
 Version17のDoDは達成済み（自動テスト＋実サーバー・実MCPサブプロセス・実CLIプロセスへの実リクエストで確認済み）。
+
+## Version18完了チェックリスト
+
+- [x] `pnpm test` が全て緑（Remote MCP・OpenAPI生成のテストを含む、250件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] Remote MCPサーバー（`pnpm run mcp:remote`）が`ARC_API_KEY`未設定時に起動エラーで終了することを確認済み（実機確認）
+- [x] ローカルで実HTTP MCP Client（`StreamableHTTPClientTransport`）経由でRead→Proposal→Approveの一連が正常動作することを確認済み（実機確認。read_reflection/read_external/proposal_createの指示書8章必須3ツールを含む）
+- [x] Bearerヘッダーなし/誤りで接続が拒否されることを確認済み（テスト・実機確認両方）
+- [x] 既存のstdio MCPサーバー（`server.ts`、Claude Code用）が無変更のまま緑であることを確認済み（Claude Codeとの共存）
+- [x] `pnpm run openapi:generate`が`docs/openapi.json`を正常に生成し、10エンドポイント全てにoperationIdが付与されていることを確認済み
+- [x] `docs/setup/chatgpt-mcp-connection.md`を作成済み
+- [x] 「ChatGPT → Remote MCP」の実接続確認はClaude Codeでは実施できない旨をReportに明記済み（公開HTTPS・ChatGPT UI操作が必要なため）
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0041〜0043（Remote MCPを採用した理由・HTTPS公開方式の選定理由・OpenAPI生成をVersion18から開始した理由）を記録済み
+- [x] `docs/architecture-diagram.md` を更新済み
+- [x] `docs/reports/Version18_Report.md` を生成済み（14章構成）
+- [x] `docs/reports/Version18_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+Version18のDoDは達成済み（自動テスト＋実サーバー・実Remote MCPサブプロセスへの実リクエストで確認済み。「ChatGPT→Remote MCP」の実接続はOwner自身の操作が必要なため対象外）。

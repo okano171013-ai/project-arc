@@ -62,6 +62,16 @@ reports/Version17_Report.md`）。ARCとClaude Codeの役割分担を明確化
 （フィールド定義等の具体仕様はなく、Claude Codeが設計。原文は
 `docs/handoff/archive/Version17_ARC_Brief.md`に保管）。
 
+**処理済み**：Version18「Remote MCP Integration」（`docs/
+reports/Version18_Report.md`）。「ARCが初めてProject ARCを直接
+利用する」というテーマで、Streamable HTTP transportによるRemote MCP
+サーバー・OpenAPI 3.x生成（主要エンドポイントのみ）を追加した正式な
+指示書。事前調査の結果、ChatGPT Developer Modeの認証方式が指示書の
+想定（Bearer認証）と実際の仕様（OAuth 2.0/2.1または認証なし）で
+ズレがあることが判明し、Owner確認のもと簡易Bearer認証のみで進めた
+（フルOAuth 2.1は見送り。原文は`docs/handoff/archive/
+Version18_ARC_Brief.md`に保管）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください。
 

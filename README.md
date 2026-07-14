@@ -15,23 +15,36 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/ai-roles.md`](./docs/ai-roles.md) — 人間・ARC・Gemini・Claude Code・
   システム自体の責務分担
 - [`docs/architecture.md`](./docs/architecture.md) — 技術設計
-- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜17のロードマップ・
+- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜18のロードマップ・
   長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version17のスコープ（現在地）
+## Version18のスコープ（現在地）
 
-テーマ：「Agent Collaboration Layer」— 「まず無料・ローカルで
-Agent Collaboration Layerを実装し、Claude Codeとの往復を成立させる。」
-Version16完了報告へのARCからの応答に基づき、ARC↔Claude Code間の
-指示書・Feedbackの往復記録（`AgentMessage`）をProject ARC自身の
-データとして保存・MCP経由で読み取れるようにした。ChatGPT接続の
-ためのRemote MCP化（OpenAPI生成・Actions対応）はVersion18へ
-先送りされた。アーキテクチャ全体像は
+テーマ：「Remote MCP Integration」— 「ARCが初めてProject ARCを直接
+利用する。」Version17完了報告へのARCからの正式な指示書に基づき、
+ChatGPTがProject ARCへ直接接続できる環境を整えた。「おとのコピペを
+減らすこと」が唯一の成功指標——Project ARC本体の設計変更ではなく、
+接続環境の完成のみが目的。事前調査の結果、ChatGPT Developer Modeの
+ネイティブな認証はOAuth 2.0/2.1または「認証なし」であり、フルの
+OAuth 2.1 Authorization Serverは今回実装していない（簡易Bearer認証
+のみ、ADR 0041）。アーキテクチャ全体像は
 [`docs/architecture-diagram.md`](./docs/architecture-diagram.md)を参照。
 
+- **Remote MCPサーバー**（`src/infrastructure/mcp/remoteServer.ts`、
+  `pnpm run mcp:remote`）— MCP公式仕様のStreamable HTTP transportで
+  実装。stdio版（`pnpm run mcp`、Claude Code用）とは独立した
+  エントリポイントで、既存の`.mcp.json`・stdio接続は無変更のまま
+  共存する。`ARC_API_KEY`は必須（未設定時は起動エラー、ADR 0041）。
+  実際にChatGPTから到達させるには公開HTTPSトンネルが必要——
+  セットアップ手順は
+  [`docs/setup/chatgpt-mcp-connection.md`](./docs/setup/chatgpt-mcp-connection.md)参照（トンネルサービスへの登録はOwner自身の操作が必要）
+- **OpenAPI 3.x生成**（`pnpm run openapi:generate`、`docs/openapi.json`）—
+  ARC向けの主要10エンドポイントに絞ってoperationId・request・
+  responseを生成する独立スクリプト。`http/server.ts`本体は変更しない
+  （ADR 0043）
 - **AgentMessage**（`GET /agent-messages`、MCP Tool `agent_message_list`、
   `pnpm propose list-messages`）— ARC↔Claude Code間の指示書・Feedback
   の往復記録。Version14で確立した「新しいProposal種別を1つ追加する」
@@ -275,6 +288,8 @@ pnpm run propose list-messages     # AgentMessageの一覧を表示（Version17�
 pnpm run api                       # ARC Connector（HTTP API）を起動（既定ポート3939）
 
 pnpm run mcp                       # MCPサーバーを起動（stdio、Version16）。事前に`pnpm run api`が起動している必要がある
+pnpm run mcp:remote                # Remote MCPサーバーを起動（Streamable HTTP、Version18、既定ポート3940）。ARC_API_KEY必須
+pnpm run openapi:generate          # docs/openapi.json を生成（Version18、主要10エンドポイントのみ）
 ```
 
 `pnpm run api`起動後の動作確認例（`curl`はGit Bash上で日本語を含む

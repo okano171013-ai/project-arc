@@ -1,7 +1,7 @@
 # Project ARC アーキテクチャ図
 
 Version7完了時にOwnerから提案された、レイヤー構成・データの流れ・
-ARCとの接続点を示す図（2026年7月、Version17時点の実装を反映。
+ARCとの接続点を示す図（2026年7月、Version18時点の実装を反映。
 Version9でBridge Layer・ThirdPersonEvaluation、Version10で
 External Brain（ExternalSource/ExternalKnowledge）、Version11で
 Knowledge Retrieval（RetrieveKnowledgeUseCase・Context Builder）、
@@ -12,7 +12,8 @@ ARC Integration（ReadGatewayUseCase・WriteProposalGatewayUseCase・
 ManagementFeedback）、Version15でConnector Deployment
 （Connector・API Key認証）、Version16でMCP Integration
 （MCPサーバー・9個のMCP Tool）、Version17でAgent Collaboration
-Layer（AgentMessage・agent_message_list）を追加）。
+Layer（AgentMessage・agent_message_list）、Version18でRemote MCP
+Integration（Remote MCPサーバー・OpenAPI生成）を追加）。
 文章での説明は[`docs/architecture.md`](./architecture.md)を参照。
 
 ---
@@ -26,7 +27,9 @@ graph TB
         HTTP["ARC Connector (HTTP API)\nsrc/infrastructure/http/server.ts\n127.0.0.1のみ・API Key認証はopt-in(Version15)"]
         Connector["Connector\nsrc/infrastructure/connector/Connector.ts\nHTTPのみ利用、Application層へ直接アクセスしない\n(Version15, ADR 0034)"]
         Auth["apiKeyAuth\nsrc/infrastructure/security/apiKeyAuth.ts\n(Version15, ADR 0036)"]
-        MCP["MCP Server + 10 Tools\nsrc/infrastructure/mcp/\nstdio、Connectorのみに依存、薄いアダプタ\n(Version16-17, ADR 0037-0039)"]
+        MCP["MCP Server + 10 Tools\nsrc/infrastructure/mcp/server.ts\nstdio、Connectorのみに依存、薄いアダプタ\n(Version16-17, ADR 0037-0039)"]
+        RemoteMCP["Remote MCP Server\nsrc/infrastructure/mcp/remoteServer.ts\nStreamable HTTP、Bearer認証必須\n(Version18, ADR 0041)"]
+        OpenApi["OpenAPI Generator\nsrc/infrastructure/openapi/\n主要10エンドポイントのみ、本体非改変\n(Version18, ADR 0043)"]
     end
 
     subgraph Application["Application層"]
@@ -68,6 +71,8 @@ graph TB
     HTTP --> Auth
     Connector -->|HTTPのみ、fetch経由| HTTP
     MCP -->|関数呼び出し| Connector
+    RemoteMCP -->|セッションごとにbuildMcpServer()を呼ぶ| Connector
+    OpenApi -.ドキュメント化のみ、依存なし.-> HTTP
     Bridge --> UC
     Bridge --> Serializers
     Retrieval --> Ports
@@ -130,6 +135,9 @@ sequenceDiagram
     participant HTTP as ARC Connector (HTTP API)
     participant Ext as 外部プログラム<br/>(将来のMCPサーバー等、Connector利用)
     participant MCP as MCPサーバー (stdio、Version16)
+    participant RemoteMCP as Remote MCPサーバー<br/>(Streamable HTTP、Version18)
+    participant Tunnel as HTTPSトンネル<br/>(Owner自身が契約・起動)
+    participant Connector as Connector（Version15）
 
     Note over Owner,ARC: 現状: ARC↔Claude Codeの直接API連携はない（Version15時点も継続）
 
@@ -185,6 +193,21 @@ sequenceDiagram
         HTTP-->>MCP: JSON応答
         MCP-->>ARC: {content, isError?}
         Note over ARC,Owner: proposal_approveの呼び出しはOwnerとの会話上の<br/>承認を経てARC自身が行う（自動Approveの経路はない）
+    end
+
+    alt Remote MCP経由でChatGPTが直接呼び出す場合（Version18、ADR 0041〜0042）
+        Note over Owner,Tunnel: トンネルの契約・起動はOwner自身が行う（Claude Codeは代行不可）
+        ARC->>Tunnel: HTTPS（公開URL、/mcp）
+        Tunnel->>RemoteMCP: 127.0.0.1:3940へ転送
+        RemoteMCP->>RemoteMCP: apiKeyAuth.isAuthorized()（Bearer必須、opt-inではない）
+        alt 認証OK
+            RemoteMCP->>RemoteMCP: セッションごとにbuildMcpServer()で新規McpServer
+            RemoteMCP->>Connector: 関数呼び出し
+            Connector->>HTTP: fetch
+            HTTP-->>ARC: JSON応答（Tunnel・RemoteMCP経由）
+        else 認証NG
+            RemoteMCP-->>ARC: 401 Unauthorized
+        end
     end
 
     Owner->>Handoff: ARC_INBOX.mdに指示書を貼る
@@ -276,17 +299,19 @@ Captureを除く10種別（上段7つ + Memory + Inventory + ExternalSource）
 
 ## 4. ARCとの接続点（現状と将来）
 
-| 接続点 | 現状（2026年7月、Version17時点） | 将来 |
+| 接続点 | 現状（2026年7月、Version18時点） | 将来 |
 |---|---|---|
 | 指示の受け渡し | `docs/handoff/ARC_INBOX.md`にOwnerが手動で貼り付け（テキスト・PDF両対応）。加えてAgentMessage（`direction: 'ToClaudeCode'`）としてProject ARC自身にも保存可能（Version17） | 引き続き人間による意思決定の窓口として維持（Principle 1）。AgentMessageはあくまで記録の補助であり、指示そのものの受け渡しは変わらずOwner経由 |
 | フィードバックの受け渡し | `docs/reports/VersionN_ARC_Feedback.md`をOwnerが手動でコピー。加えてAgentMessage（`direction: 'ToARC'`）としても保存可能（Version17） | 変更なし（ファイルとAgentMessageは並行運用） |
-| データの一括受け渡し | `pnpm bridge -- import`でOwnerがARCの提案をJSONファイル経由で一括登録（ExternalSource/ExternalKnowledge含む）。`GET /bridge/export`で全データをJSON取得可能 | Bridge Layer自体はMCP Toolの対象外（指示書9章の最低限9ツールに含まれない）。将来必要になれば同じ薄いアダプタパターンで追加可能 |
-| 知識の取得 | `read_external`/`read_decision`のMCP Tool経由でARCが直接呼び出せる（Version16、`Connector.readExternal`/`readDecision`をラップ） | ChatGPT Actionsアダプタからも同じConnectorを使って呼べるようになる見込み（Version18） |
-| 意思決定支援 | 同上（`read_decision`）。ARCの解釈・優先順位提案はDecisionContextを受け取ったARC自身が会話の中で書く | 同上（Version18） |
-| 会話への統合 | `POST /conversation/context`でquestionを渡すと、Intent判定に応じてRetrieve/Decisionへ自動的に振り分けられたConversationContextが返る（Version13、Owner経由で手動呼び出し）。MCP Toolの対象外（最低限9ツールに含まれない） | 必要になれば同じパターンでMCP Tool化可能 |
-| 読み取り（最小限） | `read_reflection`/`read_external`/`read_timeline`/`read_decision`のMCP Tool経由でARCが直接呼び出せる（Version16、ADR 0038）。`limit`はJSON Schemaで必須検証される | ChatGPT Actionsアダプタが同じConnectorをラップするだけで済む見込み（Version18） |
-| 書き込みの提案・承認 | `proposal_create`/`proposal_approve`/`proposal_reject`のMCP Tool経由でARCが直接`createProposal`まで呼べる（Version16、5種別→Version17でAgentMessage追加により6種別）。**Approveの実行はARC自身がOwnerとの会話上の承認を経て行う**——MCPサーバーに自動Approveの経路はない（ADR 0038） | 同上（Version18） |
+| データの一括受け渡し | `pnpm bridge -- import`でOwnerがARCの提案をJSONファイル経由で一括登録（ExternalSource/ExternalKnowledge含む）。`GET /bridge/export`で全データをJSON取得可能 | Bridge Layer自体はMCP Toolの対象外（最低限10ツールに含まれない）。将来必要になれば同じ薄いアダプタパターンで追加可能 |
+| 知識の取得 | `read_external`/`read_decision`のMCP Tool経由でARCが直接呼び出せる（Version16、`Connector.readExternal`/`readDecision`をラップ）。Version18でRemote MCP経由でも同じツールが呼べるようになった | ChatGPT Actionsアダプタからも同じConnectorを使って呼べるようになる見込み（Version19以降） |
+| 意思決定支援 | 同上（`read_decision`）。ARCの解釈・優先順位提案はDecisionContextを受け取ったARC自身が会話の中で書く | 同上（Version19以降） |
+| 会話への統合 | `POST /conversation/context`でquestionを渡すと、Intent判定に応じてRetrieve/Decisionへ自動的に振り分けられたConversationContextが返る（Version13、Owner経由で手動呼び出し）。MCP Toolの対象外（最低限10ツールに含まれない） | 必要になれば同じパターンでMCP Tool化可能 |
+| 読み取り（最小限） | `read_reflection`/`read_external`/`read_timeline`/`read_decision`のMCP Tool経由でARCが直接呼び出せる（Version16、ADR 0038）。`limit`はJSON Schemaで必須検証される。Remote MCP経由でも同一（Version18） | ChatGPT Actionsアダプタが同じConnectorをラップするだけで済む見込み（Version19以降） |
+| 書き込みの提案・承認 | `proposal_create`/`proposal_approve`/`proposal_reject`のMCP Tool経由でARCが直接`createProposal`まで呼べる（Version16、5種別→Version17でAgentMessage追加により6種別）。**Approveの実行はARC自身がOwnerとの会話上の承認を経て行う**——MCPサーバーに自動Approveの経路はない（ADR 0038） | 同上（Version19以降） |
 | ARC↔Claude Code間の往復記録 | `agent_message_list`（MCP Tool）・`GET /agent-messages`でAgentMessageを一覧取得できる（Version17、ADR 0039）。書き込みは既存の`proposal_create`/`approve`が担う | AgentTask（作業単位管理）・Artifact（生成物カタログ化）は具体的ニーズが確認でき次第検討（ADR 0040） |
-| MCPによる標準接続 | `src/infrastructure/mcp/server.ts`がstdio transportでMCPクライアント（Claude Desktop/Claude Code等）と接続し、10個のMCP Toolを提供する（Version16〜17、ADR 0037〜0039）。ARCが初めてProject ARCを直接（Owner経由のコピペなしで）利用できる。Claude Code自身も`.mcp.json`経由でこのMCPサーバーへ接続済み（Version17） | ChatGPT Actionsアダプタが同じConnectorをラップする形で追加され、複数のAI/接続方式が併存する見込み（Version18） |
+| MCPによる標準接続（ローカル） | `src/infrastructure/mcp/server.ts`がstdio transportでMCPクライアント（Claude Desktop/Claude Code等）と接続し、10個のMCP Toolを提供する（Version16〜17、ADR 0037〜0039）。Claude Code自身も`.mcp.json`経由でこのMCPサーバーへ接続済み（Version17）。Version18のRemote MCP追加後も無変更のまま共存 | 変更なし（ローカル専用のまま維持） |
+| MCPによる標準接続（Remote/ChatGPT向け） | `src/infrastructure/mcp/remoteServer.ts`がStreamable HTTP transportで同じ10ツールを提供する（Version18、ADR 0041）。`ARC_API_KEY`によるBearer認証必須。ローカルでの実機確認は完了、公開HTTPSトンネル経由の実ChatGPT接続はOwner自身の操作が必要（`docs/setup/chatgpt-mcp-connection.md`） | ChatGPT Developer ModeがネイティブにOAuthを要求する場合、フルのOAuth 2.1 Authorization Server実装を再検討（ADR 0041の再検討条件） |
+| OpenAPI 3.xドキュメント | `docs/openapi.json`（`pnpm run openapi:generate`）で主要10エンドポイントのoperationId/request/responseを生成可能（Version18、ADR 0043）。`http/server.ts`本体は非改変 | ChatGPT Actions実装時にこのドキュメントをベースに拡張する見込み（Version19以降） |
 | 個別の読み書き | MCP Tool経由でARCが直接呼べる（Read Layer全体、Write Proposal Layer全体、ManagementFeedback、AgentMessage）。それ以外の個別エンドポイント（`/external-sources`等）はOwnerが手動で動かすCLI/プログラム、または`Connector`クラス経由での呼び出しが前提 | ChatGPT Actions・追加のMCP Toolでカバー範囲が広がる可能性 |
 | 判断・分類 | 常にARCまたはOwner（Systemは判断しない、ADR 0007/0008/0010/0012/0021/0023/0028/0030/0031/0036/0038） | 変わらない（Project ARCの根幹原則、`docs/ai-roles.md`） |
