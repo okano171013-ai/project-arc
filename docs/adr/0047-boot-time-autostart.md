@@ -91,6 +91,30 @@ ngrok無料プランは再起動のたびに公開URLが変わる。自動起動
   Scheduler機能そのものには問題がなく、実行方法（管理者権限の有無）
   だけが結果を左右した。
 
+## 追記（2026-07-15）：ログオン後もサービスが実際には起動していなかった不具合の修正
+
+タスク登録（上記）を終えてOwnerがPCを再起動したところ、
+`ProjectARC-AutoStart`タスクは`State: Ready`で存在するにもかかわらず、
+`LastTaskResult: 1`（失敗）で終了しており、API（3939）・Remote
+MCP（3940）・ngrokのいずれも実際には起動していなかった。連動して
+`ProjectARC-CollaborationRunner`タスクも`fetch failed`で失敗していた
+（ローカルAPIが上がっていないため）。
+
+原因は`scripts/start-all.ps1`の`Start-Process -FilePath 'pnpm'`。この
+マシンの`pnpm`はPATH上に`pnpm.ps1`（と`pnpm.cmd`）が存在するが、
+`Start-Process -FilePath`はWin32の`CreateProcess`相当の解決しか行わず、
+拡張子を省略した`'pnpm'`では`.ps1`を実行できず「`%1 is not a valid
+Win32 application`」で例外を投げる。`$ErrorActionPreference = 'Stop'`
+によりスクリプトはAPI起動の直後で停止し、MCP・ngrokの起動やURL書き出し
+まで到達していなかった（ログファイルは作成されるが空、というのが
+症状だった）。
+
+`-FilePath 'pnpm'`を`-FilePath 'pnpm.cmd'`に変更し（API・MCP双方の
+呼び出し）、`scripts/start-all.ps1`を手動実行して3サービスすべての
+起動と`agent_message_list`の正常応答を確認した。次回ログオン時の
+`ProjectARC-AutoStart`タスクでも同じ経路を通るため、この修正で解消
+される見込み。
+
 ## 影響
 
 - `pnpm run api`・`pnpm run mcp:remote`・`ngrok http 3940`の自動起動

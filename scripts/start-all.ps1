@@ -48,7 +48,7 @@ if (Test-PortOpen -Port 3939) {
     Write-Output "[start-all] port 3939 already listening, skipping pnpm run api"
 } else {
     Write-Output "[start-all] starting pnpm run api"
-    Start-Process -FilePath 'pnpm' -ArgumentList 'run', 'api' `
+    Start-Process -FilePath 'pnpm.cmd' -ArgumentList 'run', 'api' `
         -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $logDir 'api.out.log') `
         -RedirectStandardError (Join-Path $logDir 'api.err.log')
@@ -60,7 +60,7 @@ if (Test-PortOpen -Port 3940) {
     Write-Output "[start-all] port 3940 already listening, skipping pnpm run mcp:remote"
 } else {
     Write-Output "[start-all] starting pnpm run mcp:remote"
-    Start-Process -FilePath 'pnpm' -ArgumentList 'run', 'mcp:remote' `
+    Start-Process -FilePath 'pnpm.cmd' -ArgumentList 'run', 'mcp:remote' `
         -WindowStyle Hidden `
         -RedirectStandardOutput (Join-Path $logDir 'mcp-remote.out.log') `
         -RedirectStandardError (Join-Path $logDir 'mcp-remote.err.log')
