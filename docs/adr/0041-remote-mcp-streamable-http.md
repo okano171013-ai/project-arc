@@ -2,7 +2,12 @@
 
 ## ステータス
 
-承認済み
+承認済み（**一部訂正**：「簡易Bearer認証のみを実装」「`ARC_API_KEY`を
+必須にする」の2点は、実機接続検証の結果ADR 0044により訂正——
+ChatGPTの「認証なし」モードは`Authorization`ヘッダーを一切送らない
+ため、Bearer必須のままではChatGPTから接続不可能なことが判明した。
+Streamable HTTP transport採用・フルOAuth 2.1を実装しない、という
+他の決定はそのまま有効）
 
 ## 関連Principle
 

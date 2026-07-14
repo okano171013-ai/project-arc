@@ -13,14 +13,17 @@
  * `buildMcpServer(connector)`（Version16で既存、変更なし）から
  * 新しいインスタンスを生成する。
  *
- * 認証：`ARC_API_KEY`によるBearer認証を必須とする（stdio/HTTP API
- * のopt-in方針とは異なり、Remote MCPは性質上公開されうるため安全側に
- * 倒す——`ARC_API_KEY`未設定時は起動time エラーで落とす、ADR 0041）。
- * ChatGPT Developer Modeのネイティブな接続方式はOAuth 2.0/2.1または
- * 認証なしであり、静的Bearer Keyの直接入力はサポートされない
- * （事前調査、ADR 0041）——フルのOAuth 2.1 Authorization Serverは
- * Version18のスコープ外とし、この制約は`docs/setup/
- * chatgpt-mcp-connection.md`に明記する。
+ * 認証：`/mcp`エンドポイントへの受信リクエストにBearer認証は
+ * **課さない**（ADR 0044、当初のADR 0041の方針を実機接続確認により
+ * 訂正）。ChatGPT Developer Modeの「認証なし」モードは
+ * `Authorization`ヘッダーを一切送らないため、Bearer必須のままでは
+ * ChatGPTから絶対に接続できないことが実機検証で判明した——
+ * フルのOAuth 2.1 Authorization Server実装はVersion18のスコープ外の
+ * ままとしたため、現実的な選択肢は「認証なしで受け付ける」のみ。
+ * **このためトンネル起動中は公開URLを知る誰でもアクセスできる**——
+ * 検証後は必ずトンネルを停止すること（`docs/setup/
+ * chatgpt-mcp-connection.md`参照）。Connector→ARC Connector HTTP API
+ * 間の認証（`ARC_API_KEY`）は本変更と無関係で従来どおり機能する。
  *
  * 重要な前提：このサーバー自身もHTTPサーバーを内包しない
  * Project ARC本体を呼び出す構成——ARC Connector HTTP API
@@ -37,7 +40,6 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { Connector } from '../connector/Connector.js';
 import { loadConnectorConfig } from '../connector/connectorConfig.js';
-import { isAuthorized } from '../security/apiKeyAuth.js';
 import { loadEnv } from '../config/env.js';
 import { buildMcpServer } from './server.js';
 
@@ -51,11 +53,11 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return JSON.parse(raw);
 }
 
-export function createRemoteMcpApp(connector: Connector, apiKey: string) {
+export function createRemoteMcpApp(connector: Connector) {
   const transports: Record<string, StreamableHTTPServerTransport> = {};
 
   return createServer((req, res) => {
-    void handleRequest(req, res, connector, apiKey, transports);
+    void handleRequest(req, res, connector, transports);
   });
 }
 
@@ -63,7 +65,6 @@ async function handleRequest(
   req: IncomingMessage,
   res: ServerResponse,
   connector: Connector,
-  apiKey: string,
   transports: Record<string, StreamableHTTPServerTransport>,
 ): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://localhost');
@@ -71,15 +72,6 @@ async function handleRequest(
   if (url.pathname !== '/mcp') {
     res.writeHead(404, { 'Content-Type': 'application/json; charset=utf-8' });
     res.end(JSON.stringify({ error: 'not found' }));
-    return;
-  }
-
-  if (!isAuthorized(req.headers.authorization, apiKey)) {
-    res.writeHead(401, {
-      'Content-Type': 'application/json; charset=utf-8',
-      'WWW-Authenticate': 'Bearer',
-    });
-    res.end(JSON.stringify({ error: 'unauthorized' }));
     return;
   }
 
@@ -129,19 +121,12 @@ function isMainModule(): boolean {
 
 if (isMainModule()) {
   const env = loadEnv();
-  if (!env.ARC_API_KEY) {
-    console.error(
-      'ARC_API_KEY is required to run the Remote MCP server (unlike the local stdio/HTTP API, ' +
-        'this endpoint is not opt-in — see ADR 0041). Set it in .env and retry.',
-    );
-    process.exit(1);
-  }
-
   const connector = new Connector(loadConnectorConfig());
-  const app = createRemoteMcpApp(connector, env.ARC_API_KEY);
+  const app = createRemoteMcpApp(connector);
   app.listen(env.MCP_HTTP_PORT, '127.0.0.1', () => {
     console.error(
-      `Project ARC Remote MCP server listening on http://127.0.0.1:${env.MCP_HTTP_PORT}/mcp (Bearer auth required)`,
+      `Project ARC Remote MCP server listening on http://127.0.0.1:${env.MCP_HTTP_PORT}/mcp ` +
+        '(NO AUTH — anyone who can reach this port/tunnel can call it, see ADR 0044)',
     );
   });
 }

@@ -23,8 +23,8 @@ const envSchema = z.object({
   // （ADR 0036参照、Version7〜14と同じ挙動を維持するopt-in設計）。
   ARC_API_KEY: z.string().optional(),
   ARC_CONNECTOR_BASE_URL: z.string().url().default('http://127.0.0.1:3939'),
-  // Remote MCP（Version18）。stdio版と異なりARC_API_KEYを必須とする
-  // （opt-inではない、ADR 0041参照）。
+  // Remote MCP（Version18）の待受ポート。/mcpエンドポイント自体は
+  // 認証しない（ChatGPT接続に合わせた設計、ADR 0044）。
   MCP_HTTP_PORT: z.coerce.number().int().positive().default(3940),
 });
 

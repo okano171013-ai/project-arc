@@ -4,7 +4,14 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
  * `env.ts`の`loadEnv()`はモジュールスコープで結果をキャッシュするため
  * （`env.ts`参照）、環境変数を変えて複数ケースを検証するには
  * `vi.resetModules()`で毎回モジュールを読み直す必要がある。
+ *
+ * `env.ts`はモジュール読み込み時に`dotenv`で実際の`.env`ファイルを
+ * 読み込む。ローカルの`.env`に`ARC_API_KEY`が設定されている環境では
+ * それがテストの`process.env`へ漏れ込み、「未設定」を検証するケースが
+ * 環境依存で壊れるため、`dotenv`自体をno-opにモックして分離する。
  */
+vi.mock('dotenv', () => ({ config: vi.fn() }));
+
 describe('loadConnectorConfig', () => {
   const ORIGINAL_ENV = { ...process.env };
 
