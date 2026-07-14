@@ -20,13 +20,19 @@
 リスク許容ですが、心当たりのない挙動に気づいた場合は
 `scripts/stop-all.ps1`で即座に停止してください。
 
-## 2. セットアップ（初回のみ、Owner自身の操作が必要）
+## 2. セットアップ（完了済み）
 
-Collaboration Runnerタスク（15分間隔）はClaude Codeが登録済みです。
-**ログオン時自動起動タスク（`ProjectARC-AutoStart`）は、Claude Codeの
-実行環境の制約により登録できませんでした**——通常のPowerShell
-ウィンドウ（デスクトップで直接開いたもの）から、以下を一度実行して
-ください。
+`ProjectARC-AutoStart`・`ProjectARC-CollaborationRunner`とも登録済み
+です（2026-07-14、`Get-ScheduledTask -TaskName 'ProjectARC-*'`で
+`State: Ready`を確認済み）。
+
+**セットアップ時に判明した注意点**：ログオントリガーのタスク
+（`ProjectARC-AutoStart`）は、このマシン（Windows 11 Home）では
+`Register-ScheduledTask`の登録に**管理者権限が必要**でした（ADR
+0047）。もし将来、このタスクを再登録・別マシンへ移行する必要が
+生じた場合は、PowerShellを「管理者として実行」した上で以下を
+実行してください（登録後のタスク実行自体は管理者権限を必要とせず、
+通常のユーザー権限で動きます）。
 
 ```powershell
 cd C:\Users\okano\project-arc

@@ -4,6 +4,23 @@
 
 `docs/reports/TEMPLATE.md`の14章構成に準拠。
 
+## 追記（2026-07-14、Owner実機操作による訂正・ADR 0047更新）
+
+本文（7章）では、`ProjectARC-AutoStart`（ログオントリガー）タスクの
+登録失敗を「Claude Codeがコマンドを実行している自動化ツールの実行
+コンテキストの制約」と判断していたが、これは誤りだった。
+
+Owner自身が通常のPowerShellウィンドウから同じスクリプトを実行しても
+同一の「Access is denied」が再現し、**PowerShellを管理者として実行**
+したところ登録に成功した。原因はClaude Codeの実行環境ではなく、
+**このマシン（Windows 11 Home）で`Register-ScheduledTask`による
+ログオントリガー登録に管理者権限が必要**という、Windows側の制約
+だった（`docs/adr/0047-boot-time-autostart.md`で訂正済み）。
+
+`ProjectARC-AutoStart`・`ProjectARC-CollaborationRunner`とも
+`State: Ready`まで実機確認が完了し、Version20は全項目が完了した
+（`docs/dod.md`参照）。
+
 ## 1. Version概要
 
 **テーマ**：Collaboration Runner + 常駐運用基盤。Version19完了後、

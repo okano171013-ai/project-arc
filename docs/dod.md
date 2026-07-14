@@ -415,7 +415,7 @@ Version19のDoDは達成済み。新規Entity・UseCase・スキーマフィー�
 - [x] Collaboration Runnerのテスト（初回全件検知・2回目新着なし・3回目差分検知・ロック機構）を実装済み
 - [x] `scripts/start-all.ps1`・`scripts/stop-all.ps1`を実装済み
 - [x] `scripts/register-scheduled-tasks.ps1`を実装し、`ProjectARC-CollaborationRunner`タスクは実際に登録・実機確認済み（`Start-ScheduledTask`で手動発火、`LastTaskResult: 0`確認済み）
-- [ ] `ProjectARC-AutoStart`タスクの登録はOwner自身の1ステップ操作として引き継ぎ済み（Claude Codeの実行環境の制約、ADR 0047に明記）——Owner実行待ち
+- [x] `ProjectARC-AutoStart`タスクをOwner自身が管理者権限のPowerShellから登録・`State: Ready`を実機確認済み（原因はWindows 11 Homeの管理者権限要件、ADR 0047で訂正済み）
 - [x] ADR 0046（Runner v1スコープ）・ADR 0047（自動起動）を記録済み
 - [x] `docs/setup/collaboration-runner.md`を作成済み
 - [x] `docs/setup/chatgpt-mcp-connection.md`の「検証後は停止」記述を常時稼働運用向けに更新済み
@@ -426,4 +426,4 @@ Version19のDoDは達成済み。新規Entity・UseCase・スキーマフィー�
 - [x] `docs/reports/Version20_Report.md` を生成済み（14章構成）
 - [x] `docs/reports/Version20_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
 
-`ProjectARC-AutoStart`タスクの実登録（Owner操作）以外は完了済み。
+Version20のDoDは全項目達成済み。

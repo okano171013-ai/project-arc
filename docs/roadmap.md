@@ -504,11 +504,15 @@ ManagementFeedbackを監視し、承認不要の範囲でClaude Codeが対応を
 - **実機で発覚した制約**：タスクスケジューラへの登録スクリプト
   （`scripts/register-scheduled-tasks.ps1`）を実行したところ、
   15分間隔のCollaboration Runnerタスクは登録できたが、ログオン
-  トリガーの自動起動タスクはClaude Codeの実行環境の権限制約により
-  登録できなかった（`docs/adr/0047-boot-time-autostart.md`参照）。
-  Owner自身が同スクリプトを対話的なPowerShellセッションから一度
-  実行する、という1ステップの手順として引き継いだ
-  （`docs/setup/collaboration-runner.md`参照）。
+  トリガーの自動起動タスクは「Access is denied」で登録できなかった。
+  当初はClaude Codeの実行環境固有の制約と判断したが、Owner自身が
+  通常のPowerShellから実行しても同じエラーが再現し、**管理者権限で
+  PowerShellを実行したところ登録に成功**——原因はこのマシン
+  （Windows 11 Home）でログオントリガー登録に管理者権限が必要という
+  Windows側の制約であり、当初の診断は誤りだったと判明した
+  （`docs/adr/0047-boot-time-autostart.md`で訂正済み）。Owner自身が
+  管理者権限で一度実行し、両タスクとも`State: Ready`まで実機確認
+  済み（`docs/setup/collaboration-runner.md`参照）。
 - **長期バックログの記録**：同日届いた100項目の長期バックログ
   （AgentMessage `8df72fe4-...`、A〜Jの10カテゴリ）は、「一括実装
   せず最小縦切りで進める」という指示書自身の方針に従い、全項目の

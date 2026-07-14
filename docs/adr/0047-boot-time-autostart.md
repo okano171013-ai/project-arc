@@ -42,24 +42,31 @@ Node.jsプロセス自身に無限ループ・プロセス監視・再起動・�
 tasks.ps1`）。独自実装を最小化し（YAGNI）、OS標準の枯れた機能を
 利用する。
 
-### 実機登録で発覚した制約：ログオントリガーの登録には対話的セッションが必要
+### 実機登録で発覚した制約：ログオントリガーの登録にはWindows 11 Homeで管理者権限が必要
 
 `register-scheduled-tasks.ps1`の実機実行時、**15分間隔で実行する
-`ProjectARC-CollaborationRunner`タスクは登録に成功したが、ログオン
-トリガーの`ProjectARC-AutoStart`タスクは「Access is denied」で登録
-できなかった**。PowerShellの`Register-ScheduledTask`コマンドレット・
-`schtasks.exe`の両方で同一のエラーとなり、原因はスクリプトの不備では
-なく、Claude Codeがコマンドを実行している自動化ツールの実行コンテキスト
-（対話的なデスクトップセッションではない）がログオントリガー登録に
-必要な権限を持たないためと判断した。
+`ProjectARC-CollaborationRunner`タスクは（Claude Codeの実行環境から
+非管理者権限で）登録に成功したが、ログオントリガーの
+`ProjectARC-AutoStart`タスクは「Access is denied」で登録できなかった**。
 
-このため、`ProjectARC-AutoStart`タスクの登録は、**Owner自身が通常の
-PowerShellウィンドウ（デスクトップで直接開いたもの）から
+当初はClaude Codeの実行環境（対話的デスクトップセッションではない）
+固有の制約と判断したが、Owner自身が通常のPowerShellウィンドウ
+（管理者権限なし）から同じスクリプトを実行しても同一のエラーが
+再現し、**PowerShellを管理者として実行**したところ登録に成功した
+——原因はClaude Codeの実行環境ではなく、**このマシン（Windows 11
+Home）で`Register-ScheduledTask`によるログオントリガー登録に管理者
+権限が必要**という、Windows側の制約だったと判明した（当初の診断は
+誤りであり、本ADRで訂正する）。時刻ベースのトリガー
+（Collaboration Runner）は非管理者権限でも登録できたため、
+制約はトリガー種別（ログオン vs. 時刻ベース）に依存する。
+
+このため、`ProjectARC-AutoStart`タスクの登録は、**Owner自身が
+PowerShellを「管理者として実行」した上で
 `scripts/register-scheduled-tasks.ps1`を一度実行する**、という
 1ステップの手動作業として残す（`docs/setup/collaboration-runner.md`に
-手順を明記）。時刻ベースのトリガー（Collaboration Runner）は
-Claude Codeが問題なく登録できた——これは自動化ツールの実行コンテキスト
-がログオン関連の登録のみ制限されていることを示す。
+手順を明記）——管理者権限での登録が必要なだけで、登録後のタスク
+実行自体は現在のユーザー権限で行われる（`Register-ScheduledTask`の
+既定の`Principal`設定）。
 
 ### ngrok無料プランのURL非固定性
 
@@ -79,20 +86,18 @@ ngrok無料プランは再起動のたびに公開URLが変わる。自動起動
 - タスクスケジューラの標準機能に委ねることで、「再起動後の復旧」
   「重複実行防止」「失敗時再試行」という指示書の要求の大部分を
   独自コードなしで満たせる。
-- ログオントリガー登録の制約は、Claude Codeの実行環境固有の限界で
-  あり、Owner自身が同じスクリプトを対話的セッションから実行すれば
-  問題なく登録できる見込み（時刻ベースのトリガーは同一環境から
-  問題なく登録できたことから、Task Scheduler自体やスクリプトの
-  内容に起因する問題ではないと判断）。
+- ログオントリガー登録の制約は、実機検証によりWindows 11 Home側の
+  権限要件（管理者権限が必要）と判明した。スクリプト自体・Task
+  Scheduler機能そのものには問題がなく、実行方法（管理者権限の有無）
+  だけが結果を左右した。
 
 ## 影響
 
 - `pnpm run api`・`pnpm run mcp:remote`・`ngrok http 3940`の自動起動
-  （`ProjectARC-AutoStart`タスク）は、Owner自身が
-  `scripts/register-scheduled-tasks.ps1`を一度実行するまで有効に
-  ならない。
-- `ProjectARC-CollaborationRunner`（15分間隔の新着検知）は既に
-  有効。
+  （`ProjectARC-AutoStart`タスク）は、Owner自身が管理者権限で
+  `scripts/register-scheduled-tasks.ps1`を実行し、登録済み
+  （`State: Ready`、2026-07-14実機確認）。
+- `ProjectARC-CollaborationRunner`（15分間隔の新着検知）も登録済み。
 - 停止方法：`Disable-ScheduledTask -TaskName 'ProjectARC-AutoStart'`
   （Runnerも同様）、または`scripts/stop-all.ps1`で起動中のプロセスを
   個別に停止する。
