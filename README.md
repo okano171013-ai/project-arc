@@ -15,22 +15,31 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/ai-roles.md`](./docs/ai-roles.md) — 人間・ARC・Gemini・Claude Code・
   システム自体の責務分担
 - [`docs/architecture.md`](./docs/architecture.md) — 技術設計
-- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜15のロードマップ・
+- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜16のロードマップ・
   長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version15のスコープ（現在地）
+## Version16のスコープ（現在地）
 
-テーマ：「Connector Deployment」— 「Project ARCを完成させる。ARCとの
-実際の接続を実現する。」Version14で完成したRead Layer/Write Proposal
-Layerを、外部プログラムから呼び出せる標準HTTP API＋API Key認証として
-仕上げる（長期ロードマップ2.0 Phase 2の完成）。MCP・ChatGPT Actions
-そのものの実装はVersion16以降に先送りし、「AIに依存しない標準的な
-接続口」を完成させることに専念した。アーキテクチャ全体像は
+テーマ：「MCP Integration」— 「ARCが初めてProject ARCを直接利用する。」
+Version15で完成したConnector・API Key認証の上に、stdioベースのMCP
+（Model Context Protocol）サーバーを「薄いアダプタ」として追加した
+（長期ロードマップ2.0 Phase 2の完成）。ChatGPT Actions対応（HTTPS
+公開・OpenAPI必須）はVersion17へ先送りし、ローカル完結するMCPを
+優先した。アーキテクチャ全体像は
 [`docs/architecture-diagram.md`](./docs/architecture-diagram.md)を参照。
 
+- **MCPサーバー**（`src/infrastructure/mcp/server.ts`、`pnpm run mcp`）—
+  ARCが会話の中で直接Project ARCを呼び出せるstdioベースのMCPサーバー。
+  `Connector`（Version15）のみに依存し、Application/Domain層は一切
+  importしない（ADR 0038）。9個のMCP Tool（`read_reflection`・
+  `read_external`・`read_timeline`・`read_decision`・
+  `proposal_create`・`proposal_approve`・`proposal_reject`・
+  `management_feedback_list`・`management_feedback_resolve`）を提供。
+  起動前に`pnpm run api`（ARC Connector HTTP API）が別プロセスとして
+  起動済みである必要がある
 - **Connector**（`src/infrastructure/connector/Connector.ts`）— ARC
   Connector HTTP APIをHTTP経由でのみ呼び出すクライアントモジュール。
   Application/Domain層の型を一切importしない、独立したHTTPクライアント
@@ -255,6 +264,8 @@ pnpm run propose list-feedback     # ManagementFeedbackの一覧を表示
 pnpm run propose resolve <id> <Accepted|Implemented|Closed|Rejected>  # resolutionを遷移
 
 pnpm run api                       # ARC Connector（HTTP API）を起動（既定ポート3939）
+
+pnpm run mcp                       # MCPサーバーを起動（stdio、Version16）。事前に`pnpm run api`が起動している必要がある
 ```
 
 `pnpm run api`起動後の動作確認例（`curl`はGit Bash上で日本語を含む
@@ -267,6 +278,35 @@ curl -X POST http://127.0.0.1:3939/skin \
   -H "Content-Type: application/json" \
   -d '{"record":{"date":"2026-07-13","redness":2}}'
 ```
+
+### MCPサーバーへの接続（Version16）
+
+MCPサーバー（`pnpm run mcp`）はstdio transportのため、ポートは使わず
+Claude Desktop・Claude Code等のMCPクライアント側の設定ファイルから
+コマンドとして起動される。事前に`pnpm run api`でARC Connector HTTP
+APIを起動しておくこと（MCPサーバー自身はHTTPサーバーを内包しない）。
+
+**Claude Desktop**（`claude_desktop_config.json`）：
+
+```json
+{
+  "mcpServers": {
+    "project-arc": {
+      "command": "npx",
+      "args": ["tsx", "/absolute/path/to/project-arc/src/infrastructure/mcp/server.ts"]
+    }
+  }
+}
+```
+
+**Claude Code**：
+
+```bash
+claude mcp add project-arc -- npx tsx /absolute/path/to/project-arc/src/infrastructure/mcp/server.ts
+```
+
+`ARC_API_KEY`を設定している場合、MCPサーバー（`Connector`経由）も
+同じ環境変数（`.env`）を読むため、追加設定は不要。
 
 ## ディレクトリ構成
 

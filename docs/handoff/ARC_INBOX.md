@@ -49,6 +49,12 @@ reports/Version15_Report.md`）。「Project ARCを完成させる。ARCとの
 Connector・API Key認証を追加した指示書（原文は
 `docs/handoff/archive/Version15_ARC_Brief.md`に保管）。
 
+**処理済み**：Version16「MCP Integration」（`docs/
+reports/Version16_Report.md`）。「ARCが初めてProject ARCを直接
+利用する」というテーマで、MCPサーバー（薄いアダプタ、Connectorのみに
+依存）と9個のMCP Toolを追加した指示書（原文は
+`docs/handoff/archive/Version16_ARC_Brief.md`に保管）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください。
 

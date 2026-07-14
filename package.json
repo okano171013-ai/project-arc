@@ -1,7 +1,7 @@
 {
   "name": "project-arc",
-  "version": "0.15.0",
-  "description": "Project ARC — AI Life Management OS (Version15: Connector Deployment)",
+  "version": "0.16.0",
+  "description": "Project ARC — AI Life Management OS (Version16: MCP Integration)",
   "type": "module",
   "private": true,
   "engines": {
@@ -27,6 +27,7 @@
     "conversation": "tsx src/infrastructure/cli/conversation.ts",
     "propose": "tsx src/infrastructure/cli/propose.ts",
     "api": "tsx src/infrastructure/http/server.ts",
+    "mcp": "tsx src/infrastructure/mcp/server.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -37,11 +38,12 @@
     "prepare": "husky || exit 0"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@supabase/supabase-js": "^2.45.0",
     "dotenv": "^16.4.5",
     "google-auth-library": "^9.14.1",
     "googleapis": "^144.0.0",
-    "zod": "^3.23.8"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^20.14.0",

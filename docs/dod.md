@@ -318,3 +318,28 @@ API Key認証がカスタムヘッダー非対応で`Authorization: Bearer`固�
 Version15_Report.md`1章・ADR 0035参照）。
 
 Version15のDoDは達成済み（自動テスト＋実サーバーへのConnector経由の実リクエストで確認済み）。
+
+## Version16完了チェックリスト
+
+- [x] `pnpm test` が全て緑（MCP Tool 9個のend-to-endテストを含む、238件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] MCPサーバー（`pnpm run mcp`）がstdioで正常に起動する（実機確認済み。実際に`npx tsx src/infrastructure/mcp/server.ts`を子プロセスとして起動しMCP Client経由で駆動）
+- [x] MCP Client経由でRead（reflection/timeline/external/decision）が正常動作する（実機確認済み、`limit`必須がJSON Schemaで検証されることを確認）
+- [x] MCP Client経由でproposal_create→proposal_approve→ManagementFeedback保存→management_feedback_list→management_feedback_resolveの一連が正常動作する（実機確認済み、指示書15章のフロー）
+- [x] MCP Client経由でproposal_rejectが何も保存しないことを確認済み
+- [x] Connector/HTTP側のエラー（存在しないID・認証なしアクセス等）がisError: trueとして正しく伝播することを確認済み（テスト・実機確認両方）
+- [x] MCP Tool層がApplication/Domain層を一切importしていないことを確認済み（ADR 0038）
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0037〜0038（MCP SDKを新規依存として追加した理由・MCP ToolをConnectorのみに依存させた理由）を記録済み
+- [x] `docs/architecture-diagram.md` を更新済み
+- [x] `docs/reports/Version16_Report.md` を生成済み（14章構成）
+- [x] `docs/reports/Version16_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+実装中、`mcp/server.ts`がテストからimportされた際に`main()`が
+`isMainModule()`ガードなしで無条件実行され、テストプロセス内で
+2つ目のstdio transportへ接続を試みてしまうバグを発見・修正した
+（`http/server.ts`と同じ`isMainModule()`パターンを追加、詳細は
+`docs/reports/Version16_Report.md`7章参照）。
+
+Version16のDoDは達成済み（自動テスト＋実サーバー・実MCPサブプロセスへの実リクエストで確認済み）。

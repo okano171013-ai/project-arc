@@ -317,6 +317,36 @@ Version15_Report.md`参照。
 
 ---
 
+## Version16｜MCP Integration
+
+「ARCが初めてProject ARCを直接利用する。」Version15完了報告への
+ARCからの応答（`docs/handoff/archive/Version16_ARC_Brief.md`）に
+基づく。ARCはChatGPT Actions（HTTPS公開・OpenAPI必須）より先に、
+ローカル完結するMCP（Model Context Protocol）を優先することを提案し、
+Owner承認のもとVersion16のテーマとなった。理由：①HTTPS公開が不要、
+②Owner承認を挟みやすいチャット文脈との相性、③全てローカルで完結
+するデバッグの容易さ、④ConnectorがHTTP APIしか知らない設計のため、
+MCPもChatGPT Actionsも同じConnectorをラップするだけで後から追加
+できる。
+
+- **MCPサーバー**（`src/infrastructure/mcp/server.ts`、`pnpm run mcp`）：
+  stdio transportの薄いアダプタ。`Connector`（Version15）のみに依存し、
+  Application/Domain層は一切importしない（ADR 0038）。
+- **9個のMCP Tool**（`read_reflection`・`read_external`・
+  `read_timeline`・`read_decision`・`proposal_create`・
+  `proposal_approve`・`proposal_reject`・`management_feedback_list`・
+  `management_feedback_resolve`）：いずれも対応する`Connector`
+  メソッドを1回呼ぶだけ。JSON SchemaはzodスキーマからSDKが自動変換。
+- **新規依存**：`@modelcontextprotocol/sdk`を追加、zodを`^3.25.76`へ
+  引き上げ（ADR 0037）。
+
+OpenAPIスキーマ生成・ChatGPT Actions対応・HTTPS公開はVersion17へ
+先送り。Project ARC本体（Connector/HTTP API/ReadGateway/
+WriteProposalGateway/UseCase/Domain）への変更は一切なし。詳細は
+`docs/reports/Version16_Report.md`参照。
+
+---
+
 ## 長期ロードマップ 2.0（Version9完了時、ARC提案）
 
 Version9完了を受け、ARCから中長期ロードマップの組み替え提案があった
@@ -339,13 +369,13 @@ Version9完了を受け、ARCから中長期ロードマップの組み替え提
   Integration（ConversationGateway）、Version14でARCが安全に読み
   書きできるRead Layer/Write Proposal Layer（ARC Integration）、
   Version15で外部プログラムから呼び出せる標準Connector（Connector
-  Deployment）が完了。Healthデータ等の実データ連携・ARCが直接
-  呼び出せる接続経路（MCP・ChatGPT Actions等のアダプタそのもの）は
-  引き続きVersion16以降の課題とする——Version15時点でもOwnerが
-  手動でCLI/HTTP APIを呼ぶ運用は変わらないが、標準HTTP API＋
-  API Key認証という「どのAIとも接続できる」土台は完成した
-  （Write Proposal LayerもOwnerの明示的な承認操作を経由する設計の
-  ため、Connector自体は自動Approveの手段を持たない）。
+  Deployment）、Version16でARCが初めて直接利用できるMCPサーバー
+  （MCP Integration）が完了。Healthデータ等の実データ連携・
+  ChatGPT Actions対応・HTTPS公開は引き続きVersion17以降の課題と
+  する——Version16時点でARCは`Connector`をラップするMCP Tool経由で
+  Read/Proposal/ManagementFeedbackを扱えるようになったが、書き込みは
+  常にOwnerの明示的な承認（`proposal_approve`の呼び出し）を経由する
+  設計のため、MCPサーバー自体は自動Approveの手段を持たない。
 - **Phase 3（Version16〜25）Life Management** — 毎日Reflection・
   睡眠・勉強・食事・筋トレ等をチェックし、ARCが未達を指摘する
   （「今週筋トレありません」等）、より踏み込んだ管理機能。
