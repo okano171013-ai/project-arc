@@ -292,3 +292,29 @@ Version4のDoDは達成済み（対話式CLIの実機確認はOwnerに委ねる�
 詳細は`docs/reports/Version14_Report.md`7章参照）。
 
 Version14のDoDは達成済み（対話式・非対話式CLI、HTTP APIともに実機確認済み）。
+
+## Version15完了チェックリスト
+
+- [x] `pnpm test` が全て緑（apiKeyAuth/Connector/connectorConfigのテストを含む、233件）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `Connector`クラス経由でRead（reflection/timeline/external/decision）が正常動作する（実機確認済み、`limit`必須）
+- [x] `Connector`クラス経由でcreateProposal→approveProposal→ManagementFeedback保存→listFeedback→resolveFeedbackの一連が正常動作する（実機確認済み、指示書15章のフロー）
+- [x] `Connector`クラス経由でrejectProposalが何も保存しないことを確認済み
+- [x] `ARC_API_KEY`未設定時は従来通り認証なしで動作し、設定時は`Authorization: Bearer`ヘッダーなし/誤りで401を返すことを確認済み（テスト・実機確認両方）
+- [x] `GET /health`は`ARC_API_KEY`設定時も認証不要であることを確認済み
+- [x] `GET /management-feedback`・`POST /management-feedback/:id/resolve`がHTTP経由で正常動作する（実機確認済み）
+- [x] Connector設定（baseUrl/apiKey）がハードコードされておらず`.env`経由で読み込まれることを確認済み
+- [x] README / docsに実装との乖離がない
+- [x] ADR 0034〜0036（ConnectorをInfrastructureへ置いた理由・HTTP APIを唯一の接続経路とした理由・認証をInfrastructureへ閉じ込めた理由）を記録済み
+- [x] `docs/architecture-diagram.md` を更新済み
+- [x] `docs/reports/Version15_Report.md` を生成済み（14章構成）
+- [x] `docs/reports/Version15_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+事前調査（指示書0章の推奨に従い実装前に実施）で、ChatGPT Actionsの
+API Key認証がカスタムヘッダー非対応で`Authorization: Bearer`固定
+であること、MCP Remote Serverも同じBearer token慣習を持つことを
+確認し、認証方式の設計に反映した（詳細は`docs/reports/
+Version15_Report.md`1章・ADR 0035参照）。
+
+Version15のDoDは達成済み（自動テスト＋実サーバーへのConnector経由の実リクエストで確認済み）。

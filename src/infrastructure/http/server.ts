@@ -10,8 +10,9 @@
  *   受け取って書き込むだけ。`/capture/suggest`が返すのは機械的な
  *   下書き提案のみ。`/bridge/import`も`type`が確定済みの入力のみを
  *   受け付ける。
- * - ローカル専用（127.0.0.1のみ）。認証は未実装（ADR 0008参照、
- *   将来リモート接続が必要になった時点で追加する）。
+ * - ローカル専用（127.0.0.1のみ）。Version15で`ARC_API_KEY`が設定
+ *   されている場合のみAPI Key認証を強制する（opt-in、ADR 0036）。
+ *   未設定ならVersion7〜14と同じく認証なしで動作する。
  * - 新規の外部依存は追加せず、Node.js標準の`http`モジュールのみで
  *   実装する（Principle 9: 段階的拡張／YAGNI）。
  */
@@ -68,6 +69,8 @@ import { JsonFileExternalSourceRepository } from '../../adapters/repositories/Js
 import { JsonFileExternalKnowledgeRepository } from '../../adapters/repositories/JsonFileExternalKnowledgeRepository.js';
 import { JsonFileManagementFeedbackRepository } from '../../adapters/repositories/JsonFileManagementFeedbackRepository.js';
 import { RuleBasedCaptureClassifier } from '../../adapters/providers/RuleBasedCaptureClassifier.js';
+import { isAuthorized } from '../security/apiKeyAuth.js';
+import { loadEnv } from '../config/env.js';
 
 import {
   serializeReflection,
@@ -88,11 +91,21 @@ import type { Reflection } from '../../domain/entities/Reflection.js';
 import type { MemoryEntry } from '../../domain/entities/MemoryEntry.js';
 import type { ExternalKnowledge } from '../../domain/entities/ExternalKnowledge.js';
 import type { AppearanceLog } from '../../domain/entities/AppearanceLog.js';
-import type { ManagementFeedback } from '../../domain/entities/ManagementFeedback.js';
+import type {
+  ManagementFeedback,
+  ManagementFeedbackResolution,
+} from '../../domain/entities/ManagementFeedback.js';
 
 export interface BuildAppOptions {
   /** テスト時に本番の`data/`と隔離するためのディレクトリ差し替え。 */
   dataDir?: string;
+  /**
+   * Version15: ARC Connector（Connector層からの呼び出し）向けの
+   * API Key認証。未設定なら認証を強制しない（opt-in、ADR 0036、
+   * Version7〜14と同じ挙動を維持する）。設定した場合、`GET /health`
+   * 以外の全ルートで`Authorization: Bearer <apiKey>`を要求する。
+   */
+  apiKey?: string;
 }
 
 function repoPath(dataDir: string | undefined, filename: string): string | undefined {
@@ -716,10 +729,33 @@ export function createApp(options: BuildAppOptions = {}) {
       await useCases.deleteExternalSource.execute({ id: params.id! });
       return ok({ deleted: true });
     }),
+
+    // --- ManagementFeedback（Version15、Connector Deployment） ---
+    // Version14ではCLIのみで完結させていたが（ADR 0033）、Connectorが
+    // 「HTTP APIのみを利用する」制約（指示書2章）を持つため、Connector
+    // 経由でlist-feedback/resolveを呼べるようHTTPエンドポイントを追加した
+    // （ADR 0035）。
+    route('GET', '/management-feedback', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const resolution = (url.searchParams.get('resolution') ?? undefined) as
+        | ManagementFeedbackResolution
+        | undefined;
+      const result = await useCases.listManagementFeedback.execute({ resolution });
+      return ok({ feedback: result.feedback.map(serializeManagementFeedback) });
+    }),
+
+    route('POST', '/management-feedback/:id/resolve', async (req, params) => {
+      const body = await readJsonBody(req);
+      const result = await useCases.resolveManagementFeedback.execute({
+        id: params.id!,
+        resolution: body.resolution as ManagementFeedbackResolution,
+      });
+      return ok({ feedback: serializeManagementFeedback(result.feedback) });
+    }),
   ];
 
   return createServer((req, res) => {
-    void handleRequest(req, res, routes);
+    void handleRequest(req, res, routes, options.apiKey);
   });
 }
 
@@ -727,9 +763,21 @@ async function handleRequest(
   req: IncomingMessage,
   res: ServerResponse,
   routes: Route[],
+  apiKey: string | undefined,
 ): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://localhost');
   const method = req.method ?? 'GET';
+
+  if (apiKey && url.pathname !== '/health') {
+    if (!isAuthorized(req.headers.authorization, apiKey)) {
+      res.writeHead(401, {
+        'Content-Type': 'application/json; charset=utf-8',
+        'WWW-Authenticate': 'Bearer',
+      });
+      res.end(JSON.stringify({ ok: false, error: 'unauthorized' }));
+      return;
+    }
+  }
 
   for (const r of routes) {
     if (r.method !== method) continue;
@@ -764,10 +812,15 @@ function isMainModule(): boolean {
 
 if (isMainModule()) {
   const port = Number(process.env.PORT) || DEFAULT_PORT;
-  const app = createApp();
-  // ローカル専用（127.0.0.1のみ）。リモート接続が必要になった場合の
-  // 認証設計はADR 0008参照（Version7では未実装、意図的な先送り）。
+  const apiKey = loadEnv().ARC_API_KEY;
+  const app = createApp({ apiKey });
+  // ローカル専用（127.0.0.1のみ）。Version15で`ARC_API_KEY`が設定されて
+  // いれば`Authorization: Bearer`によるAPI Key認証を強制する（ADR 0036、
+  // ADR 0008の「再検討条件」に対応）。未設定ならVersion7〜14と同じく
+  // 認証なしで動作する。
   app.listen(port, '127.0.0.1', () => {
-    console.log(`ARC Connector listening on http://127.0.0.1:${port}`);
+    console.log(
+      `ARC Connector listening on http://127.0.0.1:${port}${apiKey ? ' (API key required)' : ''}`,
+    );
   });
 }

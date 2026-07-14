@@ -1,7 +1,7 @@
 {
   "name": "project-arc",
-  "version": "0.14.0",
-  "description": "Project ARC — AI Life Management OS (Version14: ARC Integration)",
+  "version": "0.15.0",
+  "description": "Project ARC — AI Life Management OS (Version15: Connector Deployment)",
   "type": "module",
   "private": true,
   "engines": {

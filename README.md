@@ -15,23 +15,33 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/ai-roles.md`](./docs/ai-roles.md) — 人間・ARC・Gemini・Claude Code・
   システム自体の責務分担
 - [`docs/architecture.md`](./docs/architecture.md) — 技術設計
-- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜14のロードマップ・
+- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜15のロードマップ・
   長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version14のスコープ（現在地）
+## Version15のスコープ（現在地）
 
-テーマ：「ARC Integration」— 「ARCがProject ARCを安全に読み、Ownerの
-承認のもとで書き込めるようにする。」ARCへ直接の書き込み権限を
-与えず、`ARC → Write Proposal → Owner承認 → Project ARC`という
-Write Proposal Layerを挟むことで、Constitution第2条（Systemは
-判断しない）・第4条（Ownerが最終決定する）を保ったまま読み書きの
-入口を整備する（長期ロードマップ2.0 Phase 2の続き）。アーキテクチャ
-全体像は
+テーマ：「Connector Deployment」— 「Project ARCを完成させる。ARCとの
+実際の接続を実現する。」Version14で完成したRead Layer/Write Proposal
+Layerを、外部プログラムから呼び出せる標準HTTP API＋API Key認証として
+仕上げる（長期ロードマップ2.0 Phase 2の完成）。MCP・ChatGPT Actions
+そのものの実装はVersion16以降に先送りし、「AIに依存しない標準的な
+接続口」を完成させることに専念した。アーキテクチャ全体像は
 [`docs/architecture-diagram.md`](./docs/architecture-diagram.md)を参照。
 
+- **Connector**（`src/infrastructure/connector/Connector.ts`）— ARC
+  Connector HTTP APIをHTTP経由でのみ呼び出すクライアントモジュール。
+  Application/Domain層の型を一切importしない、独立したHTTPクライアント
+  として実装（ADR 0034）。Read/CreateProposal/ApproveProposal/
+  RejectProposal/ManagementFeedbackのlist・resolveを提供する
+- **API Key認証**（`ARC_API_KEY`環境変数）— `Authorization: Bearer
+  <key>`固定（ChatGPT Actions・MCP双方の認証慣習を事前調査した上で
+  選定、ADR 0035）。設定時のみ`GET /health`以外の全ルートで強制する
+  opt-in設計——未設定ならVersion7〜14と同じく認証なしで動作する
+  （ADR 0036）。認証コードはInfrastructure層のみに閉じ込め、
+  Application層は一切関与しない
 - **Read Layer**（`ReadGatewayUseCase`、`GET /read/reflection`
   `/read/timeline` `/read/external` `/read/decision`）— ARCが会話の
   中で必要最小限のデータだけを取得できる読み取り専用の入口。`limit`
@@ -98,14 +108,16 @@ Write Proposal Layerを挟むことで、Constitution第2条（Systemは
   `/purchase/:id/finish` `/appearance` `/evaluation` `/capture/suggest`
   `/capture` `/bridge/import` `/external-sources` `/external-knowledge`
   `/knowledge/retrieve` `/decision/support` `/conversation/context`
-  `/proposal/create` `/proposal/approve` `/proposal/reject`、
+  `/proposal/create` `/proposal/approve` `/proposal/reject`
+  `/management-feedback/:id/resolve`、
   `GET /health` `/timeline` `/bridge/export` `/external-sources`
   `/external-knowledge` `/external-knowledge/search` `/read/reflection`
-  `/read/timeline` `/read/external` `/read/decision`、`PATCH`/`DELETE`
+  `/read/timeline` `/read/external` `/read/decision`
+  `/management-feedback`、`PATCH`/`DELETE`
   も`/external-sources/:id` `/external-knowledge/:id`に対応。新規
   外部依存なし（Node標準の`http`のみ）。ローカル専用（`127.0.0.1`
-  のみ）・認証は未実装（将来リモート接続が必要になった時点で追加、
-  ADR 0008参照）
+  のみ）・`ARC_API_KEY`設定時のみAPI Key認証を強制（Version15、
+  ADR 0036）
 - **Smart Capture**（`pnpm capture`）— 文章・写真を入力すると、
   キーワード一致による下書き提案（例：「肌」→Skin Log、「買った」→
   Purchase Log、「言われた」→Third Person Evaluation）を表示。Owner

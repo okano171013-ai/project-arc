@@ -1,7 +1,7 @@
 # Project ARC アーキテクチャ図
 
 Version7完了時にOwnerから提案された、レイヤー構成・データの流れ・
-ARCとの接続点を示す図（2026年7月、Version14時点の実装を反映。
+ARCとの接続点を示す図（2026年7月、Version15時点の実装を反映。
 Version9でBridge Layer・ThirdPersonEvaluation、Version10で
 External Brain（ExternalSource/ExternalKnowledge）、Version11で
 Knowledge Retrieval（RetrieveKnowledgeUseCase・Context Builder）、
@@ -9,7 +9,8 @@ Version12でDecision Support（DecisionEngineUseCase・
 DecisionContext）、Version13でConversational Integration
 （ConversationGatewayUseCase・ConversationContext）、Version14で
 ARC Integration（ReadGatewayUseCase・WriteProposalGatewayUseCase・
-ManagementFeedback）を追加）。
+ManagementFeedback）、Version15でConnector Deployment
+（Connector・API Key認証）を追加）。
 文章での説明は[`docs/architecture.md`](./architecture.md)を参照。
 
 ---
@@ -19,8 +20,10 @@ ManagementFeedback）を追加）。
 ```mermaid
 graph TB
     subgraph Infrastructure["Infrastructure層"]
-        CLI["CLI\nsrc/infrastructure/cli/*.ts\n(memory, appearance, skin,\npurchase, challenge, capture,\ntimeline, evaluation, bridge,\nexternal, reflect, morning, ...)"]
-        HTTP["ARC Connector (HTTP API)\nsrc/infrastructure/http/server.ts\n127.0.0.1のみ・認証なし"]
+        CLI["CLI\nsrc/infrastructure/cli/*.ts\n(memory, appearance, skin,\npurchase, challenge, capture,\ntimeline, evaluation, bridge,\nexternal, reflect, morning, propose, ...)"]
+        HTTP["ARC Connector (HTTP API)\nsrc/infrastructure/http/server.ts\n127.0.0.1のみ・API Key認証はopt-in(Version15)"]
+        Connector["Connector\nsrc/infrastructure/connector/Connector.ts\nHTTPのみ利用、Application層へ直接アクセスしない\n(Version15, ADR 0034)"]
+        Auth["apiKeyAuth\nsrc/infrastructure/security/apiKeyAuth.ts\n(Version15, ADR 0036)"]
     end
 
     subgraph Application["Application層"]
@@ -59,6 +62,8 @@ graph TB
     HTTP --> Conversation
     HTTP --> ReadGW
     HTTP --> WriteGW
+    HTTP --> Auth
+    Connector -->|HTTPのみ、fetch経由| HTTP
     Bridge --> UC
     Bridge --> Serializers
     Retrieval --> Ports
@@ -118,8 +123,10 @@ sequenceDiagram
     participant Bridge as Bridge Layer<br/>(pnpm bridge / POST /bridge/import)
     participant UC as UseCase
     participant Data as data/*.json
+    participant HTTP as ARC Connector (HTTP API)
+    participant Ext as 外部プログラム<br/>(将来のMCPサーバー等、Connector利用)
 
-    Note over Owner,ARC: 現状: ARC↔Claude Codeの直接API連携はない（Version14時点も継続）
+    Note over Owner,ARC: 現状: ARC↔Claude Codeの直接API連携はない（Version15時点も継続）
 
     Owner->>ARC: 会話（文脈理解・振り分け判断はARCの責務）
     ARC-->>Owner: 提案・記録すべき内容（{type, data}形式で複数件のことも）
@@ -155,6 +162,17 @@ sequenceDiagram
         end
     end
 
+    alt Connector経由で外部プログラムが呼び出す場合（Version15、ADR 0034〜0036）
+        Ext->>HTTP: Connector経由でfetch（Authorization: Bearer ARC_API_KEY）
+        HTTP->>HTTP: apiKeyAuth.isAuthorized()（Infrastructure層のみ）
+        alt 認証OK
+            HTTP->>UC: 対応するUseCase.execute()
+            UC-->>Ext: JSON応答
+        else 認証NG
+            HTTP-->>Ext: 401 Unauthorized
+        end
+    end
+
     Owner->>Handoff: ARC_INBOX.mdに指示書を貼る
     CC->>Handoff: セッション開始時に確認
     CC->>Handoff: Version完了時にARC_Feedback.mdを更新
@@ -180,7 +198,13 @@ Timeline/Retrieval/Decisionへ`limit`必須で委譲するだけであり
 （ADR 0030）、WriteProposalGatewayはOwnerが承認したProposalを
 既存UseCaseへそのまま渡すだけで、Proposal自体は保存しない
 （ADR 0031）——Systemが判断するのは「payloadの構造が正しいか」の
-みで、内容の当否はOwnerが決める。
+みで、内容の当否はOwnerが決める。Connector Deployment（Version15）の
+Connectorは、Application層のUseCase/Repository/Domain Entityを
+一切importせず、ARC Connector HTTP APIをHTTP経由でのみ呼び出す
+（ADR 0034）——外部プログラム（将来のMCPサーバー・ChatGPT Actions
+アダプタ等）から見た入口を、コンパイラレベルでも「HTTPしか話せない」
+制約として表現する。API Key認証（`apiKeyAuth.ts`）もInfrastructure層
+のみに閉じ込め、Application層は認証の存在を一切知らない（ADR 0036）。
 
 ---
 
@@ -226,15 +250,16 @@ Captureを除く10種別（上段7つ + Memory + Inventory + ExternalSource）
 
 ## 4. ARCとの接続点（現状と将来）
 
-| 接続点 | 現状（2026年7月、Version14時点） | 将来 |
+| 接続点 | 現状（2026年7月、Version15時点） | 将来 |
 |---|---|---|
 | 指示の受け渡し | `docs/handoff/ARC_INBOX.md`にOwnerが手動で貼り付け（テキスト・PDF両対応） | 変更なし（人間による意思決定の窓口として維持、Principle 1） |
 | フィードバックの受け渡し | `docs/reports/VersionN_ARC_Feedback.md`をOwnerが手動でコピー | 変更なし |
-| データの一括受け渡し | `pnpm bridge -- import`でOwnerがARCの提案をJSONファイル経由で一括登録（ExternalSource/ExternalKnowledge含む）。`GET /bridge/export`で全データをJSON取得可能 | ARCが直接`POST /bridge/import`を呼べるようになる可能性（認証の実装が前提、ADR 0008/0010） |
-| 知識の取得 | `POST /knowledge/retrieve`でquery/tags/topicsを渡すと、スコア順のKnowledge/Sourcesと引用ブロック（context）が返る（Version11、Owner経由で手動呼び出し） | ARCが直接`POST /knowledge/retrieve`を呼び、会話に必要な知識だけをその場で取得できるようになる可能性（認証実装が前提） |
-| 意思決定支援 | `POST /decision/support`でquestionを渡すと、選択肢・比較・根拠を整理したDecisionContextが返る（Version12、Owner経由で手動呼び出し）。ARCの解釈・優先順位提案はDecisionContextを受け取ったARC自身が会話の中で書く | ARCが直接`POST /decision/support`を呼び、DecisionContextを踏まえた比較・提案をその場で会話に組み込めるようになる可能性（認証実装が前提） |
-| 会話への統合 | `POST /conversation/context`でquestionを渡すと、Intent判定に応じてRetrieve/Decisionへ自動的に振り分けられたConversationContextが返る（Version13、Owner経由で手動呼び出し）。Ownerが結果をコピペしてARCへ渡す運用は変わらない | ARCが直接`POST /conversation/context`を呼べば、Intent判定からツール呼び出しまでを1リクエストで済ませられる（認証実装が前提、Version14時点でもARC Connector自体の認証方式は変更なし） |
-| 読み取り（最小限） | `GET /read/reflection`・`/read/timeline`・`/read/external`・`/read/decision`が`limit`必須で最小限のデータを返す（Version14、ReadGatewayUseCase、ADR 0030）。Owner経由で手動呼び出し | ARCが直接呼べるようになる可能性（認証実装が前提、UseCase自体は変更不要） |
-| 書き込みの提案・承認 | `POST /proposal/create`でProposalを組み立て（保存されない）、Ownerが内容を確認した上で同じProposalを`POST /proposal/approve`（または`/reject`）へ再送して初めて書き込まれる（Version14、WriteProposalGatewayUseCase、ADR 0031）。`pnpm propose`でCLIからも同じ流れを実行可能 | ARCが`createProposal`まで直接呼び、Owner承認のUIだけを別途用意する形へ拡張できる可能性（承認ステップはUseCaseのインターフェースが強制するため設計変更は不要） |
-| 個別の読み書き | ARCから直接は不可能。ARC ConnectorはOwnerがCLIまたは`curl`/`fetch`で手動操作する前提（`/external-sources`・`/external-knowledge`含む） | ChatGPT Actions・MCP等でARCが直接呼べるようになる可能性（Read Layerはそのまま、Write LayerはProposal経由のみ） |
-| 判断・分類 | 常にARCまたはOwner（Systemは判断しない、ADR 0007/0008/0010/0012/0021/0023/0028/0030/0031） | 変わらない（Project ARCの根幹原則、`docs/ai-roles.md`） |
+| データの一括受け渡し | `pnpm bridge -- import`でOwnerがARCの提案をJSONファイル経由で一括登録（ExternalSource/ExternalKnowledge含む）。`GET /bridge/export`で全データをJSON取得可能 | MCP/ChatGPT Actionsアダプタ経由でARCが直接`POST /bridge/import`を呼べるようになる可能性（Version16以降） |
+| 知識の取得 | `POST /knowledge/retrieve`でquery/tags/topicsを渡すと、スコア順のKnowledge/Sourcesと引用ブロック（context）が返る（Version11、Owner経由で手動呼び出し） | Connector経由でARC側のプログラムが呼べる状態は整った。あとはMCP/Actionsアダプタの実装のみ（Version16） |
+| 意思決定支援 | `POST /decision/support`でquestionを渡すと、選択肢・比較・根拠を整理したDecisionContextが返る（Version12、Owner経由で手動呼び出し）。ARCの解釈・優先順位提案はDecisionContextを受け取ったARC自身が会話の中で書く | 同上（Version16） |
+| 会話への統合 | `POST /conversation/context`でquestionを渡すと、Intent判定に応じてRetrieve/Decisionへ自動的に振り分けられたConversationContextが返る（Version13、Owner経由で手動呼び出し）。Ownerが結果をコピペしてARCへ渡す運用は変わらない | 同上（Version16） |
+| 読み取り（最小限） | `GET /read/reflection`・`/read/timeline`・`/read/external`・`/read/decision`が`limit`必須で最小限のデータを返す（Version14、ReadGatewayUseCase、ADR 0030）。`Connector`クラス経由で外部プログラムからも呼び出せる（Version15、ADR 0034） | MCP/Actionsアダプタが`Connector`をラップするだけで済む見込み |
+| 書き込みの提案・承認 | `POST /proposal/create`でProposalを組み立て（保存されない）、Ownerが内容を確認した上で同じProposalを`POST /proposal/approve`（または`/reject`）へ再送して初めて書き込まれる（Version14、WriteProposalGatewayUseCase、ADR 0031）。`pnpm propose`または`Connector`クラス経由で同じ流れを実行可能（Version15） | ARCが`createProposal`まで直接呼び、Owner承認のUIだけを別途用意する形へ拡張できる可能性（承認ステップはUseCaseのインターフェースが強制するため設計変更は不要） |
+| Connectorによる標準接続 | `src/infrastructure/connector/Connector.ts`がHTTP APIのみを利用するクライアントとして提供され、`ARC_API_KEY`設定時は`Authorization: Bearer`によるAPI Key認証が強制される（Version15、ADR 0034〜0036）。呼び出し元はまだOwnerが手動で動かすプログラム・テストのみ | MCPサーバー・ChatGPT Actionsアダプタが`Connector`と同じHTTP APIを呼ぶだけで接続できる（Version16、指示書19章） |
+| 個別の読み書き | ARCから直接は不可能。ARC ConnectorはOwnerが手動で動かすCLI/プログラム、または`Connector`クラス経由での呼び出しが前提（`/external-sources`・`/external-knowledge`含む） | ChatGPT Actions・MCP等でARCが直接呼べるようになる可能性（Read Layerはそのまま、Write LayerはProposal経由のみ） |
+| 判断・分類 | 常にARCまたはOwner（Systemは判断しない、ADR 0007/0008/0010/0012/0021/0023/0028/0030/0031/0036） | 変わらない（Project ARCの根幹原則、`docs/ai-roles.md`） |

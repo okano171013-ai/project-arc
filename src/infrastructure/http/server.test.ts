@@ -556,4 +556,106 @@ describe('ARC Connector HTTP API', () => {
     expect(rejected.status).toBe(200);
     expect(rejected.json.data).toEqual({ rejected: true, type: 'Memory' });
   });
+
+  // --- ManagementFeedback（Version15、Connectorが呼ぶHTTPエンドポイント） ---
+
+  it('GET /management-feedback lists feedback, optionally filtered by resolution', async () => {
+    const created = await call('POST', '/proposal/create', {
+      type: 'ManagementFeedback',
+      target: '対象',
+      payload: {
+        record: { author: 'ARC', category: 'Process', content: '内容', reason: '理由' },
+      },
+      reason: '理由',
+    });
+    await call('POST', '/proposal/approve', (created.json.data as { proposal: unknown }).proposal);
+
+    const all = await call('GET', '/management-feedback');
+    expect(all.status).toBe(200);
+    expect((all.json.data as { feedback: unknown[] }).feedback).toHaveLength(1);
+
+    const openOnly = await call('GET', '/management-feedback?resolution=Open');
+    expect((openOnly.json.data as { feedback: unknown[] }).feedback).toHaveLength(1);
+
+    const acceptedOnly = await call('GET', '/management-feedback?resolution=Accepted');
+    expect((acceptedOnly.json.data as { feedback: unknown[] }).feedback).toHaveLength(0);
+  });
+
+  it('POST /management-feedback/:id/resolve transitions resolution', async () => {
+    const created = await call('POST', '/proposal/create', {
+      type: 'ManagementFeedback',
+      target: '対象',
+      payload: {
+        record: { author: 'ARC', category: 'Process', content: '内容', reason: '理由' },
+      },
+      reason: '理由',
+    });
+    const approved = await call(
+      'POST',
+      '/proposal/approve',
+      (created.json.data as { proposal: unknown }).proposal,
+    );
+    const feedbackId = (
+      (approved.json.data as { result: { feedback: { id: string } } }).result.feedback
+    ).id;
+
+    const resolved = await call('POST', `/management-feedback/${feedbackId}/resolve`, {
+      resolution: 'Accepted',
+    });
+    expect(resolved.status).toBe(200);
+    expect((resolved.json.data as { feedback: { resolution: string } }).feedback.resolution).toBe(
+      'Accepted',
+    );
+  });
+});
+
+describe('ARC Connector HTTP API — API Key Authentication (Version15)', () => {
+  const AUTH_DATA_DIR = 'data/_test-http-server-auth';
+  const API_KEY = 'test-secret-key';
+  let authServer: Server;
+  let authBaseUrl: string;
+
+  async function callAuth(method: string, path: string, headers?: Record<string, string>) {
+    const res = await fetch(`${authBaseUrl}${path}`, { method, headers });
+    const json = (await res.json()) as { ok: boolean; data?: unknown; error?: string };
+    return { status: res.status, json };
+  }
+
+  beforeAll(async () => {
+    await rm(AUTH_DATA_DIR, { recursive: true, force: true });
+    authServer = createApp({ dataDir: AUTH_DATA_DIR, apiKey: API_KEY });
+    await new Promise<void>((resolve) => authServer.listen(0, '127.0.0.1', resolve));
+    const address = authServer.address() as AddressInfo;
+    authBaseUrl = `http://127.0.0.1:${address.port}`;
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((resolve) => authServer.close(() => resolve()));
+    await rm(AUTH_DATA_DIR, { recursive: true, force: true });
+  });
+
+  it('GET /health requires no API key even when apiKey is configured', async () => {
+    const { status } = await callAuth('GET', '/health');
+    expect(status).toBe(200);
+  });
+
+  it('rejects requests with no Authorization header (401)', async () => {
+    const { status, json } = await callAuth('GET', '/read/reflection?limit=1');
+    expect(status).toBe(401);
+    expect(json.error).toBe('unauthorized');
+  });
+
+  it('rejects requests with a wrong API key (401)', async () => {
+    const { status } = await callAuth('GET', '/read/reflection?limit=1', {
+      Authorization: 'Bearer wrong-key',
+    });
+    expect(status).toBe(401);
+  });
+
+  it('accepts requests with the correct Authorization: Bearer header', async () => {
+    const { status } = await callAuth('GET', '/read/reflection?limit=1', {
+      Authorization: `Bearer ${API_KEY}`,
+    });
+    expect(status).toBe(200);
+  });
 });

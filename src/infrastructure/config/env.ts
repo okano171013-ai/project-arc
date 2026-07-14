@@ -19,6 +19,10 @@ const envSchema = z.object({
   GOOGLE_CLIENT_ID: z.string().optional(),
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+  // ARC Connector（Version15）。未設定ならAPI Key認証は無効のまま
+  // （ADR 0036参照、Version7〜14と同じ挙動を維持するopt-in設計）。
+  ARC_API_KEY: z.string().optional(),
+  ARC_CONNECTOR_BASE_URL: z.string().url().default('http://127.0.0.1:3939'),
 });
 
 export type Env = z.infer<typeof envSchema>;

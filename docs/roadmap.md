@@ -282,6 +282,39 @@ MCP・ChatGPT Actions・Claude API・Gemini API接続、自動Approve、
 自動保存、AI推論はVersion14の対象外（指示書18章）。詳細は
 `docs/reports/Version14_Report.md`参照。
 
+## Version15｜Connector Deployment
+
+Version14で完成したRead Layer/Write Proposal Layerを、実際に外部
+プログラムから呼び出せる標準的な接続口として仕上げるVersion。Owner
+指示書（`docs/handoff/archive/Version15_ARC_Brief.md`）は「ARCが実際に
+利用できる状態へ進める」ことを目的としつつ、「Project ARCはARCに
+依存することではない。ARCはその利用者の一人である」という独立性を
+強調していた。
+
+- **Connector**（`src/infrastructure/connector/Connector.ts`、ADR 0034）：
+  ARC Connector HTTP APIをHTTP経由でのみ呼び出すクライアントモジュール。
+  Application/Domain層の型を一切importしない。Read（reflection/
+  timeline/external/decision）・CreateProposal・ApproveProposal・
+  RejectProposal・ManagementFeedbackのlist/resolveを提供する。
+- **API Key認証**（`src/infrastructure/security/apiKeyAuth.ts`、
+  ADR 0036）：`Authorization: Bearer <ARC_API_KEY>`固定（ChatGPT
+  Actions・MCP双方の認証慣習に合わせた形式、事前調査済み）。
+  `ARC_API_KEY`が設定されている場合のみ強制するopt-in設計——
+  Version7〜14の既存運用・テストを一切壊さない。認証コードは
+  Infrastructure層のみに閉じ込め、Application層は関与しない。
+- **Connector Configuration**（`connectorConfig.ts`）：接続先・API Key
+  を`.env`経由で読み込み、ハードコードしない。
+- **ManagementFeedbackのHTTPエンドポイント追加**（ADR 0035）：
+  `GET /management-feedback`・`POST /management-feedback/:id/resolve`
+  ——Version14ではCLIのみで完結させていたが（ADR 0033）、Connectorが
+  「HTTP APIのみ利用する」制約を持つため見直した。
+
+MCP・ChatGPT Actionsそのものの実装、公開HTTPS化、OpenAPIスキーマ
+生成はVersion15の対象外（指示書16章）。事前調査の結果は
+`docs/reports/Version15_Report.md`に記録し、Version16（各AIとの
+接続実装）への申し送り事項とした。詳細は`docs/reports/
+Version15_Report.md`参照。
+
 ---
 
 ## 長期ロードマップ 2.0（Version9完了時、ARC提案）
@@ -304,13 +337,15 @@ Version9完了を受け、ARCから中長期ロードマップの組み替え提
   知識を比較・整理して判断材料を作るDecision Support、Version13で
   1回の質問応答でRetrieve/Decisionを呼び分けるConversational
   Integration（ConversationGateway）、Version14でARCが安全に読み
-  書きできるRead Layer/Write Proposal Layer（ARC Integration）が
-  完了。Healthデータ等の実データ連携・ARCが直接呼び出せる接続経路
-  （MCP・ChatGPT Actions等）は引き続き先の課題とする（Version14
-  時点でもOwnerが手動でCLI/HTTP APIを呼ぶ運用は変わらない——
-  Write Proposal LayerもOwnerの明示的な承認操作を経由する設計の
-  ため、認証未実装のままでも「ARCが誤って書き込む」リスクは
-  構造的に生じない）。
+  書きできるRead Layer/Write Proposal Layer（ARC Integration）、
+  Version15で外部プログラムから呼び出せる標準Connector（Connector
+  Deployment）が完了。Healthデータ等の実データ連携・ARCが直接
+  呼び出せる接続経路（MCP・ChatGPT Actions等のアダプタそのもの）は
+  引き続きVersion16以降の課題とする——Version15時点でもOwnerが
+  手動でCLI/HTTP APIを呼ぶ運用は変わらないが、標準HTTP API＋
+  API Key認証という「どのAIとも接続できる」土台は完成した
+  （Write Proposal LayerもOwnerの明示的な承認操作を経由する設計の
+  ため、Connector自体は自動Approveの手段を持たない）。
 - **Phase 3（Version16〜25）Life Management** — 毎日Reflection・
   睡眠・勉強・食事・筋トレ等をチェックし、ARCが未達を指摘する
   （「今週筋トレありません」等）、より踏み込んだ管理機能。

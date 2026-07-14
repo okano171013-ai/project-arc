@@ -43,6 +43,12 @@ reports/Version14_Report.md`）。Owner自身が「ARCが直接POSTする」案�
 Project ARC`）を新設する方針へ修正した指示書（原文は
 `docs/handoff/archive/Version14_ARC_Brief.md`に保管）。
 
+**処理済み**：Version15「Connector Deployment」（`docs/
+reports/Version15_Report.md`）。「Project ARCを完成させる。ARCとの
+実際の接続を実現する」というテーマで、Infrastructure層に
+Connector・API Key認証を追加した指示書（原文は
+`docs/handoff/archive/Version15_ARC_Brief.md`に保管）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください。
 
