@@ -421,11 +421,21 @@ OAuth 2.1 Authorization Serverは見送る方針で進めた（ADR 0041）。
 **実機確認の範囲について**：ローカルで`pnpm run api`＋
 `pnpm run mcp:remote`を起動し、実HTTP MCP Client
 （`StreamableHTTPClientTransport`）経由でRead→Proposal→Approveの
-一連を確認した（指示書15章のローカル版）。**「ChatGPT → Remote MCP」
-の実接続確認は、公開HTTPS・ChatGPT Developer Modeでの実UI操作を
-要するため、Claude Codeでは実施できない**——`docs/setup/
+一連を確認した（指示書15章のローカル版）。「ChatGPT → Remote MCP」の
+実接続確認は、公開HTTPS・ChatGPT Developer Modeでの実UI操作を要する
+ため、Claude Codeでは実施できない——`docs/setup/
 chatgpt-mcp-connection.md`の手順に従ってOwner自身が確認する。詳細は
 `docs/reports/Version18_Report.md`参照。
+
+**追記（2026-07-14、Owner実機接続確認）**：Owner自身がngrok経由で
+ChatGPT Developer Modeから接続を試みたところ、簡易Bearer認証が
+原因で常に401になり接続不可能なことが判明した（ChatGPTの「認証なし」
+モードは`Authorization`ヘッダーを一切送らないため）。Owner確認の上、
+`/mcp`エンドポイントの認証チェックを撤廃し（ADR 0044、ADR 0041を
+一部訂正）、その後**ChatGPTから実際に`agent_message_list`の実行・
+`proposal_create`→`proposal_approve`の承認フローが成功することを
+確認した**。「ChatGPTが初めてProject ARCを直接利用する」という
+Version18のキャッチコピーが、Version18のうちに実現した。
 
 ---
 

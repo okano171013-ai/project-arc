@@ -8,6 +8,30 @@ Version18_Report.md`を参照。この文書は対話AI向け）
 
 ---
 
+## 0. 追記（2026-07-14）：ChatGPTからの実接続に成功しました
+
+以下の本文は、Owner自身によるChatGPT実接続確認より前に作成した
+ものです。その後、Owner自身がngrok経由でChatGPT Developer Modeから
+実際に接続を試みたところ、**「②Remote MCP調査」で予測していた
+仕様ズレが実際に起きました**——簡易Bearer認証を必須にしていたため、
+ChatGPTの「認証なし」モードでは`Authorization`ヘッダーが一切送られず、
+常に401 Unauthorizedになり接続できませんでした。
+
+Owner確認の上、Remote MCPエンドポイントの認証チェックを撤廃し
+（ADR 0044、下記②の「簡易Bearer認証のみを実装」という方針を訂正）、
+その後**ChatGPTから実際に以下が成功することを確認しました**：
+
+- コネクタ作成・接続
+- `agent_message_list`ツールの実行（正しい結果が返る）
+- `proposal_create`→（未保存の確認）→`proposal_approve`という
+  Write Proposal Layerの一連の承認フロー（実際に保存される）
+
+「おとのコピペを減らすこと」という唯一の成功指標につながる、
+ChatGPTからの実際の読み書きが確認できました。下記⑥の「ChatGPT接続
+確認：ローカル版のみ実施」は解消しています。
+
+---
+
 ## 1. 今回実装した内容を、日常的にどう使えるか
 
 ### Remote MCPサーバー：`pnpm run mcp:remote`
@@ -66,14 +90,15 @@ Cloudflare Tunnel／Tailscale Funnel／ngrokを比較し、初回検証はngrok�
 Remote MCPサーバーも既存の`buildMcpServer`ファクトリをそのまま
 再利用する薄いアダプタです。
 
-### ⑥ChatGPT接続確認：ローカル版のみ実施しました
+### ⑥ChatGPT接続確認：実施しました（0章の追記参照）
 
 `read_reflection`・`read_external`・`proposal_create`の3ツールを、
-実HTTP MCP Client経由でローカルに確認しました。**「ChatGPT →
-Remote MCP」という実際の接続確認は、公開HTTPS・ChatGPT Developer
-ModeでのUI操作を要するため、Claude Codeでは実施できていません**。
-Owner自身が`docs/setup/chatgpt-mcp-connection.md`の手順に従って
-確認する必要があります。
+実HTTP MCP Client経由でローカルに確認しました。当初は「ChatGPT →
+Remote MCP」の実接続確認はClaude Codeでは実施できないとしていま
+したが、その後Owner自身が`docs/setup/chatgpt-mcp-connection.md`の
+手順に従って実際に接続し、`agent_message_list`の実行・
+`proposal_create`→`proposal_approve`の承認フローが成功することを
+確認しました（0章参照）。
 
 ### ⑦Proposal確認：実施しました
 
@@ -96,25 +121,30 @@ HTTPSはトンネル側で担保される前提です。Rate Limit・詳細な�
 
 ---
 
-## 3. 次Versionで優先的に提案してほしいこと
+## 3. 次Versionで優先的に提案してほしいこと（0章の追記により解決済み）
 
-- Owner自身が実際にトンネルを起動し、ChatGPT Developer Modeから
-  接続を試みた結果（特に、Bearer API Key入力欄が実際にUIに存在
-  するかどうか）を、次の指示書で共有してください。これによって
-  Version19以降、フルのOAuth 2.1実装が必要かどうかを判断できます。
+~~Owner自身が実際にトンネルを起動し、ChatGPT Developer Modeから
+接続を試みた結果（特に、Bearer API Key入力欄が実際にUIに存在
+するかどうか）を、次の指示書で共有してください。~~ →
+**確認済みです。ChatGPT UIにBearer入力欄はなく、「認証なし」が
+唯一機能する方式でした（0章参照）。フルのOAuth 2.1実装は現時点では
+不要と判断しています。**
 
 ---
 
-## 4. 設計上の制約（誤案内を避けるために知っておいてほしいこと）
+## 4. 設計上の制約（誤案内を避けるために知っておいてほしいこと、0章の追記により更新）
 
-- **ChatGPTのUIにBearer API Key入力欄がない場合、「認証なし」
-  モードでの接続が現実的な選択肢になります**。この場合、公開URLを
-  知る誰でもアクセス可能になるため、検証後はトンネルを停止する等の
-  注意が必要です。
-- **Remote MCPサーバーは`ARC_API_KEY`必須です**。ローカルのHTTP API・
-  stdio MCPと異なり、未設定では起動しません。
+- **Remote MCPサーバー（`/mcp`）は認証を一切行いません**（ADR 0044、
+  当初の「Bearer必須」方針から変更）。ChatGPT側は必ず「認証なし
+  （No Authentication）」を選択してください。公開URLを知る誰でも
+  アクセス可能になるため、検証後はトンネルを停止する等の注意が
+  必要です。
+- `ARC_API_KEY`は、Connector→ARC Connector HTTP API間の内部認証
+  （`pnpm run api`側がopt-inで要求する場合）にのみ使われます。
+  Remote MCPサーバー自体の起動には不要になりました。
 - **書き込みは常にOwner承認を経由します**（Remote MCP経由でも同一の
-  制約）。
+  制約）。認証を撤廃した後も、この点は実機確認（`proposal_create`→
+  `proposal_approve`）で問題ないことを確認済みです。
 
 ---
 
@@ -123,12 +153,16 @@ HTTPSはトンネル側で担保される前提です。Rate Limit・詳細な�
 - OpenAPIドキュメント（`docs/openapi.json`）は自動同期の仕組みが
   ありません。エンドポイントに変更があった場合は
   `pnpm run openapi:generate`の再実行が必要です。
+- Remote MCPが認証なしで動く前提になったため、将来的に「トンネル起動中
+  だけ有効なワンタイムトークン」等、運用負担の小さい追加防御を検討
+  する余地があります（現時点ではYAGNIにより見送り）。
 
 ---
 
-## 6. ARCへの質問・相談事項
+## 6. ARCへの質問・相談事項（0章の追記により解決済み）
 
-- ChatGPT側の認証UIの実際の仕様（Bearer入力欄の有無）について、
-  ARC側で確認できる情報があれば教えてください。ADR 0041（Remote
-  MCPを採用した理由）・ADR 0042（HTTPS公開方式の選定理由）・
-  ADR 0043（OpenAPI生成のスコープ）を記録済みです。
+~~ChatGPT側の認証UIの実際の仕様（Bearer入力欄の有無）について、
+ARC側で確認できる情報があれば教えてください。~~ →
+**確認済みです（0章参照）。ADR 0041（Remote MCPを採用した理由）・
+ADR 0042（HTTPS公開方式の選定理由）・ADR 0043（OpenAPI生成の
+スコープ）・ADR 0044（認証撤廃の理由）を記録済みです。**

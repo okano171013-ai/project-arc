@@ -4,6 +4,31 @@
 
 `docs/reports/TEMPLATE.md`の14章構成に準拠。
 
+## 追記（2026-07-14、Owner実機接続確認・ADR 0044）
+
+本文（1〜14章）作成時点では「ChatGPT → Remote MCPの実接続確認は
+Claude Codeでは実施できない」としていたが、Owner自身がngrok経由で
+実際に接続を試みたところ、**簡易Bearer認証が原因でChatGPTから
+一度も接続できないことが判明した**（ChatGPTの「認証なし」モードは
+`Authorization`ヘッダーを一切送らないため、Bearer必須のサーバー側と
+組み合わせると常に401になる——ngrokのHTTP Requestsログで確認）。
+
+Owner確認（AskUserQuestion）の上、`/mcp`エンドポイントの認証チェックを
+撤廃し（コミット`cd572bd`、ADR 0044、ADR 0041を一部訂正）、その後
+**Owner自身の手で以下が実際に成功したことを確認した**：
+
+- ChatGPT Developer Modeからの接続（コネクタ作成）
+- `agent_message_list`ツールの実行（`{"messages": []}`が正しく返る）
+- `proposal_create`→（未保存の確認）→`proposal_approve`という
+  Write Proposal Layerの一連のフロー（実際に`id`付きで保存された）
+
+これにより、6章「実機確認」の未実施項目、8章「技術的負債」の
+Bearer認証の懸念、9章「次Versionへの申し送り」・13章「次Versionで
+最も価値が高い改善」で挙げていた「ChatGPT実接続の確認」が、
+Version18のうちに解消した。Version18の唯一の成功指標「おとの
+コピペを減らすこと」の土台となる、ChatGPTからの実際の読み書きが
+初めて確認できたことを記録する。
+
 ## 1. Version概要
 
 **テーマ**：Remote MCP Integration — 「ARCが初めてProject ARCを直接
