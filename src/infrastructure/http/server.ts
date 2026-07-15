@@ -55,8 +55,10 @@ import { ListManagementFeedbackUseCase } from '../../application/use-cases/manag
 import { ResolveManagementFeedbackUseCase } from '../../application/use-cases/management-feedback/ResolveManagementFeedback.js';
 import { AddAgentMessageUseCase } from '../../application/use-cases/agent-message/AddAgentMessage.js';
 import { ListAgentMessagesUseCase } from '../../application/use-cases/agent-message/ListAgentMessages.js';
+import { ListApprovalDecisionsUseCase } from '../../application/use-cases/approval-policy/ListApprovalDecisions.js';
 import type { ExternalKnowledgeStatus } from '../../domain/entities/ExternalKnowledge.js';
 import type { ProposalType, Proposal } from '../../domain/value-objects/Proposal.js';
+import type { ApprovalLevel, ApprovalSignals } from '../../domain/value-objects/ApprovalLevel.js';
 
 import { JsonFileReflectionRepository } from '../../adapters/repositories/JsonFileReflectionRepository.js';
 import { JsonFileMemoryRepository } from '../../adapters/repositories/JsonFileMemoryRepository.js';
@@ -71,6 +73,7 @@ import { JsonFileExternalSourceRepository } from '../../adapters/repositories/Js
 import { JsonFileExternalKnowledgeRepository } from '../../adapters/repositories/JsonFileExternalKnowledgeRepository.js';
 import { JsonFileManagementFeedbackRepository } from '../../adapters/repositories/JsonFileManagementFeedbackRepository.js';
 import { JsonFileAgentMessageRepository } from '../../adapters/repositories/JsonFileAgentMessageRepository.js';
+import { JsonFileApprovalDecisionRepository } from '../../adapters/repositories/JsonFileApprovalDecisionRepository.js';
 import { RuleBasedCaptureClassifier } from '../../adapters/providers/RuleBasedCaptureClassifier.js';
 import { isAuthorized } from '../security/apiKeyAuth.js';
 import { loadEnv } from '../config/env.js';
@@ -90,6 +93,7 @@ import {
   serializeMemoryEntry,
   serializeManagementFeedback,
   serializeAgentMessage,
+  serializeApprovalDecision,
 } from '../../application/serializers.js';
 import type { Reflection } from '../../domain/entities/Reflection.js';
 import type { MemoryEntry } from '../../domain/entities/MemoryEntry.js';
@@ -151,6 +155,9 @@ export function buildUseCases(options: BuildAppOptions = {}) {
   );
   const agentMessageRepository = new JsonFileAgentMessageRepository(
     repoPath(dataDir, 'agent-messages.json'),
+  );
+  const approvalDecisionRepository = new JsonFileApprovalDecisionRepository(
+    repoPath(dataDir, 'approval-decisions.json'),
   );
   const classifier = new RuleBasedCaptureClassifier();
 
@@ -240,6 +247,7 @@ export function buildUseCases(options: BuildAppOptions = {}) {
     resolveManagementFeedback: new ResolveManagementFeedbackUseCase(managementFeedbackRepository),
     addAgentMessage: new AddAgentMessageUseCase(agentMessageRepository),
     listAgentMessages: new ListAgentMessagesUseCase(agentMessageRepository),
+    listApprovalDecisions: new ListApprovalDecisionsUseCase(approvalDecisionRepository),
     readGateway: new ReadGatewayUseCase(
       reflectionRepository,
       appearanceLogRepository,
@@ -259,6 +267,7 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       appearanceLogRepository,
       managementFeedbackRepository,
       agentMessageRepository,
+      approvalDecisionRepository,
     ),
   };
 }
@@ -686,11 +695,12 @@ export function createApp(options: BuildAppOptions = {}) {
     // ことで初めてRepositoryへ書き込まれる（Constitution第2条・第4条）。
     route('POST', '/proposal/create', async (req) => {
       const body = await readJsonBody(req);
-      const proposal = useCases.writeProposalGateway.createProposal({
+      const proposal = await useCases.writeProposalGateway.createProposal({
         type: body.type as ProposalType,
         target: body.target as string,
         payload: body.payload as Record<string, unknown>,
         reason: body.reason as string,
+        signals: body.signals as ApprovalSignals | undefined,
       });
       return ok({ proposal: serializeProposal(proposal) }, 201);
     }),
@@ -705,8 +715,15 @@ export function createApp(options: BuildAppOptions = {}) {
     route('POST', '/proposal/reject', async (req) => {
       const body = await readJsonBody(req);
       const proposal = body as unknown as Proposal;
-      const result = useCases.writeProposalGateway.rejectProposal(proposal);
+      const result = await useCases.writeProposalGateway.rejectProposal(proposal);
       return ok(result);
+    }),
+
+    route('GET', '/approval-decisions', async (req) => {
+      const url = new URL(req.url ?? '', 'http://localhost');
+      const level = (url.searchParams.get('level') ?? undefined) as ApprovalLevel | undefined;
+      const result = await useCases.listApprovalDecisions.execute({ level });
+      return ok({ decisions: result.decisions.map(serializeApprovalDecision) });
     }),
 
     route('GET', '/external-sources', async () => {

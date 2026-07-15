@@ -176,3 +176,32 @@ Implemented→Closedへ遷移（第4条：resolutionの遷移はOwnerの判断�
 この規約はデータの形式であり、Systemがこれを解釈・検証すること
 はない——あくまで人間・AIが読んだときに関連付けを追える程度の
 軽量な記録に留める。
+
+## Approval Policy Engine（Version21〜）
+
+Continuous Collaborationループの「Ownerが『do』で承認」という
+ステップ自体は変更しない。Version21は、そのステップの周辺に
+以下2つを追加した（ADR 0048）。
+
+1. **Level分類**：`proposal_create`/`proposal_approve`/
+   `proposal_reject`を呼ぶ側（ARC/Claude Code）は、任意で
+   `signals`（`costImpact`・`externalExposureChange`・
+   `authOrSecretChange`・`destructive`・
+   `personalDataExternalTransfer`・`constitutionOrPrincipleChange`の
+   6つのboolean）を宣言できる。いずれかがtrueならLevel2、
+   `signals`省略時はLevel1へエスカレーション、明示的に全てfalseなら
+   Level0——この分類は`target`/`reason`の自由記述の意味を一切解釈
+   しない機械的なlookupであり、Systemが「重要かどうか」を判断する
+   ものではない（Constitution第2条）。
+2. **監査ログ**：`ApprovalDecision`（新Entity）が、create/approve/
+   rejectのたびに機械的に1件記録される。`approval_decision_list`
+   （MCP Tool）・`GET /approval-decisions`（HTTP）で参照できる。
+
+**この2つはOwnerの承認プロセスを一切変更しない**——Level2に
+分類されたProposalも、Level0に分類されたProposalも、従来どおり
+Ownerが`createProposal`の戻り値を再送すること（`do`）でしか
+`approveProposal`は実行されない（ADR 0031の「Ownerの再送が承認の
+証」という保証はそのまま）。ARCによる承認代行（Level1のProposalを
+Ownerの`do`なしに承認してよいという運用変更）と、Level2の迂回を
+暗号学的に防ぐ仕組み（認証の再導入）は、いずれもOwner確認が必要な
+論点として意図的に未実装のままにしてある（ADR 0048参照）。

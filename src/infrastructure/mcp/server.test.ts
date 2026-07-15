@@ -12,7 +12,7 @@ import { buildMcpServer } from './server.js';
  * MCP Tool層のend-to-endテスト。指示書15章の精神
  * （実物を起動して駆動する）に従い、実際のHTTP APIサーバーを起動し、
  * SDKが提供する`InMemoryTransport`でClient/McpServerを接続して、
- * 実際のMCPプロトコル（JSON Schema検証を含む）越しに9ツールを
+ * 実際のMCPプロトコル（JSON Schema検証を含む）越しに10ツールを
  * 検証する。
  */
 describe('Project ARC MCP Server', () => {
@@ -47,12 +47,13 @@ describe('Project ARC MCP Server', () => {
     return content[0]?.text ?? '';
   }
 
-  it('lists all 9 registered tools', async () => {
+  it('lists all 10 registered tools', async () => {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual(
       [
         'agent_message_list',
+        'approval_decision_list',
         'management_feedback_list',
         'management_feedback_resolve',
         'proposal_approve',
@@ -176,5 +177,40 @@ describe('Project ARC MCP Server', () => {
     const messages = JSON.parse(textOf(list)).messages;
     expect(messages).toHaveLength(1);
     expect(messages[0].record.direction).toBe('ToClaudeCode');
+  });
+
+  it('drives signals -> proposal_create -> approval_decision_list -> proposal_approve -> approval_decision_list (Version21)', async () => {
+    const created = await client.callTool({
+      name: 'proposal_create',
+      arguments: {
+        type: 'Memory',
+        target: 'Version21 e2e対象',
+        payload: { record: { category: 'Assets', title: 't', content: 'c' } },
+        reason: 'e2e確認',
+        signals: { costImpact: true },
+      },
+    });
+    expect(created.isError).toBeFalsy();
+    const proposal = JSON.parse(textOf(created));
+    expect(proposal.approvalLevel).toBe('Level2');
+
+    const afterCreate = await client.callTool({ name: 'approval_decision_list', arguments: {} });
+    expect(afterCreate.isError).toBeFalsy();
+    const proposedDecisions = JSON.parse(textOf(afterCreate)).decisions;
+    expect(proposedDecisions.some((d: { record: { stage: string; level: string } }) =>
+      d.record.stage === 'Proposed' && d.record.level === 'Level2',
+    )).toBe(true);
+
+    const approved = await client.callTool({ name: 'proposal_approve', arguments: proposal });
+    expect(approved.isError).toBeFalsy();
+
+    const afterApprove = await client.callTool({
+      name: 'approval_decision_list',
+      arguments: { level: 'Level2' },
+    });
+    const level2Decisions = JSON.parse(textOf(afterApprove)).decisions;
+    expect(level2Decisions.some((d: { record: { stage: string } }) => d.record.stage === 'Approved')).toBe(
+      true,
+    );
   });
 });

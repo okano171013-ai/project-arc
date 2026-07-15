@@ -21,6 +21,7 @@ describe('generateOpenApiDocument', () => {
         '/management-feedback',
         '/management-feedback/{id}/resolve',
         '/agent-messages',
+        '/approval-decisions',
       ].sort(),
     );
 

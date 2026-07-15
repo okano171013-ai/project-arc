@@ -427,3 +427,27 @@ Version19のDoDは達成済み。新規Entity・UseCase・スキーマフィー�
 - [x] `docs/reports/Version20_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
 
 Version20のDoDは全項目達成済み。
+
+## Version21完了チェックリスト
+
+- [x] `pnpm test` が全て緑（276件、ApprovalDecision/ClassifyApprovalLevel/RecordApprovalDecision/ListApprovalDecisionsのテストとWriteProposalGatewayへの追加テストを含む）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] 実装前にConstitution・ai-roles.md・関連ADR（0031/0039/0044/0045/0046）を確認し、Level分類表と例外一覧をPlan ModeでOwnerへ提示・承認済み
+- [x] `signals`（6フラグ）から`ClassifyApprovalLevelUseCase`が機械的にLevel0/1/2を分類することを確認済み（signals未申告時のLevel1エスカレーション、複数signal時の最高Level採用を含む）
+- [x] `WriteProposalGatewayUseCase`のcreate/approve/rejectが`ApprovalDecision`を正しいstageで記録することを確認済み（テスト・実機確認両方）
+- [x] `approveProposal`がクライアントの`approvalLevel`詐称を無視し、`signals`からサーバー側で再計算することを確認済み（テストで検証）
+- [x] `proposal_create`（signals付き）→`approval_decision_list`→`proposal_approve`→`approval_decision_list`の一連が実MCPクライアント経由（InMemoryTransport、実HTTPサーバー・実Connector経由）で正常動作することを確認済み
+- [x] `GET /approval-decisions`・`POST /proposal/create`（signals付き）がHTTP経由の実リクエスト（`node -e fetch`、Bearer認証込み）で正常動作することを確認済み（検証用データは確認後に削除済み）
+- [x] 既存の`agent_message_list`・`management_feedback_list`等が無変更で動作すること（回帰確認、MCP Tool一覧が10→11件になったこと含めテスト更新済み）
+- [x] Owner確認の結果、指示書の2点（ARCによるProposal承認代行、Level2の暗号学的な迂回不能化）は実装せず、ADR 0048へ提案として記録
+- [x] ADR 0048（Approval Policy Engineのスコープ）を記録済み
+- [x] `docs/ai-roles.md`にApproval Policy Engineの位置づけを追記済み
+- [x] `docs/setup/approval-policy.md`を作成済み
+- [x] `docs/handoff/archive/Version21_ARC_Brief.md`を作成済み（AgentMessage原文を保管）
+- [x] `docs/handoff/ARC_INBOX.md`に処理済みエントリを追記済み
+- [x] README / docsに実装との乖離がない
+- [x] `docs/reports/Version21_Report.md` を生成済み（14章構成）
+- [x] `docs/reports/Version21_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
+
+Version21のDoDは全項目達成済み。

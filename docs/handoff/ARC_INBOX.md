@@ -93,6 +93,21 @@ archive/Version19_ARC_Brief.md`に保管）。「ManagementFeedbackを
 `docs/roadmap.md`の長期セクションへ要約を記録するに留めた（原文は
 `docs/handoff/archive/Version20_ARC_Brief.md`に保管）。
 
+**処理済み**：Version21「Approval Policy Engine」（`docs/
+reports/Version21_Report.md`）。AgentMessage（id `6b78f23d-...`）に
+よる指示。Level0（Claude Code）/Level1（ARC）/Level2（Owner）の
+3段階承認レベルを、呼び出し側が申告する構造化`signals`から機械的に
+分類し、`ApprovalDecision`として監査記録する仕組みを実装した。
+実装前にConstitution・ai-roles.md・関連ADRを確認したところ、指示書を
+字義通り実装すると既存の設計保証と衝突する箇所を2点発見し、
+指示書要件4（矛盾するなら実装せず提案）に従いいずれも実装しなかった：
+①「Level1: ARCがOwnerの`do`なしにProposal承認を代行してよい」という
+運用変更（ADR 0031の「Ownerの再送が承認の証」という保証と衝突）、
+②「Level2の迂回不能性」の暗号学的保証（ADR 0044でRemote MCP認証が
+撤回済みのため技術的に不可能、かつ認証再導入自体がLevel2に該当する
+自己参照）。詳細な判断根拠はADR 0048参照（原文は`docs/handoff/
+archive/Version21_ARC_Brief.md`に保管）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください
 （またはARCが直接AgentMessageとして送ってくることもあります

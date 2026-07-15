@@ -27,6 +27,7 @@ import type { ConversationContext } from '../domain/value-objects/ConversationCo
 import type { Proposal } from '../domain/value-objects/Proposal.js';
 import type { ManagementFeedback } from '../domain/entities/ManagementFeedback.js';
 import type { AgentMessage } from '../domain/entities/AgentMessage.js';
+import type { ApprovalDecision } from '../domain/entities/ApprovalDecision.js';
 
 export function serializeReflection(reflection: Reflection) {
   return {
@@ -169,6 +170,8 @@ export function serializeProposal(proposal: Proposal) {
     payload: proposal.payload,
     reason: proposal.reason,
     createdAt: proposal.createdAt,
+    signals: proposal.signals,
+    approvalLevel: proposal.approvalLevel,
   };
 }
 
@@ -188,6 +191,14 @@ export function serializeAgentMessage(message: AgentMessage) {
     id: message.id,
     record: message.record,
     createdAt: message.createdAt.toISOString(),
+  };
+}
+
+export function serializeApprovalDecision(decision: ApprovalDecision) {
+  return {
+    id: decision.id,
+    record: decision.record,
+    createdAt: decision.createdAt.toISOString(),
   };
 }
 

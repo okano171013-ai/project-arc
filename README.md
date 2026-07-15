@@ -15,13 +15,39 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/ai-roles.md`](./docs/ai-roles.md) — 人間・ARC・Gemini・Claude Code・
   システム自体の責務分担
 - [`docs/architecture.md`](./docs/architecture.md) — 技術設計
-- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜20のロードマップ・
+- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜21のロードマップ・
   長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version20のスコープ（現在地）
+## Version21のスコープ（現在地）
+
+テーマ：「Approval Policy Engine」— ARCから「Claude Codeの承認要求を
+可能な限りARCが代行し、Ownerには重要事項のみを上げる」仕組みの実装
+指示を受けた。呼び出し側が申告する構造化`signals`（有料サービス・
+外部公開拡大・認証変更・破壊的操作・個人情報の外部送信・
+Constitution変更の6カテゴリ）からLevel0/1/2を機械的に分類し、
+`ApprovalDecision`として監査記録する。実装前にConstitution・
+ai-roles.md・関連ADRを確認し、指示書を字義通り実装すると既存の
+設計保証と衝突する2点（ARCによるProposal承認代行、Level2の暗号学的な
+迂回不能化）を発見、いずれも実装せずOwnerへの提案としてADR 0048へ
+記録した。詳細は
+[`docs/setup/approval-policy.md`](./docs/setup/approval-policy.md)・
+ADR 0048参照。
+
+- **Approval Policy Engine**（`ClassifyApprovalLevelUseCase`、
+  `ApprovalDecision`）— `signals`未申告時はLevel1へエスカレーション、
+  いずれかのsignalがtrueなら無条件でLevel2。`approveProposal`/
+  `rejectProposal`はクライアントが返した表示用`approvalLevel`を
+  信用せず`signals`からサーバー側で再計算する
+- **監査ログ**（`GET /approval-decisions`、MCP Tool
+  `approval_decision_list`）— create/approve/rejectのたびに機械的に
+  記録される。書き込み専用の新規MCP Toolは追加しておらず、既存の
+  `proposal_create`が`signals`を受け付けるだけで完結する（ADR 0039の
+  「書き込み経路を増やさない」方針を継続）
+
+### 旧Version20のスコープ：「Collaboration Runner + 常駐運用基盤」
 
 テーマ：「Collaboration Runner + 常駐運用基盤」— ARCから「Collaboration
 Runnerと常駐運用基盤を最優先で実装してください」という指示を受け、
@@ -77,9 +103,9 @@ Systemが判断を下す機能は実装していない（`docs/constitution.md`
   トンネルが必要——セットアップ手順は
   [`docs/setup/chatgpt-mcp-connection.md`](./docs/setup/chatgpt-mcp-connection.md)参照（トンネルサービスへの登録はOwner自身の操作が必要）
 - **OpenAPI 3.x生成**（`pnpm run openapi:generate`、`docs/openapi.json`）—
-  ARC向けの主要10エンドポイントに絞ってoperationId・request・
-  responseを生成する独立スクリプト。`http/server.ts`本体は変更しない
-  （ADR 0043）
+  ARC向けの主要エンドポイント（Version21時点で11個）に絞って
+  operationId・request・responseを生成する独立スクリプト。
+  `http/server.ts`本体は変更しない（ADR 0043）
 - **AgentMessage**（`GET /agent-messages`、MCP Tool `agent_message_list`、
   `pnpm propose list-messages`）— ARC↔Claude Code間の指示書・Feedback
   の往復記録。Version14で確立した「新しいProposal種別を1つ追加する」
@@ -90,12 +116,13 @@ Systemが判断を下す機能は実装していない（`docs/constitution.md`
 - **MCPサーバー**（`src/infrastructure/mcp/server.ts`、`pnpm run mcp`）—
   ARCが会話の中で直接Project ARCを呼び出せるstdioベースのMCPサーバー。
   `Connector`（Version15）のみに依存し、Application/Domain層は一切
-  importしない（ADR 0038）。10個のMCP Tool（`read_reflection`・
+  importしない（ADR 0038）。11個のMCP Tool（`read_reflection`・
   `read_external`・`read_timeline`・`read_decision`・
   `proposal_create`・`proposal_approve`・`proposal_reject`・
   `management_feedback_list`・`management_feedback_resolve`・
-  `agent_message_list`）を提供。起動前に`pnpm run api`（ARC Connector
-  HTTP API）が別プロセスとして起動済みである必要がある
+  `agent_message_list`・`approval_decision_list`）を提供。起動前に
+  `pnpm run api`（ARC Connector HTTP API）が別プロセスとして
+  起動済みである必要がある
 - **Connector**（`src/infrastructure/connector/Connector.ts`）— ARC
   Connector HTTP APIをHTTP経由でのみ呼び出すクライアントモジュール。
   Application/Domain層の型を一切importしない、独立したHTTPクライアント

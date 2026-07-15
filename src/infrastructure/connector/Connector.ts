@@ -22,11 +22,31 @@ export type ConnectorProposalType =
   | 'ManagementFeedback'
   | 'AgentMessage';
 
+export type ConnectorApprovalLevel = 'Level0' | 'Level1' | 'Level2';
+
+/** Owner指示書（AgentMessage `6b78f23d-...`）が列挙した6カテゴリにそのまま対応する。 */
+export interface ConnectorApprovalSignals {
+  readonly costImpact?: boolean;
+  readonly externalExposureChange?: boolean;
+  readonly authOrSecretChange?: boolean;
+  readonly destructive?: boolean;
+  readonly personalDataExternalTransfer?: boolean;
+  readonly constitutionOrPrincipleChange?: boolean;
+}
+
 export interface ConnectorProposal {
   readonly type: ConnectorProposalType;
   readonly target: string;
   readonly payload: Record<string, unknown>;
   readonly reason: string;
+  readonly createdAt: string;
+  readonly signals?: ConnectorApprovalSignals;
+  readonly approvalLevel?: ConnectorApprovalLevel;
+}
+
+export interface ConnectorApprovalDecision {
+  readonly id: string;
+  readonly record: Record<string, unknown>;
   readonly createdAt: string;
 }
 
@@ -95,6 +115,7 @@ export interface CreateProposalInput {
   target: string;
   payload: Record<string, unknown>;
   reason: string;
+  signals?: ConnectorApprovalSignals;
 }
 
 interface ApiEnvelope<T> {
@@ -191,6 +212,17 @@ export class Connector {
     if (relatedVersion) params.set('relatedVersion', relatedVersion);
     const query = params.toString();
     return this.request('GET', `/agent-messages${query ? `?${query}` : ''}`);
+  }
+
+  // --- ApprovalDecision（Version21、Approval Policy Engine） ---
+  // 書き込みはcreateProposal/approveProposal/rejectProposalが`signals`を
+  // 渡すことで自動的に記録される。読み取りのみ専用メソッドを持つ。
+
+  async listApprovalDecisions(
+    level?: ConnectorApprovalLevel,
+  ): Promise<{ decisions: ConnectorApprovalDecision[] }> {
+    const path = level ? `/approval-decisions?level=${encodeURIComponent(level)}` : '/approval-decisions';
+    return this.request('GET', path);
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {

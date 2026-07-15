@@ -14,6 +14,8 @@ import type { ExternalSourceRepository } from '../../ports/ExternalSourceReposit
 import type { AppearanceLogRepository } from '../../ports/AppearanceLogRepository.js';
 import type { ManagementFeedbackRepository } from '../../ports/ManagementFeedbackRepository.js';
 import type { AgentMessageRepository } from '../../ports/AgentMessageRepository.js';
+import type { ApprovalDecision } from '../../../domain/entities/ApprovalDecision.js';
+import type { ApprovalDecisionRepository } from '../../ports/ApprovalDecisionRepository.js';
 
 class FakeReflectionRepository implements ReflectionRepository {
   store = new Map<string, Reflection>();
@@ -118,6 +120,16 @@ class FakeAgentMessageRepository implements AgentMessageRepository {
   }
 }
 
+class FakeApprovalDecisionRepository implements ApprovalDecisionRepository {
+  store: ApprovalDecision[] = [];
+  async save(decision: ApprovalDecision): Promise<void> {
+    this.store.push(decision);
+  }
+  async findAll(): Promise<ApprovalDecision[]> {
+    return this.store;
+  }
+}
+
 function buildGateway() {
   const reflectionRepo = new FakeReflectionRepository();
   const memoryRepo = new FakeMemoryRepository();
@@ -126,6 +138,7 @@ function buildGateway() {
   const appearanceRepo = new FakeAppearanceLogRepository();
   const feedbackRepo = new FakeManagementFeedbackRepository();
   const agentMessageRepo = new FakeAgentMessageRepository();
+  const approvalDecisionRepo = new FakeApprovalDecisionRepository();
   const gateway = new WriteProposalGatewayUseCase(
     reflectionRepo,
     memoryRepo,
@@ -134,6 +147,7 @@ function buildGateway() {
     appearanceRepo,
     feedbackRepo,
     agentMessageRepo,
+    approvalDecisionRepo,
   );
   return {
     gateway,
@@ -144,6 +158,7 @@ function buildGateway() {
     appearanceRepo,
     feedbackRepo,
     agentMessageRepo,
+    approvalDecisionRepo,
   };
 }
 
@@ -154,8 +169,8 @@ describe('WriteProposalGatewayUseCase', () => {
     ctx = buildGateway();
   });
 
-  it('createProposal stamps createdAt and never touches any repository (保存しない)', () => {
-    const proposal = ctx.gateway.createProposal({
+  it('createProposal stamps createdAt and never touches any repository (保存しない)', async () => {
+    const proposal = await ctx.gateway.createProposal({
       type: 'Memory',
       target: '新しいMemory: シェーバー',
       payload: { record: { category: 'Assets', title: 'シェーバー', content: 'PHILIPS 5000' } },
@@ -166,26 +181,55 @@ describe('WriteProposalGatewayUseCase', () => {
     expect(ctx.memoryRepo.store.size).toBe(0);
   });
 
-  it('createProposal rejects an invalid payload for the given type (構造検証)', () => {
-    expect(() =>
+  it('createProposal rejects an invalid payload for the given type (構造検証)', async () => {
+    await expect(
       ctx.gateway.createProposal({
         type: 'Memory',
         target: '不正な提案',
         payload: { record: { title: '見出しのみ' } },
         reason: '理由',
       }),
-    ).toThrow(/Invalid proposal payload for type Memory/);
+    ).rejects.toThrow(/Invalid proposal payload for type Memory/);
   });
 
-  it('createProposal rejects an empty reason (理由必須)', () => {
-    expect(() =>
+  it('createProposal rejects an empty reason (理由必須)', async () => {
+    await expect(
       ctx.gateway.createProposal({
         type: 'Memory',
         target: '対象',
         payload: { record: { category: 'Assets', title: 't', content: 'c' } },
         reason: '  ',
       }),
-    ).toThrow('reason must not be empty');
+    ).rejects.toThrow('reason must not be empty');
+  });
+
+  it('createProposal classifies via signals and records a Proposed ApprovalDecision (Version21: 分類・監査記録)', async () => {
+    const proposal = await ctx.gateway.createProposal({
+      type: 'Memory',
+      target: '対象',
+      payload: { record: { category: 'Assets', title: 't', content: 'c' } },
+      reason: '理由',
+      signals: { costImpact: true },
+    });
+
+    expect(proposal.approvalLevel).toBe('Level2');
+    expect(ctx.approvalDecisionRepo.store).toHaveLength(1);
+    expect(ctx.approvalDecisionRepo.store[0]?.record).toMatchObject({
+      stage: 'Proposed',
+      level: 'Level2',
+      triggeredSignals: ['costImpact'],
+    });
+  });
+
+  it('createProposal escalates to Level1 when signals are omitted (未申告のエスカレーション)', async () => {
+    const proposal = await ctx.gateway.createProposal({
+      type: 'Memory',
+      target: '対象',
+      payload: { record: { category: 'Assets', title: 't', content: 'c' } },
+      reason: '理由',
+    });
+
+    expect(proposal.approvalLevel).toBe('Level1');
   });
 
   it.each([
@@ -220,7 +264,7 @@ describe('WriteProposalGatewayUseCase', () => {
       (ctx: ReturnType<typeof buildGateway>) => ctx.agentMessageRepo.store.size,
     ],
   ])('approveProposal persists a %s proposal via the corresponding UseCase (承認時の保存)', async (type, payload, countOf) => {
-    const proposal = ctx.gateway.createProposal({
+    const proposal = await ctx.gateway.createProposal({
       type,
       target: `${type}の提案`,
       payload,
@@ -233,16 +277,56 @@ describe('WriteProposalGatewayUseCase', () => {
     expect(countOf(ctx)).toBe(1);
   });
 
-  it('rejectProposal persists nothing (却下時は保存しない)', () => {
-    const proposal = ctx.gateway.createProposal({
+  it('rejectProposal persists nothing (却下時は保存しない)', async () => {
+    const proposal = await ctx.gateway.createProposal({
       type: 'Memory',
       target: '対象',
       payload: { record: { category: 'Assets', title: 't', content: 'c' } },
       reason: '理由',
     });
 
-    const result = ctx.gateway.rejectProposal(proposal);
+    const result = await ctx.gateway.rejectProposal(proposal);
     expect(result).toEqual({ rejected: true, type: 'Memory' });
     expect(ctx.memoryRepo.store.size).toBe(0);
+  });
+
+  it('approveProposal recomputes the level from signals server-side, ignoring a spoofed approvalLevel (Version21: level詐称の無効化)', async () => {
+    const proposal = await ctx.gateway.createProposal({
+      type: 'Memory',
+      target: '対象',
+      payload: { record: { category: 'Assets', title: 't', content: 'c' } },
+      reason: '理由',
+      signals: { destructive: true },
+    });
+    expect(proposal.approvalLevel).toBe('Level2');
+
+    // クライアントが表示用フィールドだけをLevel0へ書き換えて再送しても、
+    // 監査ログにはsignalsから再計算した本当のLevel2が記録される。
+    const spoofed = { ...proposal, approvalLevel: 'Level0' as const };
+    await ctx.gateway.approveProposal(spoofed);
+
+    const approved = ctx.approvalDecisionRepo.store.find((d) => d.record.stage === 'Approved');
+    expect(approved?.record.level).toBe('Level2');
+  });
+
+  it('approveProposal and rejectProposal each record an ApprovalDecision (承認・却下の監査記録)', async () => {
+    const proposal = await ctx.gateway.createProposal({
+      type: 'Memory',
+      target: '承認される提案',
+      payload: { record: { category: 'Assets', title: 't', content: 'c' } },
+      reason: '理由',
+    });
+    await ctx.gateway.approveProposal(proposal);
+
+    const rejected = await ctx.gateway.createProposal({
+      type: 'Memory',
+      target: '却下される提案',
+      payload: { record: { category: 'Assets', title: 't', content: 'c' } },
+      reason: '理由',
+    });
+    await ctx.gateway.rejectProposal(rejected);
+
+    const stages = ctx.approvalDecisionRepo.store.map((d) => d.record.stage);
+    expect(stages).toEqual(['Proposed', 'Approved', 'Proposed', 'Rejected']);
   });
 });

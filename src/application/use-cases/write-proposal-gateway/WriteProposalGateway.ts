@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type { Proposal, ProposalType } from '../../../domain/value-objects/Proposal.js';
+import type { ApprovalSignals } from '../../../domain/value-objects/ApprovalLevel.js';
 import type { ReflectionRepository } from '../../ports/ReflectionRepository.js';
 import type { MemoryRepository } from '../../ports/MemoryRepository.js';
 import type { ExternalKnowledgeRepository } from '../../ports/ExternalKnowledgeRepository.js';
@@ -7,12 +8,15 @@ import type { ExternalSourceRepository } from '../../ports/ExternalSourceReposit
 import type { AppearanceLogRepository } from '../../ports/AppearanceLogRepository.js';
 import type { ManagementFeedbackRepository } from '../../ports/ManagementFeedbackRepository.js';
 import type { AgentMessageRepository } from '../../ports/AgentMessageRepository.js';
+import type { ApprovalDecisionRepository } from '../../ports/ApprovalDecisionRepository.js';
 import { RecordDailyReflectionUseCase } from '../reflection/RecordDailyReflection.js';
 import { AddMemoryEntryUseCase } from '../memory/AddMemoryEntry.js';
 import { AddExternalKnowledgeUseCase } from '../external-knowledge/AddExternalKnowledge.js';
 import { AddAppearanceLogUseCase } from '../appearance/AddAppearanceLog.js';
 import { AddManagementFeedbackUseCase } from '../management-feedback/AddManagementFeedback.js';
 import { AddAgentMessageUseCase } from '../agent-message/AddAgentMessage.js';
+import { ClassifyApprovalLevelUseCase } from '../approval-policy/ClassifyApprovalLevel.js';
+import { RecordApprovalDecisionUseCase } from '../approval-policy/RecordApprovalDecision.js';
 
 /**
  * typeごとのpayload構造だけを検証するzodスキーマ。ここでの検証は
@@ -100,6 +104,11 @@ export interface CreateProposalInput {
   target: string;
   payload: Record<string, unknown>;
   reason: string;
+  /**
+   * Version21（Approval Policy Engine）。省略可——省略時は
+   * ClassifyApprovalLevelUseCaseがLevel1へエスカレーションする。
+   */
+  signals?: ApprovalSignals;
 }
 
 export interface ApproveProposalOutput {
@@ -129,6 +138,8 @@ export class WriteProposalGatewayUseCase {
   private readonly addAppearanceLog: AddAppearanceLogUseCase;
   private readonly addManagementFeedback: AddManagementFeedbackUseCase;
   private readonly addAgentMessage: AddAgentMessageUseCase;
+  private readonly classifyApprovalLevel: ClassifyApprovalLevelUseCase;
+  private readonly recordApprovalDecision: RecordApprovalDecisionUseCase;
 
   constructor(
     reflectionRepository: ReflectionRepository,
@@ -138,6 +149,7 @@ export class WriteProposalGatewayUseCase {
     appearanceLogRepository: AppearanceLogRepository,
     managementFeedbackRepository: ManagementFeedbackRepository,
     agentMessageRepository: AgentMessageRepository,
+    approvalDecisionRepository: ApprovalDecisionRepository,
   ) {
     this.recordDailyReflection = new RecordDailyReflectionUseCase(reflectionRepository);
     this.addMemoryEntry = new AddMemoryEntryUseCase(memoryRepository);
@@ -148,9 +160,18 @@ export class WriteProposalGatewayUseCase {
     this.addAppearanceLog = new AddAppearanceLogUseCase(appearanceLogRepository);
     this.addManagementFeedback = new AddManagementFeedbackUseCase(managementFeedbackRepository);
     this.addAgentMessage = new AddAgentMessageUseCase(agentMessageRepository);
+    this.classifyApprovalLevel = new ClassifyApprovalLevelUseCase();
+    this.recordApprovalDecision = new RecordApprovalDecisionUseCase(approvalDecisionRepository);
   }
 
-  createProposal(input: CreateProposalInput): Proposal {
+  /**
+   * Version21（Approval Policy Engine、ADR 0048）：`signals`から
+   * Levelを機械的に分類し、Proposalへ付与のうえApprovalDecisionを
+   * 1件記録する（stage: 'Proposed'）。分類結果はここでは何も止めない
+   * ——Proposalは引き続き保存されず、既存のOwner再送が承認の証という
+   * 制約（ADR 0031）はそのまま維持される。
+   */
+  async createProposal(input: CreateProposalInput): Promise<Proposal> {
     if (!input.reason.trim()) {
       throw new Error('reason must not be empty');
     }
@@ -158,60 +179,116 @@ export class WriteProposalGatewayUseCase {
       throw new Error('target must not be empty');
     }
     this.validatePayload(input.type, input.payload);
-    return {
+
+    const classification = this.classifyApprovalLevel.execute(input.signals);
+    const proposal: Proposal = {
       type: input.type,
       target: input.target,
       payload: input.payload,
       reason: input.reason,
       createdAt: new Date().toISOString(),
+      signals: input.signals,
+      approvalLevel: classification.level,
     };
+
+    await this.recordApprovalDecision.execute({
+      record: {
+        stage: 'Proposed',
+        proposalType: proposal.type,
+        target: proposal.target,
+        level: classification.level,
+        reason: classification.reason,
+        triggeredSignals: classification.triggeredSignals,
+        signals: input.signals ?? {},
+      },
+    });
+
+    return proposal;
   }
 
   async approveProposal(proposal: Proposal): Promise<ApproveProposalOutput> {
     const payload = this.validatePayload(proposal.type, proposal.payload);
+    // クライアントが返した`proposal.approvalLevel`は表示用であり信用しない
+    // ——`signals`からサーバー側で必ず再計算する（ADR 0048、迂回対策）。
+    const classification = this.classifyApprovalLevel.execute(proposal.signals);
 
-    switch (proposal.type) {
+    const output = await this.executeApproval(proposal.type, payload);
+
+    await this.recordApprovalDecision.execute({
+      record: {
+        stage: 'Approved',
+        proposalType: proposal.type,
+        target: proposal.target,
+        level: classification.level,
+        reason: classification.reason,
+        triggeredSignals: classification.triggeredSignals,
+        signals: proposal.signals ?? {},
+      },
+    });
+
+    return output;
+  }
+
+  async rejectProposal(proposal: Proposal): Promise<RejectProposalOutput> {
+    const classification = this.classifyApprovalLevel.execute(proposal.signals);
+
+    await this.recordApprovalDecision.execute({
+      record: {
+        stage: 'Rejected',
+        proposalType: proposal.type,
+        target: proposal.target,
+        level: classification.level,
+        reason: classification.reason,
+        triggeredSignals: classification.triggeredSignals,
+        signals: proposal.signals ?? {},
+      },
+    });
+
+    return { rejected: true, type: proposal.type };
+  }
+
+  private async executeApproval(
+    type: ProposalType,
+    payload: unknown,
+  ): Promise<ApproveProposalOutput> {
+    switch (type) {
       case 'Reflection': {
         const result = await this.recordDailyReflection.execute(
           payload as unknown as Parameters<RecordDailyReflectionUseCase['execute']>[0],
         );
-        return { type: proposal.type, result };
+        return { type, result };
       }
       case 'Memory': {
         const result = await this.addMemoryEntry.execute(
           payload as unknown as Parameters<AddMemoryEntryUseCase['execute']>[0],
         );
-        return { type: proposal.type, result };
+        return { type, result };
       }
       case 'ExternalKnowledge': {
         const result = await this.addExternalKnowledge.execute(
           payload as unknown as Parameters<AddExternalKnowledgeUseCase['execute']>[0],
         );
-        return { type: proposal.type, result };
+        return { type, result };
       }
       case 'Appearance': {
         const result = await this.addAppearanceLog.execute(
           payload as unknown as Parameters<AddAppearanceLogUseCase['execute']>[0],
         );
-        return { type: proposal.type, result };
+        return { type, result };
       }
       case 'ManagementFeedback': {
         const result = await this.addManagementFeedback.execute(
           payload as unknown as Parameters<AddManagementFeedbackUseCase['execute']>[0],
         );
-        return { type: proposal.type, result };
+        return { type, result };
       }
       case 'AgentMessage': {
         const result = await this.addAgentMessage.execute(
           payload as unknown as Parameters<AddAgentMessageUseCase['execute']>[0],
         );
-        return { type: proposal.type, result };
+        return { type, result };
       }
     }
-  }
-
-  rejectProposal(proposal: Proposal): RejectProposalOutput {
-    return { rejected: true, type: proposal.type };
   }
 
   private validatePayload(type: ProposalType, payload: Record<string, unknown>): unknown {

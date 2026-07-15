@@ -15,9 +15,9 @@
  *
  * 対象エンドポイントは、ARCが実際に利用する主要API群
  * （Read Layer・Write Proposal Layer・ManagementFeedback・
- * AgentMessage）に絞る——Connector（Version15）・MCP Tool
- * （Version16〜17）が対応する10エンドポイントとそのまま一致する
- * （ADR 0043、YAGNI）。
+ * AgentMessage・ApprovalDecision）に絞る——Connector（Version15）・
+ * MCP Tool（Version16〜17、Version21）が対応するエンドポイントと
+ * そのまま一致する（ADR 0043、YAGNI）。
  */
 import { writeFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
@@ -60,6 +60,19 @@ const proposalTypeSchema = z
   .enum(['Reflection', 'Memory', 'ExternalKnowledge', 'Appearance', 'ManagementFeedback', 'AgentMessage'])
   .openapi('ProposalType');
 
+const approvalLevelSchema = z.enum(['Level0', 'Level1', 'Level2']).openapi('ApprovalLevel');
+
+const approvalSignalsSchema = z
+  .object({
+    costImpact: z.boolean().optional(),
+    externalExposureChange: z.boolean().optional(),
+    authOrSecretChange: z.boolean().optional(),
+    destructive: z.boolean().optional(),
+    personalDataExternalTransfer: z.boolean().optional(),
+    constitutionOrPrincipleChange: z.boolean().optional(),
+  })
+  .openapi('ApprovalSignals');
+
 const proposalSchema = z
   .object({
     type: proposalTypeSchema,
@@ -67,6 +80,8 @@ const proposalSchema = z
     payload: z.record(z.unknown()),
     reason: z.string(),
     createdAt: z.string(),
+    signals: approvalSignalsSchema.optional(),
+    approvalLevel: approvalLevelSchema.optional(),
   })
   .openapi('Proposal');
 
@@ -239,6 +254,19 @@ registerGet({
   }),
   responseDescription: 'AgentMessageの一覧',
   responseSchema: z.object({ messages: z.array(z.record(z.unknown())) }),
+});
+
+// --- ApprovalDecision（Version21、Approval Policy Engine） ---
+
+registerGet({
+  operationId: 'listApprovalDecisions',
+  path: '/approval-decisions',
+  summary: 'Proposalのcreate/approve/reject時に機械的に記録されたLevel判定の監査ログを一覧取得する',
+  query: z.object({
+    level: approvalLevelSchema.optional(),
+  }),
+  responseDescription: 'ApprovalDecisionの一覧',
+  responseSchema: z.object({ decisions: z.array(z.record(z.unknown())) }),
 });
 
 export function generateOpenApiDocument() {

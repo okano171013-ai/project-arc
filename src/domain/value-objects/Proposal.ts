@@ -14,6 +14,8 @@
  * へ再送するステートレスなラウンドトリップでのみ成立する。ADR 0031参照。
  */
 
+import type { ApprovalLevel, ApprovalSignals } from './ApprovalLevel.js';
+
 export type ProposalType =
   | 'Reflection'
   | 'Memory'
@@ -39,4 +41,16 @@ export interface Proposal {
   /** なぜこの提案をするのか（ARCの説明）。 */
   readonly reason: string;
   readonly createdAt: string; // ISO8601
+  /**
+   * 呼び出し側が申告した構造化フラグ（Version21、Approval Policy
+   * Engine）。省略可——省略時はClassifyApprovalLevelUseCaseがLevel1へ
+   * エスカレーションする（ADR 0048）。
+   */
+  readonly signals?: ApprovalSignals;
+  /**
+   * `signals`からcreateProposal時点でサーバー側が計算したレベル。
+   * 表示・監査目的のみで、approveProposal/rejectProposalはこの値を
+   * 信用せず`signals`から再計算する。
+   */
+  readonly approvalLevel?: ApprovalLevel;
 }

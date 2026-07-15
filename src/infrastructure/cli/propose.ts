@@ -26,6 +26,7 @@ import { JsonFileExternalSourceRepository } from '../../adapters/repositories/Js
 import { JsonFileAppearanceLogRepository } from '../../adapters/repositories/JsonFileAppearanceLogRepository.js';
 import { JsonFileManagementFeedbackRepository } from '../../adapters/repositories/JsonFileManagementFeedbackRepository.js';
 import { JsonFileAgentMessageRepository } from '../../adapters/repositories/JsonFileAgentMessageRepository.js';
+import { JsonFileApprovalDecisionRepository } from '../../adapters/repositories/JsonFileApprovalDecisionRepository.js';
 import type { ProposalType, Proposal } from '../../domain/value-objects/Proposal.js';
 import type { ManagementFeedbackResolution } from '../../domain/entities/ManagementFeedback.js';
 import type { MemoryCategory } from '../../domain/entities/MemoryEntry.js';
@@ -57,6 +58,7 @@ function buildGateway(): WriteProposalGatewayUseCase {
     new JsonFileAppearanceLogRepository(),
     new JsonFileManagementFeedbackRepository(),
     new JsonFileAgentMessageRepository(),
+    new JsonFileApprovalDecisionRepository(),
   );
 }
 
@@ -181,7 +183,7 @@ async function runCreate(): Promise<void> {
         : await rl.question('この提案の理由: ');
 
     const gateway = buildGateway();
-    const proposal = gateway.createProposal({ type, target, payload, reason });
+    const proposal = await gateway.createProposal({ type, target, payload, reason });
     printProposal(proposal);
 
     const approveRaw = await rl.question('Approve? (y/n): ');
@@ -189,7 +191,7 @@ async function runCreate(): Promise<void> {
       const result = await gateway.approveProposal(proposal);
       console.log(`\n承認・保存しました。 (${result.type})`);
     } else {
-      const result = gateway.rejectProposal(proposal);
+      const result = await gateway.rejectProposal(proposal);
       console.log(`\n却下しました。何も保存していません。 (${result.type})`);
     }
   } finally {
