@@ -1,5 +1,7 @@
 # Version21 Report: Approval Policy Engine
 
+**コミットハッシュ**：`4ebde7d`（`feature/v4-v6-smart-capture`ブランチ）
+
 `docs/reports/TEMPLATE.md`の14章構成に準拠。
 
 ## 1. Version概要
