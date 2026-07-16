@@ -451,3 +451,43 @@ Version20のDoDは全項目達成済み。
 - [x] `docs/reports/Version21_ARC_Feedback.md`（ARCへのフィードバック）を生成済み
 
 Version21のDoDは全項目達成済み。
+
+## Version22完了チェックリスト
+
+- [x] `pnpm test` が全て緑（294件、`LocalOAuthProvider`単体テスト15件・
+      `remoteServer.oauth.test.ts`のe2eテスト3件を含む）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] 単一の権限表（`docs/authority-table.md`）を作成済み
+- [x] 無認証Remote MCPの脅威モデル（`docs/security/
+      remote-mcp-threat-model.md`）を作成済み——
+      `management_feedback_resolve`がWrite Proposal Layerを経由しない
+      直接書き込みであるという具体的な穴を発見・記録
+- [x] 認証方式3案（Bearer静的トークン／自前OAuth 2.1／Cloudflare
+      Access）を比較し、B（自前OAuth 2.1）を推奨（ADR 0049）
+- [x] `LocalOAuthProvider`（DCR・PKCE・Passcodeゲート・token発行/検証/
+      失効/revoke）を実装・単体テスト済み
+- [x] `MCP_OAUTH_ENABLED`（既定false）で`remoteServer.ts`に配線——
+      フラグOFF時は既存の`remoteServer.test.ts`が無変更でgreenのまま
+      （回帰確認済み）
+- [x] フラグON時、DCR→passcode認可→PKCE token交換→bearer保護された
+      `/mcp`呼び出しの一連を実HTTPリクエスト（`remoteServer.oauth.
+      test.ts`）で確認済み。無token・誤passcodeでの拒否も確認済み
+- [x] Level1委譲案（`docs/proposals/level1-arc-approval-delegation.md`、
+      `AgentDelegationGrant`設計・Constitution第4条改定文言案）を
+      現行維持案と比較可能な形で提示——**実装はしていない**
+- [x] 本番の`pnpm run mcp:remote`・ngrok/Cloudflareトンネル・`.env`には
+      Version22時点で変更を加えていない（`MCP_OAUTH_ENABLED`は
+      `.env.example`に追記のみ、実`.env`は無変更）
+- [x] ADR 0049（Version22のスコープ・認証方式比較・推奨）を記録済み
+- [x] `docs/setup/remote-mcp-oauth-migration.md`（未実施の移行手順・
+      ロールバック手順）を作成済み
+- [x] `docs/ai-roles.md`に権限表への参照リンクを追記済み
+- [x] `docs/handoff/archive/Version22_ARC_Brief.md`を作成済み
+- [x] `docs/handoff/ARC_INBOX.md`に処理済みエントリを追記済み
+- [x] README / docsに実装との乖離がない
+- [x] `docs/reports/Version22_Report.md`を生成済み（14章構成）
+- [x] `docs/reports/Version22_ARC_Feedback.md`（次にOwnerが承認すべき
+      事項を費用・リスク・具体的操作とともに列挙）を生成済み
+
+Version22のDoDは全項目達成済み。

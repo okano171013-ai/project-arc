@@ -205,3 +205,12 @@ Ownerが`createProposal`の戻り値を再送すること（`do`）でしか
 Ownerの`do`なしに承認してよいという運用変更）と、Level2の迂回を
 暗号学的に防ぐ仕組み（認証の再導入）は、いずれもOwner確認が必要な
 論点として意図的に未実装のままにしてある（ADR 0048参照）。
+
+### Authority Table（Version22〜）
+
+Level0/1/2の実行主体・許可操作・禁止操作・エスカレーション条件を
+単一の表にまとめたものが[`docs/authority-table.md`](./authority-table.md)
+にある。判断に迷ったらまずこの表を確認する。Version22では、認証の
+再導入によるLevel2の実効性強化（ADR 0049、`docs/security/
+remote-mcp-threat-model.md`）と、Level1委譲の将来設計（未実装、
+`docs/proposals/level1-arc-approval-delegation.md`）を扱った。

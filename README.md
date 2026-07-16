@@ -15,13 +15,44 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/ai-roles.md`](./docs/ai-roles.md) — 人間・ARC・Gemini・Claude Code・
   システム自体の責務分担
 - [`docs/architecture.md`](./docs/architecture.md) — 技術設計
-- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜21のロードマップ・
+- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜22のロードマップ・
   長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version21のスコープ（現在地）
+## Version22のスコープ（現在地）
+
+テーマ：「Authority Boundary and Secure Approval」— Version21の
+完了報告への応答としてARCから届いた指示。Level0/1/2の単一権限表、
+無認証Remote MCPの脅威モデル、認証方式3案の比較・推奨、ローカル
+無料試作、Level1委譲の将来設計（未実装）を求めた。詳細は
+[`docs/authority-table.md`](./docs/authority-table.md)・
+[`docs/security/remote-mcp-threat-model.md`](./docs/security/remote-mcp-threat-model.md)・
+ADR 0049参照。
+
+- **脅威モデルでの発見**：`management_feedback_resolve`はWrite
+  Proposal Layerを経由しない直接書き込みであり、現状の無認証Remote
+  MCPではトンネル公開URLを知る誰でもOwnerの`do`を経由せず実行できる
+  ——ADR 0044の「Write系はProposal経由なのでリスクは限定的」という
+  従来の主張に対する具体的な反例
+- **認証方式の推奨**：Bearer静的トークン・自前OAuth 2.1・Cloudflare
+  Accessの3案を比較し、`@modelcontextprotocol/sdk`同梱の
+  `mcpAuthRouter`を使った自前OAuth 2.1（ChatGPT Connector互換・
+  追加契約不要）を推奨
+- **`LocalOAuthProvider`**（`src/infrastructure/security/oauth/`）—
+  Dynamic Client Registration・PKCE・OwnerのみのPasscodeゲート・
+  短命token/refresh tokenをインメモリで実装したローカル試作。
+  `MCP_OAUTH_ENABLED`（既定false）で`remoteServer.ts`に配線——
+  フラグOFF時は既存の無認証挙動を1バイトも変えない。本番環境への
+  有効化はVersion22では行わず、Owner承認待ち
+  （[`docs/setup/remote-mcp-oauth-migration.md`](./docs/setup/remote-mcp-oauth-migration.md)参照）
+- **Level1委譲**（未実装）— `AgentDelegationGrant`設計案と
+  Constitution第4条改定文言案を現行維持案と比較可能な形で提示
+  （[`docs/proposals/level1-arc-approval-delegation.md`](./docs/proposals/level1-arc-approval-delegation.md)、
+  採否はOwner判断）
+
+### 旧Version21のスコープ：「Approval Policy Engine」
 
 テーマ：「Approval Policy Engine」— ARCから「Claude Codeの承認要求を
 可能な限りARCが代行し、Ownerには重要事項のみを上げる」仕組みの実装

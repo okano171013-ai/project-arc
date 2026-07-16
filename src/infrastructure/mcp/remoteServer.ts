@@ -32,16 +32,27 @@
  * には、別途HTTPSトンネル（`docs/setup/chatgpt-mcp-connection.md`
  * 参照）でこのプロセスを公開する必要がある——トンネルサービスへの
  * 契約はOwner自身の操作が必要（安全ガイドライン、ADR 0042）。
+ *
+ * Version22追記（ADR 0049）：`MCP_OAUTH_ENABLED=true`のときのみ、
+ * `LocalOAuthProvider`によるOAuth 2.1試作を有効化する。**既定は
+ * false固定**——このフラグを立てない限り、上記の「認証しない」挙動を
+ * 1バイトも変えない。本番のngrok/Cloudflareトンネル・実際の`.env`では
+ * Version22時点でこのフラグを有効化していない（Owner承認待ち、
+ * `docs/setup/remote-mcp-oauth-migration.md`参照）。
  */
 import { randomUUID } from 'node:crypto';
-import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { pathToFileURL } from 'node:url';
+import express from 'express';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
+import { mcpAuthRouter } from '@modelcontextprotocol/sdk/server/auth/router.js';
+import { requireBearerAuth } from '@modelcontextprotocol/sdk/server/auth/middleware/bearerAuth.js';
 import { Connector } from '../connector/Connector.js';
 import { loadConnectorConfig } from '../connector/connectorConfig.js';
 import { loadEnv } from '../config/env.js';
 import { buildMcpServer } from './server.js';
+import { LocalOAuthProvider } from '../security/oauth/LocalOAuthProvider.js';
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
@@ -53,12 +64,47 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return JSON.parse(raw);
 }
 
-export function createRemoteMcpApp(connector: Connector) {
+export interface RemoteMcpOAuthOptions {
+  readonly issuerUrl: URL;
+  readonly ownerPasscode: string;
+}
+
+/**
+ * `oauth`省略時（既定）は、ADR 0044のまま生の`node:http`サーバーを
+ * 返す——Version18〜21から1バイトも挙動を変えない。`oauth`指定時のみ
+ * Expressで`mcpAuthRouter`（SDK同梱、Version22で追加）を配線する。
+ */
+export function createRemoteMcpApp(connector: Connector, oauth?: RemoteMcpOAuthOptions): Server {
   const transports: Record<string, StreamableHTTPServerTransport> = {};
 
-  return createServer((req, res) => {
+  if (!oauth) {
+    return createServer((req, res) => {
+      void handleRequest(req, res, connector, transports);
+    });
+  }
+
+  const provider = new LocalOAuthProvider(oauth.ownerPasscode);
+  const app = express();
+
+  // `mcpAuthRouter`配下の各ハンドラ（authorize/token/register/revoke）は
+  // 内部で個別にボディパーサーを適用済み（SDK側の実装）。`/mcp`には
+  // ボディパーサーを一切適用しない——`readJsonBody`が読むべき生の
+  // リクエストストリームを先に消費してしまうと、既存のMCPリクエスト
+  // 処理が壊れるため。
+  app.use(mcpAuthRouter({ provider, issuerUrl: oauth.issuerUrl, scopesSupported: ['mcp:tools'] }));
+  app.post('/authorize/confirm', express.urlencoded({ extended: false }), (req, res) => {
+    void provider.handleConfirm(req, res);
+  });
+
+  app.all('/mcp', requireBearerAuth({ verifier: provider }), (req, res) => {
     void handleRequest(req, res, connector, transports);
   });
+
+  // ExpressのappはNode標準のリクエストリスナーとして`createServer`に
+  // 渡せる——生のhttp.Serverと同じ`.listen()`/`.close()`/`.address()`
+  // インターフェースを維持し、既存の呼び出し側（テスト・main）を
+  // 変更せずに済む。
+  return createServer(app);
 }
 
 async function handleRequest(
@@ -122,11 +168,31 @@ function isMainModule(): boolean {
 if (isMainModule()) {
   const env = loadEnv();
   const connector = new Connector(loadConnectorConfig());
-  const app = createRemoteMcpApp(connector);
+
+  let oauth: RemoteMcpOAuthOptions | undefined;
+  if (env.MCP_OAUTH_ENABLED) {
+    if (!env.MCP_OAUTH_OWNER_PASSCODE) {
+      console.error('MCP_OAUTH_ENABLED=true requires MCP_OAUTH_OWNER_PASSCODE to be set. Exiting.');
+      process.exit(1);
+    }
+    oauth = {
+      issuerUrl: new URL(`http://127.0.0.1:${env.MCP_HTTP_PORT}`),
+      ownerPasscode: env.MCP_OAUTH_OWNER_PASSCODE,
+    };
+  }
+
+  const app = createRemoteMcpApp(connector, oauth);
   app.listen(env.MCP_HTTP_PORT, '127.0.0.1', () => {
-    console.error(
-      `Project ARC Remote MCP server listening on http://127.0.0.1:${env.MCP_HTTP_PORT}/mcp ` +
-        '(NO AUTH — anyone who can reach this port/tunnel can call it, see ADR 0044)',
-    );
+    if (oauth) {
+      console.error(
+        `Project ARC Remote MCP server listening on http://127.0.0.1:${env.MCP_HTTP_PORT}/mcp ` +
+          '(OAuth 2.1試作が有効、ADR 0049。ローカルPasscodeゲート経由のみ接続可能)',
+      );
+    } else {
+      console.error(
+        `Project ARC Remote MCP server listening on http://127.0.0.1:${env.MCP_HTTP_PORT}/mcp ` +
+          '(NO AUTH — anyone who can reach this port/tunnel can call it, see ADR 0044)',
+      );
+    }
   });
 }

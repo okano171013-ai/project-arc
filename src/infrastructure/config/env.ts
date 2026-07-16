@@ -26,6 +26,13 @@ const envSchema = z.object({
   // Remote MCP（Version18）の待受ポート。/mcpエンドポイント自体は
   // 認証しない（ChatGPT接続に合わせた設計、ADR 0044）。
   MCP_HTTP_PORT: z.coerce.number().int().positive().default(3940),
+  // OAuth 2.1試作（Version22、ADR 0049）。既定false——設定しない限り
+  // ADR 0044の無認証挙動を1バイトも変えない。trueにする場合は
+  // MCP_OAUTH_OWNER_PASSCODEも必須（起動時チェック、`remoteServer.ts`）。
+  // `z.coerce.boolean()`は`Boolean("false")`が`true`になる既知の罠が
+  // あるため使わず、文字列`"true"`との厳密一致のみを`true`とする。
+  MCP_OAUTH_ENABLED: z.preprocess((v) => v === 'true', z.boolean()).default(false),
+  MCP_OAUTH_OWNER_PASSCODE: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

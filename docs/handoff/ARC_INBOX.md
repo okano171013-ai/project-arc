@@ -108,6 +108,20 @@ reports/Version21_Report.md`）。AgentMessage（id `6b78f23d-...`）に
 自己参照）。詳細な判断根拠はADR 0048参照（原文は`docs/handoff/
 archive/Version21_ARC_Brief.md`に保管）。
 
+**処理済み**：Version22「Authority Boundary and Secure Approval」
+（`docs/reports/Version22_Report.md`）。AgentMessage（id
+`e5728efb-...`）による指示。Version21の完了報告への応答として届いた。
+Level0/1/2の単一権限表（`docs/authority-table.md`）、無認証Remote MCP
+の脅威モデル（`docs/security/remote-mcp-threat-model.md`、
+`management_feedback_resolve`がWrite Proposal Layerを経由しない
+直接書き込みであるという具体的な穴を発見）、認証方式3案比較・推奨
+（ADR 0049）、ローカル無料試作（`LocalOAuthProvider`、OAuth 2.1・
+Dynamic Client Registration・PKCE・Passcodeゲート、`MCP_OAUTH_ENABLED`
+で既定OFF）、Level1委譲の未実装Constitution変更案（`docs/proposals/
+level1-arc-approval-delegation.md`）を実施した。本番環境・現行接続
+には変更を加えていない（原文は`docs/handoff/archive/
+Version22_ARC_Brief.md`に保管）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください
 （またはARCが直接AgentMessageとして送ってくることもあります
