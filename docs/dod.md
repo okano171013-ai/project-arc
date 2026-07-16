@@ -491,3 +491,30 @@ Version21のDoDは全項目達成済み。
       事項を費用・リスク・具体的操作とともに列挙）を生成済み
 
 Version22のDoDは全項目達成済み。
+
+## Version23完了チェックリスト（設計・次Version計画のみ、コード実装なし）
+
+- [x] Owner決定（AgentMessage `f81e9141-...`）を確認・解釈済み
+- [x] 既存モデルとの重複調査を実施（`Reflection`/`ChallengeLog`で
+      カバー可能な範囲、食事・栄養・体重・収入のギャップ、`StudyLog`
+      未配線の発見を`docs/proposals/life-log-auto-save-delegation.md`
+      3章に記録）
+- [x] Constitution整合性の結論（改定不要）をADR 0050（ステータス
+      「提案中」、Owner・ARC確認待ち）として記録
+- [x] Level1委譲（Version22、未決定）との違いを`docs/proposals/
+      level1-arc-approval-delegation.md`に相互参照として明記
+- [x] Phase分割した次Version実装計画（`LifeLogAutoSaveGrant`設計、
+      Phase 1: Reflection既存フィールド+ChallengeLog配線、Phase 2:
+      食事/体重/収入の新フィールド）を提示
+- [x] `pnpm test`/`typecheck`/`lint`：コード変更なしのため前Version
+      （Version22、294件）から変化なしを確認
+- [x] `docs/handoff/archive/Version23_ARC_Brief.md`を作成済み
+- [x] `docs/handoff/ARC_INBOX.md`に処理済みエントリを追記済み
+- [x] `docs/reports/Version23_Report.md`を生成済み（14章構成、
+      コード実装なしの旨を明記）
+- [x] `docs/reports/Version23_ARC_Feedback.md`（Owner・ARC確認事項
+      3点を含む）を生成済み
+
+Version23のDoDは「設計・次Version計画の提示」という本Versionの
+スコープにおいて全項目達成済み。実装そのものはOwner・ARC確認後の
+次Versionに持ち越し。

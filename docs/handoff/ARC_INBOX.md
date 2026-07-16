@@ -122,6 +122,20 @@ level1-arc-approval-delegation.md`）を実施した。本番環境・現行接�
 には変更を加えていない（原文は`docs/handoff/archive/
 Version22_ARC_Brief.md`に保管）。
 
+**処理済み**：Version23「Life Log Auto-Save Delegation」（`docs/
+reports/Version23_Report.md`）。AgentMessage（id `f81e9141-...`）
+による指示——Version17〜22と異なり、ARC経由ではなくOwner本人が
+Remote MCP経由で直接発信した初めての指示書。Owner本人がChatGPT上で
+明示送信した通常の生活記録（食事・栄養・睡眠・体重・運動・勉強・
+授業・支出/収入・日次振り返り・挑戦行動）の自動保存を許可する内容。
+指示書自身が「次Version実装計画を提示」を求めていたため、コード実装は
+せず、既存モデルとの重複調査・Constitution整合性の結論（改定不要、
+Owner・ARC確認待ち、ADR 0050）・Phase分割した実装計画
+（`docs/proposals/life-log-auto-save-delegation.md`）の提示に留めた。
+このメッセージはVersion22作業中に届いていたが約1時間強気づかず、
+セッション中の再確認の重要性を`docs/reports/Version23_Report.md`10章
+に記録した。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください
 （またはARCが直接AgentMessageとして送ってくることもあります

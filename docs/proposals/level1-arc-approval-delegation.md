@@ -3,6 +3,13 @@
 **ステータス**：提案のみ。実装していない。Owner・ARCの判断待ち
 （AgentMessage `e5728efb-...`要件1への対応、ADR 0049参照）。
 
+**関連（別種の委譲、混同注意）**：2026-07-16、Ownerは本ドキュメントとは
+別の、範囲を限定した委譲を既に決定した——[`docs/proposals/
+life-log-auto-save-delegation.md`](./life-log-auto-save-delegation.md)
+参照（Owner本人がChatGPT上で明示送信した通常の生活記録に限定した
+自動保存で、任意のProposal承認代行を扱う本ドキュメントとは別種）。
+本ドキュメント（一般的なProposal承認代行）は引き続き未決定のまま。
+
 このドキュメントは、Version21で見送った「ARCがOwnerの`do`なしに
 `proposal_approve`を実行してよい」という運用変更を、実装せずに
 設計として提示するものである。採否はOwnerが決める（Constitution
