@@ -57,7 +57,16 @@ const errorResponses = {
 };
 
 const proposalTypeSchema = z
-  .enum(['Reflection', 'Memory', 'ExternalKnowledge', 'Appearance', 'ManagementFeedback', 'AgentMessage'])
+  .enum([
+    'Reflection',
+    'Memory',
+    'ExternalKnowledge',
+    'Appearance',
+    'ManagementFeedback',
+    'AgentMessage',
+    'ChallengeLog',
+    'AgentDelegationGrant',
+  ])
   .openapi('ProposalType');
 
 const approvalLevelSchema = z.enum(['Level0', 'Level1', 'Level2']).openapi('ApprovalLevel');
@@ -82,6 +91,8 @@ const proposalSchema = z
     createdAt: z.string(),
     signals: approvalSignalsSchema.optional(),
     approvalLevel: approvalLevelSchema.optional(),
+    autoApproved: z.boolean().optional(),
+    result: z.unknown().optional(),
   })
   .openapi('Proposal');
 
@@ -267,6 +278,19 @@ registerGet({
   }),
   responseDescription: 'ApprovalDecisionの一覧',
   responseSchema: z.object({ decisions: z.array(z.record(z.unknown())) }),
+});
+
+// --- AgentDelegationGrant（Version24、Constitution第4条限定改定） ---
+
+registerGet({
+  operationId: 'listAgentDelegationGrants',
+  path: '/agent-delegation-grants',
+  summary: 'Ownerが発行した生活記録自動保存の委譲書（AgentDelegationGrant）を一覧取得する',
+  query: z.object({
+    status: z.enum(['Active', 'Paused', 'Revoked']).optional(),
+  }),
+  responseDescription: 'AgentDelegationGrantの一覧',
+  responseSchema: z.object({ grants: z.array(z.record(z.unknown())) }),
 });
 
 export function generateOpenApiDocument() {

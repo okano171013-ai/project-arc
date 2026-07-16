@@ -76,7 +76,7 @@ Version21のサーバー側再計算保証（`signals`から`approveProposal`が
 ことは保証するが、「そもそもクライアントがOwner本人か」は保証しない
 ——両者は別の問題である。
 
-## 5. 対応方針（詳細はADR 0049）
+## 5. 対応方針（詳細はADR 0049・0051）
 
 - `management_feedback_resolve`は、認証導入後は`requireBearerAuth`で
   保護する対象に含める（`/mcp`エンドポイント全体を保護すれば、
@@ -85,5 +85,11 @@ Version21のサーバー側再計算保証（`signals`から`approveProposal`が
   詳細はADR 0049）。
 - 認証方式の比較・推奨・ローカル試作はADR 0049・
   [`docs/setup/remote-mcp-oauth-migration.md`](../setup/remote-mcp-oauth-migration.md)参照。
-- 本番環境（実際に稼働中のngrokトンネル・`.env`）への変更は
-  Version22では行わない——Owner承認待ち。
+- **Version24でOAuth 2.1を本番有効化した**（ADR 0051）。上記の
+  `management_feedback_resolve`を含む全MCP Tool呼び出しは、現在
+  `/mcp`エンドポイント全体を保護する`requireBearerAuth`の内側にある
+  ——3章で発見した「無認証で直接書き込める」というギャップは実質的に
+  閉じた。ただし4章で述べた「クライアントがOwner本人かARC/Claude
+  Codeか」を暗号学的に区別できない、という限界は変わらない——
+  OAuthはトンネル公開URLへの到達可能性を狭めるが、認証済み
+  セッション内での主体の区別はできない。

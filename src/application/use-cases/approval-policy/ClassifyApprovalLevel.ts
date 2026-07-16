@@ -3,9 +3,11 @@ import {
   type ApprovalLevel,
   type ApprovalSignals,
 } from '../../../domain/value-objects/ApprovalLevel.js';
+import type { ProposalType } from '../../../domain/value-objects/Proposal.js';
 
 /**
- * ClassifyApprovalLevelUseCase（Version21、Approval Policy Engine）
+ * ClassifyApprovalLevelUseCase（Version21、Approval Policy Engine。
+ * Version24でtypeベースの強制ルールを追加）
  *
  * `ApprovalSignals`（呼び出し側が申告した構造化フラグ）だけを見て
  * Level0/1/2を機械的に導出する。ADR 0022（CandidateBuilder）・
@@ -14,6 +16,11 @@ import {
  * ——`target`/`reason`等の自由記述テキストの意味を読むことは一切しない。
  *
  * ルール（優先順）：
+ * 0. `proposalType === 'AgentDelegationGrant'`なら、signalsの内容に
+ *    関わらず常にLevel2（Version24、ADR 0051）。委譲書自体の作成・
+ *    変更が既存のOwner`do`必須フローを絶対に迂回できないようにする、
+ *    型ベースの決定的ルール——「AgentDelegationGrantという型である」
+ *    という機械的事実のlookupであり、内容の意味解釈ではない。
  * 1. `signals`が省略された場合（=申告なし）は境界事例として扱い、
  *    安全側のLevel1へエスカレーションする（指示書要件2）。
  * 2. 申告されたsignalsのうち1つでもtrueなら、無条件でLevel2
@@ -29,7 +36,15 @@ export interface ClassifyApprovalLevelOutput {
 }
 
 export class ClassifyApprovalLevelUseCase {
-  execute(signals: ApprovalSignals | undefined): ClassifyApprovalLevelOutput {
+  execute(signals: ApprovalSignals | undefined, proposalType?: ProposalType): ClassifyApprovalLevelOutput {
+    if (proposalType === 'AgentDelegationGrant') {
+      return {
+        level: 'Level2',
+        reason: 'AgentDelegationGrant自体の作成・変更は常にLevel2（type固定ルール、ADR 0051）',
+        triggeredSignals: [],
+      };
+    }
+
     if (signals === undefined) {
       return {
         level: 'Level1',

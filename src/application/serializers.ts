@@ -28,6 +28,7 @@ import type { Proposal } from '../domain/value-objects/Proposal.js';
 import type { ManagementFeedback } from '../domain/entities/ManagementFeedback.js';
 import type { AgentMessage } from '../domain/entities/AgentMessage.js';
 import type { ApprovalDecision } from '../domain/entities/ApprovalDecision.js';
+import type { AgentDelegationGrant } from '../domain/entities/AgentDelegationGrant.js';
 
 export function serializeReflection(reflection: Reflection) {
   return {
@@ -163,6 +164,13 @@ export function serializeDecisionContext(context: DecisionContext) {
   };
 }
 
+/**
+ * `proposal.result`（Version24、自動承認時のみ設定される生の実行結果）は
+ * 意図的に含めない——Entityインスタンスをそのまま返すとprivateフィールド
+ * が漏れる（Version14で実際に発覚したバグ、`docs/reports/
+ * Version14_Report.md`7章参照）。呼び出し側（`http/server.ts`）が
+ * `proposal.type`に応じた個別のserialize関数を通してから合成すること。
+ */
 export function serializeProposal(proposal: Proposal) {
   return {
     type: proposal.type,
@@ -172,6 +180,7 @@ export function serializeProposal(proposal: Proposal) {
     createdAt: proposal.createdAt,
     signals: proposal.signals,
     approvalLevel: proposal.approvalLevel,
+    autoApproved: proposal.autoApproved,
   };
 }
 
@@ -199,6 +208,16 @@ export function serializeApprovalDecision(decision: ApprovalDecision) {
     id: decision.id,
     record: decision.record,
     createdAt: decision.createdAt.toISOString(),
+  };
+}
+
+export function serializeAgentDelegationGrant(grant: AgentDelegationGrant) {
+  return {
+    id: grant.id,
+    record: grant.record,
+    createdAt: grant.createdAt.toISOString(),
+    status: grant.status,
+    usageCount: grant.usageCount,
   };
 }
 

@@ -22,7 +22,9 @@ export type ProposalType =
   | 'ExternalKnowledge'
   | 'Appearance'
   | 'ManagementFeedback'
-  | 'AgentMessage';
+  | 'AgentMessage'
+  | 'ChallengeLog'
+  | 'AgentDelegationGrant';
 
 export interface Proposal {
   readonly type: ProposalType;
@@ -53,4 +55,11 @@ export interface Proposal {
    * 信用せず`signals`から再計算する。
    */
   readonly approvalLevel?: ApprovalLevel;
+  /**
+   * Version24（Constitution第4条限定改定）：有効な`AgentDelegationGrant`
+   * によりOwnerの`do`なしで即時書き込みされた場合のみtrue。
+   */
+  readonly autoApproved?: boolean;
+  /** `autoApproved`がtrueの場合のみ、実行結果（`ApproveProposalOutput.result`相当）を含む。 */
+  readonly result?: unknown;
 }

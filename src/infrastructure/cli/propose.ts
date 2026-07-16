@@ -27,9 +27,12 @@ import { JsonFileAppearanceLogRepository } from '../../adapters/repositories/Jso
 import { JsonFileManagementFeedbackRepository } from '../../adapters/repositories/JsonFileManagementFeedbackRepository.js';
 import { JsonFileAgentMessageRepository } from '../../adapters/repositories/JsonFileAgentMessageRepository.js';
 import { JsonFileApprovalDecisionRepository } from '../../adapters/repositories/JsonFileApprovalDecisionRepository.js';
+import { JsonFileChallengeLogRepository } from '../../adapters/repositories/JsonFileChallengeLogRepository.js';
+import { JsonFileAgentDelegationGrantRepository } from '../../adapters/repositories/JsonFileAgentDelegationGrantRepository.js';
 import type { ProposalType, Proposal } from '../../domain/value-objects/Proposal.js';
 import type { ManagementFeedbackResolution } from '../../domain/entities/ManagementFeedback.js';
 import type { MemoryCategory } from '../../domain/entities/MemoryEntry.js';
+import type { AgentDelegationGrantScope } from '../../domain/entities/AgentDelegationGrant.js';
 
 const TYPES: ProposalType[] = [
   'Reflection',
@@ -38,6 +41,8 @@ const TYPES: ProposalType[] = [
   'Appearance',
   'ManagementFeedback',
   'AgentMessage',
+  'ChallengeLog',
+  'AgentDelegationGrant',
 ];
 const MEMORY_CATEGORIES: MemoryCategory[] = [
   'Assets', 'Appearance', 'Goals', 'Preferences', 'Education',
@@ -59,6 +64,8 @@ function buildGateway(): WriteProposalGatewayUseCase {
     new JsonFileManagementFeedbackRepository(),
     new JsonFileAgentMessageRepository(),
     new JsonFileApprovalDecisionRepository(),
+    new JsonFileChallengeLogRepository(),
+    new JsonFileAgentDelegationGrantRepository(),
   );
 }
 
@@ -147,6 +154,47 @@ async function promptPayload(rl: Rl, type: ProposalType): Promise<Record<string,
           relatedVersion: relatedVersion || undefined,
           tags: tagsRaw ? tagsRaw.split(',').map((t) => t.trim()).filter(Boolean) : undefined,
         },
+      };
+    }
+    case 'ChallengeLog': {
+      const date = await rl.question('日付 (YYYY-MM-DD): ');
+      const title = await rl.question('タイトル (例: 赤福): ');
+      const category = await rl.question('カテゴリ (任意): ');
+      const note = await rl.question('メモ (任意): ');
+      return {
+        record: {
+          date,
+          title,
+          category: category || undefined,
+          note: note || undefined,
+        },
+      };
+    }
+    case 'AgentDelegationGrant': {
+      const action = await rl.question('操作 (1=create/2=pause/3=resume/4=revoke): ');
+      const actionMap: Record<string, 'create' | 'pause' | 'resume' | 'revoke'> = {
+        '1': 'create',
+        '2': 'pause',
+        '3': 'resume',
+        '4': 'revoke',
+      };
+      const resolvedAction = actionMap[action.trim()] ?? 'create';
+      if (resolvedAction !== 'create') {
+        const id = await rl.question('対象GrantのID: ');
+        return { action: resolvedAction, id };
+      }
+      const scopeRaw = await rl.question('scope (カンマ区切り、Reflection/ChallengeLog): ');
+      const scope = scopeRaw
+        .split(',')
+        .map((s) => s.trim())
+        .filter((s): s is AgentDelegationGrantScope => s === 'Reflection' || s === 'ChallengeLog');
+      const expiresAtDays = await rl.question('有効期限 (今日から何日後): ');
+      const usageLimitRaw = await rl.question('上限回数: ');
+      const reason = await rl.question('理由: ');
+      const expiresAt = new Date(Date.now() + Number(expiresAtDays) * 24 * 60 * 60 * 1000).toISOString();
+      return {
+        action: 'create',
+        record: { scope, expiresAt, usageLimit: Number(usageLimitRaw), reason },
       };
     }
   }

@@ -13,6 +13,8 @@ export const PROPOSAL_TYPES = [
   'Appearance',
   'ManagementFeedback',
   'AgentMessage',
+  'ChallengeLog',
+  'AgentDelegationGrant',
 ] as const;
 
 /**
@@ -46,4 +48,9 @@ export const proposalShape = {
     .enum(['Level0', 'Level1', 'Level2'])
     .optional()
     .describe('表示用（proposal_createの戻り値）。承認判定はsignalsから再計算されるため無視される'),
+  autoApproved: z
+    .boolean()
+    .optional()
+    .describe('Version24：trueの場合proposal_approveは拒否される（重複防止、既に自動保存済み）'),
+  result: z.unknown().optional().describe('autoApproved: trueの場合のみ含まれる実行結果（表示用）'),
 };

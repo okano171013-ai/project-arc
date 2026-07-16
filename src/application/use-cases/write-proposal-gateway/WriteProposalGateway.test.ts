@@ -16,6 +16,10 @@ import type { ManagementFeedbackRepository } from '../../ports/ManagementFeedbac
 import type { AgentMessageRepository } from '../../ports/AgentMessageRepository.js';
 import type { ApprovalDecision } from '../../../domain/entities/ApprovalDecision.js';
 import type { ApprovalDecisionRepository } from '../../ports/ApprovalDecisionRepository.js';
+import type { ChallengeLog } from '../../../domain/entities/ChallengeLog.js';
+import type { ChallengeLogRepository } from '../../ports/ChallengeLogRepository.js';
+import { AgentDelegationGrant } from '../../../domain/entities/AgentDelegationGrant.js';
+import type { AgentDelegationGrantRepository } from '../../ports/AgentDelegationGrantRepository.js';
 
 class FakeReflectionRepository implements ReflectionRepository {
   store = new Map<string, Reflection>();
@@ -130,6 +134,29 @@ class FakeApprovalDecisionRepository implements ApprovalDecisionRepository {
   }
 }
 
+class FakeChallengeLogRepository implements ChallengeLogRepository {
+  store: ChallengeLog[] = [];
+  async save(log: ChallengeLog): Promise<void> {
+    this.store.push(log);
+  }
+  async findAll(): Promise<ChallengeLog[]> {
+    return this.store;
+  }
+}
+
+class FakeAgentDelegationGrantRepository implements AgentDelegationGrantRepository {
+  store = new Map<string, AgentDelegationGrant>();
+  async save(grant: AgentDelegationGrant): Promise<void> {
+    this.store.set(grant.id, grant);
+  }
+  async findById(id: string): Promise<AgentDelegationGrant | null> {
+    return this.store.get(id) ?? null;
+  }
+  async findAll(): Promise<AgentDelegationGrant[]> {
+    return [...this.store.values()];
+  }
+}
+
 function buildGateway() {
   const reflectionRepo = new FakeReflectionRepository();
   const memoryRepo = new FakeMemoryRepository();
@@ -139,6 +166,8 @@ function buildGateway() {
   const feedbackRepo = new FakeManagementFeedbackRepository();
   const agentMessageRepo = new FakeAgentMessageRepository();
   const approvalDecisionRepo = new FakeApprovalDecisionRepository();
+  const challengeLogRepo = new FakeChallengeLogRepository();
+  const agentDelegationGrantRepo = new FakeAgentDelegationGrantRepository();
   const gateway = new WriteProposalGatewayUseCase(
     reflectionRepo,
     memoryRepo,
@@ -148,6 +177,8 @@ function buildGateway() {
     feedbackRepo,
     agentMessageRepo,
     approvalDecisionRepo,
+    challengeLogRepo,
+    agentDelegationGrantRepo,
   );
   return {
     gateway,
@@ -159,6 +190,8 @@ function buildGateway() {
     feedbackRepo,
     agentMessageRepo,
     approvalDecisionRepo,
+    challengeLogRepo,
+    agentDelegationGrantRepo,
   };
 }
 
@@ -328,5 +361,132 @@ describe('WriteProposalGatewayUseCase', () => {
 
     const stages = ctx.approvalDecisionRepo.store.map((d) => d.record.stage);
     expect(stages).toEqual(['Proposed', 'Approved', 'Proposed', 'Rejected']);
+  });
+
+  describe('AgentDelegationGrant auto-approval (Version24, Constitution第4条限定改定)', () => {
+    async function seedGrant(ctx2: ReturnType<typeof buildGateway>, overrides: Partial<{ usageLimit: number; scope: ('Reflection' | 'ChallengeLog')[] }> = {}) {
+      const grant = AgentDelegationGrant.create({
+        id: 'grant-1',
+        record: {
+          scope: overrides.scope ?? ['Reflection'],
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          usageLimit: overrides.usageLimit ?? 5,
+          reason: 'テスト用委譲',
+        },
+      });
+      await ctx2.agentDelegationGrantRepo.save(grant);
+      return grant;
+    }
+
+    it('auto-approves a Reflection proposal when a valid grant covers it (有効なGrantでの自動承認)', async () => {
+      await seedGrant(ctx);
+      const proposal = await ctx.gateway.createProposal({
+        type: 'Reflection',
+        target: '今日の振り返り',
+        payload: { date: '2026-07-16', record: { proudOf: '勉強した' } },
+        reason: 'Owner本人の発言をそのまま書き写し',
+      });
+
+      expect(proposal.autoApproved).toBe(true);
+      expect(proposal.result).toBeTruthy();
+      expect(ctx.reflectionRepo.store.size).toBe(1);
+
+      const decision = ctx.approvalDecisionRepo.store.find((d) => d.record.target === '今日の振り返り');
+      expect(decision?.record.stage).toBe('Approved');
+      expect(decision?.record.approver).toBe('auto-save');
+    });
+
+    it('does not auto-approve when no grant exists (Grant不在時は従来通りOwner do待ち)', async () => {
+      const proposal = await ctx.gateway.createProposal({
+        type: 'Reflection',
+        target: '今日の振り返り',
+        payload: { date: '2026-07-16', record: { proudOf: '勉強した' } },
+        reason: '理由',
+      });
+
+      expect(proposal.autoApproved).toBeUndefined();
+      expect(ctx.reflectionRepo.store.size).toBe(0);
+    });
+
+    it('does not auto-approve a Level2-classified proposal even with a valid grant (Level2はGrantより優先)', async () => {
+      await seedGrant(ctx);
+      const proposal = await ctx.gateway.createProposal({
+        type: 'Reflection',
+        target: '今日の振り返り',
+        payload: { date: '2026-07-16', record: { proudOf: '勉強した' } },
+        reason: '理由',
+        signals: { personalDataExternalTransfer: true },
+      });
+
+      expect(proposal.autoApproved).toBeUndefined();
+      expect(ctx.reflectionRepo.store.size).toBe(0);
+    });
+
+    it('never auto-approves an AgentDelegationGrant proposal itself, even if an (irrelevant) grant exists (Grant自身の自動承認は不可)', async () => {
+      await seedGrant(ctx);
+      const proposal = await ctx.gateway.createProposal({
+        type: 'AgentDelegationGrant',
+        target: '新しい委譲',
+        payload: {
+          action: 'create',
+          record: { scope: ['Reflection'], expiresAt: new Date(Date.now() + 1000).toISOString(), usageLimit: 1, reason: 'テスト' },
+        },
+        reason: '理由',
+      });
+
+      expect(proposal.autoApproved).toBeUndefined();
+      expect(proposal.approvalLevel).toBe('Level2');
+    });
+
+    it('stops auto-approving once usageLimit is reached (上限到達後はOwner do待ちへフォールバック)', async () => {
+      await seedGrant(ctx, { usageLimit: 1 });
+
+      const first = await ctx.gateway.createProposal({
+        type: 'Reflection',
+        target: '1件目',
+        payload: { date: '2026-07-16', record: { proudOf: 'A' } },
+        reason: '理由',
+      });
+      expect(first.autoApproved).toBe(true);
+
+      const second = await ctx.gateway.createProposal({
+        type: 'Reflection',
+        target: '2件目',
+        payload: { date: '2026-07-17', record: { proudOf: 'B' } },
+        reason: '理由',
+      });
+      expect(second.autoApproved).toBeUndefined();
+      expect(ctx.reflectionRepo.store.size).toBe(1);
+    });
+
+    it('rejects a second approveProposal call on an already auto-approved proposal (重複防止)', async () => {
+      await seedGrant(ctx);
+      const proposal = await ctx.gateway.createProposal({
+        type: 'Reflection',
+        target: '今日の振り返り',
+        payload: { date: '2026-07-16', record: { proudOf: '勉強した' } },
+        reason: '理由',
+      });
+      expect(proposal.autoApproved).toBe(true);
+
+      await expect(ctx.gateway.approveProposal(proposal)).rejects.toThrow(
+        'This proposal was already auto-approved',
+      );
+      expect(ctx.reflectionRepo.store.size).toBe(1);
+    });
+
+    it('does not auto-approve ChallengeLog when the grant scope excludes it (scope外は対象外)', async () => {
+      // scopeをReflectionのみに限定した委譲では、ChallengeLogは対象外のまま。
+      await seedGrant(ctx, { scope: ['Reflection'] });
+      const proposal = await ctx.gateway.createProposal({
+        type: 'ChallengeLog',
+        target: '初めての体験',
+        payload: { record: { date: '2026-07-16', title: '初めての体験' } },
+        reason: '理由',
+      });
+
+      expect(proposal.autoApproved).toBeUndefined();
+      expect(ctx.challengeLogRepo.store).toHaveLength(0);
+    });
   });
 });

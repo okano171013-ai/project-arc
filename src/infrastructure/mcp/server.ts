@@ -29,6 +29,7 @@ import { registerManagementFeedbackListTool } from './tools/managementFeedbackLi
 import { registerManagementFeedbackResolveTool } from './tools/managementFeedbackResolve.js';
 import { registerAgentMessageListTool } from './tools/agentMessageList.js';
 import { registerApprovalDecisionListTool } from './tools/approvalDecisionList.js';
+import { registerAgentDelegationGrantListTool } from './tools/agentDelegationGrantList.js';
 
 export function buildMcpServer(connector: Connector): McpServer {
   const server = new McpServer({ name: 'project-arc', version: '1.0.0' });
@@ -44,6 +45,7 @@ export function buildMcpServer(connector: Connector): McpServer {
   registerManagementFeedbackResolveTool(server, connector);
   registerAgentMessageListTool(server, connector);
   registerApprovalDecisionListTool(server, connector);
+  registerAgentDelegationGrantListTool(server, connector);
 
   return server;
 }

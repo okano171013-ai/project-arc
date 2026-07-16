@@ -136,6 +136,21 @@ Owner・ARC確認待ち、ADR 0050）・Phase分割した実装計画
 セッション中の再確認の重要性を`docs/reports/Version23_Report.md`10章
 に記録した。
 
+**処理済み（一部Owner操作待ち）**：Version24「OAuth Production
+Activation and Scoped Life-Log Delegation」（`docs/reports/
+Version24_Report.md`）。Owner本人発信のAgentMessage（id
+`1e02902f-...`）による指示——Version22 Feedbackの3承認事項に基づく。
+Constitution第4条を限定改定（`AgentDelegationGrant`委譲、ADR 0051）、
+`AgentDelegationGrant`Entity・自動承認フロー・重複防止・監査ログ拡張
+（Phase1: Reflection・ChallengeLog）を実装し、実HTTPリクエストで
+grant作成→承認→自動保存→監査記録→重複拒否→取消し→自動保存停止の
+一連を実機確認済み。**OAuth本番有効化（`.env`への`MCP_OAUTH_ENABLED`
+設定・秘密情報書き込み・本番サービス再起動）はClaude Codeの実行環境
+の安全機構によりブロックされ、Owner自身の手作業として引き継いだ**
+——具体的な2行の設定内容とPasscodeはOwnerへチャットで直接伝達済み
+（ファイルには記録していない）。手順は`docs/setup/
+remote-mcp-oauth-migration.md`参照。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください
 （またはARCが直接AgentMessageとして送ってくることもあります

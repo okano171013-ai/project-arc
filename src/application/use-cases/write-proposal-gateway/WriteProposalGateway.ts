@@ -9,14 +9,21 @@ import type { AppearanceLogRepository } from '../../ports/AppearanceLogRepositor
 import type { ManagementFeedbackRepository } from '../../ports/ManagementFeedbackRepository.js';
 import type { AgentMessageRepository } from '../../ports/AgentMessageRepository.js';
 import type { ApprovalDecisionRepository } from '../../ports/ApprovalDecisionRepository.js';
+import type { ChallengeLogRepository } from '../../ports/ChallengeLogRepository.js';
+import type { AgentDelegationGrantRepository } from '../../ports/AgentDelegationGrantRepository.js';
 import { RecordDailyReflectionUseCase } from '../reflection/RecordDailyReflection.js';
 import { AddMemoryEntryUseCase } from '../memory/AddMemoryEntry.js';
 import { AddExternalKnowledgeUseCase } from '../external-knowledge/AddExternalKnowledge.js';
 import { AddAppearanceLogUseCase } from '../appearance/AddAppearanceLog.js';
 import { AddManagementFeedbackUseCase } from '../management-feedback/AddManagementFeedback.js';
 import { AddAgentMessageUseCase } from '../agent-message/AddAgentMessage.js';
+import { AddChallengeLogUseCase } from '../challenge/AddChallengeLog.js';
+import { ManageAgentDelegationGrantUseCase } from '../agent-delegation-grant/ManageAgentDelegationGrant.js';
 import { ClassifyApprovalLevelUseCase } from '../approval-policy/ClassifyApprovalLevel.js';
 import { RecordApprovalDecisionUseCase } from '../approval-policy/RecordApprovalDecision.js';
+
+/** Version24：この2型のみ、有効なAgentDelegationGrantがあれば自動承認の対象になりうる。 */
+const AUTO_APPROVABLE_TYPES: readonly ProposalType[] = ['Reflection', 'ChallengeLog'];
 
 /**
  * typeごとのpayload構造だけを検証するzodスキーマ。ここでの検証は
@@ -97,6 +104,29 @@ const payloadSchemas: Record<ProposalType, z.ZodTypeAny> = {
       tags: z.array(z.string()).optional(),
     }),
   }),
+  ChallengeLog: z.object({
+    record: z.object({
+      date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'date must be YYYY-MM-DD'),
+      title: z.string().min(1),
+      category: z.string().optional(),
+      note: z.string().optional(),
+      estimated: z.boolean().optional(),
+      estimationBasis: z.string().optional(),
+      confidence: z.enum(['low', 'medium', 'high']).optional(),
+    }),
+  }),
+  AgentDelegationGrant: z.object({
+    action: z.enum(['create', 'pause', 'resume', 'revoke']),
+    record: z
+      .object({
+        scope: z.array(z.enum(['Reflection', 'ChallengeLog'])).min(1),
+        expiresAt: z.string(),
+        usageLimit: z.number().positive(),
+        reason: z.string().min(1),
+      })
+      .optional(),
+    id: z.string().optional(),
+  }),
 };
 
 export interface CreateProposalInput {
@@ -138,6 +168,8 @@ export class WriteProposalGatewayUseCase {
   private readonly addAppearanceLog: AddAppearanceLogUseCase;
   private readonly addManagementFeedback: AddManagementFeedbackUseCase;
   private readonly addAgentMessage: AddAgentMessageUseCase;
+  private readonly addChallengeLog: AddChallengeLogUseCase;
+  private readonly manageAgentDelegationGrant: ManageAgentDelegationGrantUseCase;
   private readonly classifyApprovalLevel: ClassifyApprovalLevelUseCase;
   private readonly recordApprovalDecision: RecordApprovalDecisionUseCase;
 
@@ -150,6 +182,8 @@ export class WriteProposalGatewayUseCase {
     managementFeedbackRepository: ManagementFeedbackRepository,
     agentMessageRepository: AgentMessageRepository,
     approvalDecisionRepository: ApprovalDecisionRepository,
+    challengeLogRepository: ChallengeLogRepository,
+    private readonly agentDelegationGrantRepository: AgentDelegationGrantRepository,
   ) {
     this.recordDailyReflection = new RecordDailyReflectionUseCase(reflectionRepository);
     this.addMemoryEntry = new AddMemoryEntryUseCase(memoryRepository);
@@ -160,6 +194,8 @@ export class WriteProposalGatewayUseCase {
     this.addAppearanceLog = new AddAppearanceLogUseCase(appearanceLogRepository);
     this.addManagementFeedback = new AddManagementFeedbackUseCase(managementFeedbackRepository);
     this.addAgentMessage = new AddAgentMessageUseCase(agentMessageRepository);
+    this.addChallengeLog = new AddChallengeLogUseCase(challengeLogRepository);
+    this.manageAgentDelegationGrant = new ManageAgentDelegationGrantUseCase(agentDelegationGrantRepository);
     this.classifyApprovalLevel = new ClassifyApprovalLevelUseCase();
     this.recordApprovalDecision = new RecordApprovalDecisionUseCase(approvalDecisionRepository);
   }
@@ -178,9 +214,27 @@ export class WriteProposalGatewayUseCase {
     if (!input.target.trim()) {
       throw new Error('target must not be empty');
     }
-    this.validatePayload(input.type, input.payload);
+    const validatedPayload = this.validatePayload(input.type, input.payload);
 
-    const classification = this.classifyApprovalLevel.execute(input.signals);
+    const classification = this.classifyApprovalLevel.execute(input.signals, input.type);
+
+    // Version24（Constitution第4条限定改定）：Level2でなく、かつ
+    // AUTO_APPROVABLE_TYPESに含まれる型のみ、有効なAgentDelegationGrant
+    // があれば即時実行する。AgentDelegationGrant自身は
+    // AUTO_APPROVABLE_TYPESに含まれないため、上のtype固定Level2
+    // ルールと合わせて二重に自動承認の対象から除外される。
+    let autoApproved = false;
+    let autoApprovalResult: unknown;
+    if (classification.level !== 'Level2' && AUTO_APPROVABLE_TYPES.includes(input.type)) {
+      const grant = await this.findValidGrant(input.type);
+      if (grant) {
+        autoApprovalResult = await this.executeApproval(input.type, validatedPayload);
+        grant.recordUsage();
+        await this.agentDelegationGrantRepository.save(grant);
+        autoApproved = true;
+      }
+    }
+
     const proposal: Proposal = {
       type: input.type,
       target: input.target,
@@ -189,17 +243,19 @@ export class WriteProposalGatewayUseCase {
       createdAt: new Date().toISOString(),
       signals: input.signals,
       approvalLevel: classification.level,
+      ...(autoApproved ? { autoApproved: true, result: (autoApprovalResult as ApproveProposalOutput).result } : {}),
     };
 
     await this.recordApprovalDecision.execute({
       record: {
-        stage: 'Proposed',
+        stage: autoApproved ? 'Approved' : 'Proposed',
         proposalType: proposal.type,
         target: proposal.target,
         level: classification.level,
         reason: classification.reason,
         triggeredSignals: classification.triggeredSignals,
         signals: input.signals ?? {},
+        approver: autoApproved ? 'auto-save' : 'Owner',
       },
     });
 
@@ -207,10 +263,16 @@ export class WriteProposalGatewayUseCase {
   }
 
   async approveProposal(proposal: Proposal): Promise<ApproveProposalOutput> {
+    if (proposal.autoApproved) {
+      // Version24（重複防止）：createProposalが既に自動保存した
+      // Proposalを再度approveProposalへ渡すと二重書き込みになる。
+      // クライアント側の実装ミス・再送によるものを含め、機械的に拒否する。
+      throw new Error('This proposal was already auto-approved; approveProposal must not be called again');
+    }
     const payload = this.validatePayload(proposal.type, proposal.payload);
     // クライアントが返した`proposal.approvalLevel`は表示用であり信用しない
     // ——`signals`からサーバー側で必ず再計算する（ADR 0048、迂回対策）。
-    const classification = this.classifyApprovalLevel.execute(proposal.signals);
+    const classification = this.classifyApprovalLevel.execute(proposal.signals, proposal.type);
 
     const output = await this.executeApproval(proposal.type, payload);
 
@@ -223,6 +285,7 @@ export class WriteProposalGatewayUseCase {
         reason: classification.reason,
         triggeredSignals: classification.triggeredSignals,
         signals: proposal.signals ?? {},
+        approver: 'Owner',
       },
     });
 
@@ -230,7 +293,7 @@ export class WriteProposalGatewayUseCase {
   }
 
   async rejectProposal(proposal: Proposal): Promise<RejectProposalOutput> {
-    const classification = this.classifyApprovalLevel.execute(proposal.signals);
+    const classification = this.classifyApprovalLevel.execute(proposal.signals, proposal.type);
 
     await this.recordApprovalDecision.execute({
       record: {
@@ -241,10 +304,16 @@ export class WriteProposalGatewayUseCase {
         reason: classification.reason,
         triggeredSignals: classification.triggeredSignals,
         signals: proposal.signals ?? {},
+        approver: 'Owner',
       },
     });
 
     return { rejected: true, type: proposal.type };
+  }
+
+  private async findValidGrant(type: ProposalType) {
+    const grants = await this.agentDelegationGrantRepository.findAll();
+    return grants.find((g) => g.isValidFor(type));
   }
 
   private async executeApproval(
@@ -285,6 +354,18 @@ export class WriteProposalGatewayUseCase {
       case 'AgentMessage': {
         const result = await this.addAgentMessage.execute(
           payload as unknown as Parameters<AddAgentMessageUseCase['execute']>[0],
+        );
+        return { type, result };
+      }
+      case 'ChallengeLog': {
+        const result = await this.addChallengeLog.execute(
+          payload as unknown as Parameters<AddChallengeLogUseCase['execute']>[0],
+        );
+        return { type, result };
+      }
+      case 'AgentDelegationGrant': {
+        const result = await this.manageAgentDelegationGrant.execute(
+          payload as unknown as Parameters<ManageAgentDelegationGrantUseCase['execute']>[0],
         );
         return { type, result };
       }

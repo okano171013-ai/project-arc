@@ -56,7 +56,9 @@ import { ResolveManagementFeedbackUseCase } from '../../application/use-cases/ma
 import { AddAgentMessageUseCase } from '../../application/use-cases/agent-message/AddAgentMessage.js';
 import { ListAgentMessagesUseCase } from '../../application/use-cases/agent-message/ListAgentMessages.js';
 import { ListApprovalDecisionsUseCase } from '../../application/use-cases/approval-policy/ListApprovalDecisions.js';
+import { ListAgentDelegationGrantsUseCase } from '../../application/use-cases/agent-delegation-grant/ListAgentDelegationGrants.js';
 import type { ExternalKnowledgeStatus } from '../../domain/entities/ExternalKnowledge.js';
+import type { AgentDelegationGrantStatus } from '../../domain/entities/AgentDelegationGrant.js';
 import type { ProposalType, Proposal } from '../../domain/value-objects/Proposal.js';
 import type { ApprovalLevel, ApprovalSignals } from '../../domain/value-objects/ApprovalLevel.js';
 
@@ -74,6 +76,7 @@ import { JsonFileExternalKnowledgeRepository } from '../../adapters/repositories
 import { JsonFileManagementFeedbackRepository } from '../../adapters/repositories/JsonFileManagementFeedbackRepository.js';
 import { JsonFileAgentMessageRepository } from '../../adapters/repositories/JsonFileAgentMessageRepository.js';
 import { JsonFileApprovalDecisionRepository } from '../../adapters/repositories/JsonFileApprovalDecisionRepository.js';
+import { JsonFileAgentDelegationGrantRepository } from '../../adapters/repositories/JsonFileAgentDelegationGrantRepository.js';
 import { RuleBasedCaptureClassifier } from '../../adapters/providers/RuleBasedCaptureClassifier.js';
 import { isAuthorized } from '../security/apiKeyAuth.js';
 import { loadEnv } from '../config/env.js';
@@ -94,9 +97,13 @@ import {
   serializeManagementFeedback,
   serializeAgentMessage,
   serializeApprovalDecision,
+  serializeAgentDelegationGrant,
+  serializeChallengeLog,
 } from '../../application/serializers.js';
 import type { Reflection } from '../../domain/entities/Reflection.js';
 import type { MemoryEntry } from '../../domain/entities/MemoryEntry.js';
+import type { ChallengeLog } from '../../domain/entities/ChallengeLog.js';
+import type { AgentDelegationGrant } from '../../domain/entities/AgentDelegationGrant.js';
 import type { ExternalKnowledge } from '../../domain/entities/ExternalKnowledge.js';
 import type { AppearanceLog } from '../../domain/entities/AppearanceLog.js';
 import type {
@@ -158,6 +165,9 @@ export function buildUseCases(options: BuildAppOptions = {}) {
   );
   const approvalDecisionRepository = new JsonFileApprovalDecisionRepository(
     repoPath(dataDir, 'approval-decisions.json'),
+  );
+  const agentDelegationGrantRepository = new JsonFileAgentDelegationGrantRepository(
+    repoPath(dataDir, 'agent-delegation-grants.json'),
   );
   const classifier = new RuleBasedCaptureClassifier();
 
@@ -248,6 +258,7 @@ export function buildUseCases(options: BuildAppOptions = {}) {
     addAgentMessage: new AddAgentMessageUseCase(agentMessageRepository),
     listAgentMessages: new ListAgentMessagesUseCase(agentMessageRepository),
     listApprovalDecisions: new ListApprovalDecisionsUseCase(approvalDecisionRepository),
+    listAgentDelegationGrants: new ListAgentDelegationGrantsUseCase(agentDelegationGrantRepository),
     readGateway: new ReadGatewayUseCase(
       reflectionRepository,
       appearanceLogRepository,
@@ -268,6 +279,8 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       managementFeedbackRepository,
       agentMessageRepository,
       approvalDecisionRepository,
+      challengeLogRepository,
+      agentDelegationGrantRepository,
     ),
   };
 }
@@ -349,6 +362,10 @@ function serializeApproveResult(type: ProposalType, result: unknown): unknown {
       return { feedback: serializeManagementFeedback((result as { feedback: ManagementFeedback }).feedback) };
     case 'AgentMessage':
       return { message: serializeAgentMessage((result as { message: AgentMessage }).message) };
+    case 'ChallengeLog':
+      return { log: serializeChallengeLog((result as { log: ChallengeLog }).log) };
+    case 'AgentDelegationGrant':
+      return { grant: serializeAgentDelegationGrant((result as { grant: AgentDelegationGrant }).grant) };
   }
 }
 
@@ -702,7 +719,15 @@ export function createApp(options: BuildAppOptions = {}) {
         reason: body.reason as string,
         signals: body.signals as ApprovalSignals | undefined,
       });
-      return ok({ proposal: serializeProposal(proposal) }, 201);
+      const serialized = serializeProposal(proposal);
+      return ok(
+        {
+          proposal: proposal.autoApproved
+            ? { ...serialized, result: serializeApproveResult(proposal.type, proposal.result) }
+            : serialized,
+        },
+        201,
+      );
     }),
 
     route('POST', '/proposal/approve', async (req) => {
@@ -795,6 +820,16 @@ export function createApp(options: BuildAppOptions = {}) {
       const relatedVersion = url.searchParams.get('relatedVersion') ?? undefined;
       const result = await useCases.listAgentMessages.execute({ direction, relatedVersion });
       return ok({ messages: result.messages.map(serializeAgentMessage) });
+    }),
+
+    // --- AgentDelegationGrant（Version24、Constitution第4条限定改定） ---
+    // 書き込みは既存のPOST /proposal/*（type: 'AgentDelegationGrant'）を
+    // そのまま使う——一覧取得のみ専用ルートを持つ（agent-messagesと同型）。
+    route('GET', '/agent-delegation-grants', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const status = (url.searchParams.get('status') ?? undefined) as AgentDelegationGrantStatus | undefined;
+      const result = await useCases.listAgentDelegationGrants.execute({ status });
+      return ok({ grants: result.grants.map(serializeAgentDelegationGrant) });
     }),
   ];
 

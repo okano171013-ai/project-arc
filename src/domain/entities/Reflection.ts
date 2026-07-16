@@ -23,6 +23,15 @@ export interface ReflectionRecord {
   /** 事実と推測を分離する（Principle 5）。ここは事実の記述のみ。 */
   readonly todaysEvents?: string;
   readonly tomorrowsGoal?: string;
+  /**
+   * Version24（Owner決定・Constitution第4条限定改定）：自動保存対象は
+   * 「Owner本人が明示的に送信した内容のみ」が原則。機械的・低リスクに
+   * 算出した推定値を保存する場合は、この3フィールドで推定であること・
+   * 根拠・不確実性を明示する（確定事実として書かない）。
+   */
+  readonly estimated?: boolean;
+  readonly estimationBasis?: string;
+  readonly confidence?: 'low' | 'medium' | 'high';
 }
 
 export type Mood = 'great' | 'good' | 'neutral' | 'low' | 'bad';

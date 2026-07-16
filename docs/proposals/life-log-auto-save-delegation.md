@@ -1,12 +1,15 @@
-# 提案（Owner決定を受けた設計・次Version実装計画）：通常生活記録の自動保存
+# 提案（Version24でPhase1実装済み）：通常生活記録の自動保存
 
-**ステータス**：Owner決定（AgentMessage `f81e9141-...`）は既に確定済み。
-本ドキュメントはその決定を、Version22の権限委譲設計・既存データ
-モデルへ具体的に反映する設計と、次Version（Version23想定）の
-最小縦切り実装計画をまとめたもの。**実装はまだしていない**——
-Owner決定自体が「実装してよい」という許可であって「実装した」という
-事実ではないため、着手前に本ドキュメントの内容（特に4章の
-Constitution整合性の結論）をOwner・ARCに確認してもらう。
+**ステータス**：Owner決定（AgentMessage `f81e9141-...`）を受け、
+AgentMessage `1e02902f-...`（正式実装指示）に基づきVersion24で
+**Phase1を実装した**——`AgentDelegationGrant`（Reflection・
+ChallengeLog限定）、Constitution第4条の限定改定（ADR 0051）。
+4章のConstitution整合性の結論（改定不要）はOwnerによって採用され
+ず、明示的な限定改定という別の結論に置き換わった（ADR 0050は
+「却下・ADR 0051に置き換え」ステータスへ更新済み）。5章の技術設計・
+6章の確認事項は歴史的経緯として残すが、実際の実装はADR 0051・
+`docs/reports/Version24_Report.md`を参照すること。Phase2（食事・
+栄養・体重・収入）は未実装のまま次Version以降の課題。
 
 ## 1. Owner決定の要約
 

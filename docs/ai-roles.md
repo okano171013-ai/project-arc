@@ -197,20 +197,31 @@ Continuous Collaborationループの「Ownerが『do』で承認」という
    rejectのたびに機械的に1件記録される。`approval_decision_list`
    （MCP Tool）・`GET /approval-decisions`（HTTP）で参照できる。
 
-**この2つはOwnerの承認プロセスを一切変更しない**——Level2に
-分類されたProposalも、Level0に分類されたProposalも、従来どおり
-Ownerが`createProposal`の戻り値を再送すること（`do`）でしか
+**この2つは元々Ownerの承認プロセスを一切変更しないものだった**——
+Level2に分類されたProposalも、Level0に分類されたProposalも、
+従来どおりOwnerが`createProposal`の戻り値を再送すること（`do`）でしか
 `approveProposal`は実行されない（ADR 0031の「Ownerの再送が承認の
-証」という保証はそのまま）。ARCによる承認代行（Level1のProposalを
-Ownerの`do`なしに承認してよいという運用変更）と、Level2の迂回を
-暗号学的に防ぐ仕組み（認証の再導入）は、いずれもOwner確認が必要な
-論点として意図的に未実装のままにしてある（ADR 0048参照）。
+証」という保証はそのまま）。ARCによる**一般的な**承認代行（任意の
+Proposalを`do`なしに承認してよいという運用変更）は、引き続きOwner確認
+が必要な論点として意図的に未実装のままにしてある（ADR 0048参照、
+`docs/proposals/level1-arc-approval-delegation.md`）。
 
-### Authority Table（Version22〜）
+**ただしVersion24で、範囲を限定した例外を1つだけ設けた**——Owner本人が
+`AgentDelegationGrant`として明示的に発行した範囲（Reflection・
+ChallengeLogのみ）に限り、ARCは`do`なしに保存できる。これは
+Constitution第4条の限定改定（ADR 0051）であり、Owner自身が最終決定した
+上での例外であって、Claude Code・ARCが独自に解禁したものではない
+——`AgentDelegationGrant`自体の作成・変更は逆に常にLevel2として扱われ、
+Owner`do`を絶対に迂回できない（型ベースの決定的ルール、ADR 0051）。
+Level2の迂回を暗号学的に防ぐ仕組み（認証）もVersion24で本番有効化した
+（ADR 0049・0051、既知の限界は`docs/authority-table.md`参照）。
+
+### Authority Table（Version22〜、Version24で更新）
 
 Level0/1/2の実行主体・許可操作・禁止操作・エスカレーション条件を
 単一の表にまとめたものが[`docs/authority-table.md`](./authority-table.md)
-にある。判断に迷ったらまずこの表を確認する。Version22では、認証の
-再導入によるLevel2の実効性強化（ADR 0049、`docs/security/
-remote-mcp-threat-model.md`）と、Level1委譲の将来設計（未実装、
-`docs/proposals/level1-arc-approval-delegation.md`）を扱った。
+にある。判断に迷ったらまずこの表を確認する。Version22では認証方式の
+比較・脅威モデル・ローカル試作（ADR 0049）とLevel1委譲の将来設計
+（`docs/proposals/level1-arc-approval-delegation.md`）を扱い、
+Version24でOAuth本番有効化と`AgentDelegationGrant`（生活記録限定の
+委譲）を実装した（ADR 0051）。

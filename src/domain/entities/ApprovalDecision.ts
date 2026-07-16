@@ -27,6 +27,12 @@ export interface ApprovalDecisionRecord {
   readonly reason: string;
   readonly triggeredSignals: string[];
   readonly signals: ApprovalSignals;
+  /**
+   * Version24（Constitution第4条限定改定）：この決定がOwnerの`do`経由か
+   * `AgentDelegationGrant`による自動保存経由かを区別する。省略時は
+   * 既存レコードとの後方互換のため`'Owner'`として扱う。
+   */
+  readonly approver?: 'Owner' | 'auto-save';
 }
 
 export class ApprovalDecision {

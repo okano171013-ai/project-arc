@@ -46,4 +46,23 @@ describe('ClassifyApprovalLevelUseCase', () => {
     expect(result.level).toBe('Level2');
     expect(result.triggeredSignals).toEqual(['costImpact', 'destructive']);
   });
+
+  it('forces Level2 for AgentDelegationGrant regardless of signals (Version24: type固定ルール)', () => {
+    const withNoSignals = useCase.execute(undefined, 'AgentDelegationGrant');
+    expect(withNoSignals.level).toBe('Level2');
+
+    const withAllFalseSignals = useCase.execute(
+      {
+        costImpact: false,
+        externalExposureChange: false,
+        authOrSecretChange: false,
+        destructive: false,
+        personalDataExternalTransfer: false,
+        constitutionOrPrincipleChange: false,
+      },
+      'AgentDelegationGrant',
+    );
+    expect(withAllFalseSignals.level).toBe('Level2');
+    expect(withAllFalseSignals.triggeredSignals).toEqual([]);
+  });
 });

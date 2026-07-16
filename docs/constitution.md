@@ -7,6 +7,11 @@ Version9完了時にARC（ChatGPT）から提案され、Owner承認により202
 に正式採択（原文は
 [`docs/handoff/archive/2026-07_ARC_Roadmap2_and_Constitution_Proposal.md`](./handoff/archive/2026-07_ARC_Roadmap2_and_Constitution_Proposal.md)）。
 
+**改定履歴**：Version24（2026年7月）、第4条にOwner承認による限定改定
+（`AgentDelegationGrant`委譲の明文化）。Owner本人発信のAgentMessage
+（id `1e02902f-...`）による指示、詳細は`docs/adr/
+0051-version24-constitution-amendment-and-delegation.md`参照。
+
 新しい機能・Versionを検討する際は、この7条とPrinciples（`docs/
 principles.md`）の両方に立ち返ること。条文同士が衝突するように
 見える場合は、本文書内の「条文間の関係」を先に確認する。
@@ -27,7 +32,12 @@ ARCは、推論する。
 
 ### 第4条
 
-Ownerが、最終決定する。
+Ownerが、最終決定する。ただし、Ownerが`AgentDelegationGrant`として
+明示的に発行し、有効期限・上限・範囲を定めた事項に限り、その範囲内で
+ARCが個別の承認なしに記録を保存できる。委譲は常にOwnerが発行・
+一時停止・再開・取消しでき、有効なGrantが存在しない場合の既定は
+Ownerの個別承認である。Claude Code・ARC自身がGrantを作成・変更・
+復活させることはできない。
 
 ### 第5条
 
@@ -60,6 +70,17 @@ Purchase Log境界）は、すべてこの第1条を裏付ける具体的な設�
 Captureの責務分担）・ADR 0008（ARC Connector）・ADR 0010（Bridge
 Layer）は、いずれもこの2条を実装レベルで守るための具体的な設計
 判断だった。
+
+**第4条のVersion24改定（`AgentDelegationGrant`）と第2条との整合**：
+第4条の改定は、Ownerが範囲・期限・上限を明示して発行した委譲書
+（`AgentDelegationGrant`）の枠内でのみARCの即時保存を許すものであり、
+「Ownerが最終決定する」という原則そのものは変えていない——委譲書の
+発行・取消し自体が常にOwnerの個別承認（第4条本来のプロセス）を経る
+ため、決定権限の所在は一貫してOwnerにある。第2条との関係でも、
+自動保存の対象は「Owner本人が明示的に送信した内容の機械的な書き写し」
+に限られ、推測・補完した内容を確定事実として保存することはない
+（ADR 0051参照）——Systemが「何が重要か」「何が事実か」を判断する
+わけではなく、この改定によって第2条の意味が変わることもない。
 
 ### 第3条：ARCは推論する
 

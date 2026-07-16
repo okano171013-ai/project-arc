@@ -518,3 +518,54 @@ Version22のDoDは全項目達成済み。
 Version23のDoDは「設計・次Version計画の提示」という本Versionの
 スコープにおいて全項目達成済み。実装そのものはOwner・ARC確認後の
 次Versionに持ち越し。
+
+## Version24完了チェックリスト
+
+- [x] `pnpm test` が全て緑（321件、`AgentDelegationGrant`単体テスト
+      13件・`ManageAgentDelegationGrant`テスト6件・
+      `WriteProposalGateway`への追加テスト7件を含む）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] Constitution第4条を限定改定（`docs/constitution.md`、Plan Mode
+      承認済みの文言をそのまま反映、ADR 0051）
+- [x] `AgentDelegationGrant` Entity・状態機械（Active/Paused/Revoked、
+      Revoked→resumeは例外で拒否）を実装・単体テスト済み
+- [x] `ClassifyApprovalLevelUseCase`に型固定ルール（AgentDelegationGrant
+      は常にLevel2）を追加
+- [x] `WriteProposalGatewayUseCase`に自動承認ロジックを実装
+      （Reflection・ChallengeLogのみ、Level2は対象外、
+      AgentDelegationGrant自身は二重に対象外）
+- [x] 重複防止：`approveProposal`が`autoApproved`済みProposalの再送を
+      拒否することを実装・テスト済み
+- [x] 監査ログ拡張：`ApprovalDecisionRecord.approver`
+      （'Owner'|'auto-save'）を追加
+- [x] 新規MCP Tool `agent_delegation_grant_list`（読み取り専用）・
+      `GET /agent-delegation-grants`を追加
+- [x] **実HTTPリクエストでの実機確認**：grant作成→Owner do承認→
+      Reflection自動保存（`autoApproved: true`）→監査ログに
+      `approver: 'auto-save'`記録→usageCount増加→重複approve拒否
+      （400）→grant取消し（Revoked）→取消し後は自動保存が停止する
+      ことを一連で確認済み。検証用データは確認後に削除済み
+- [x] ADR 0051（Constitution改定の差分・効果・取消し方法、
+      AgentDelegationGrant設計、OAuth本番有効化の記録）を作成済み
+- [x] ADR 0050のステータスを「却下・ADR 0051に置き換え」へ更新
+- [x] `docs/authority-table.md`・`docs/ai-roles.md`・`docs/security/
+      remote-mcp-threat-model.md`・両`docs/proposals/*.md`を
+      Version24の内容に合わせて更新済み
+- [ ] **OAuth本番有効化**（`.env`への`MCP_OAUTH_ENABLED=true`・
+      Passcode設定、本番サービス再起動）——Claude Codeの実行環境の
+      安全機構によりブロックされ、**Owner自身の手作業として未実施**。
+      設定内容・Passcodeはチャットで直接伝達済み、`docs/setup/
+      remote-mcp-oauth-migration.md`に手順あり
+- [ ] ChatGPT Connectorの再作成（OAuthモード）——上記完了後にOwner
+      自身が実施
+- [x] `docs/handoff/archive/Version24_ARC_Brief.md`を作成済み
+- [x] `docs/handoff/ARC_INBOX.md`に処理済み（Owner操作待ち）エントリを
+      追記済み
+- [x] `docs/reports/Version24_Report.md`を生成済み（14章構成）
+- [x] `docs/reports/Version24_ARC_Feedback.md`（Owner次の一手を明示）
+      を生成済み
+
+Version24のDoDは、Claude Codeが実行できる範囲（B・C・E、コード実装・
+テスト・実機確認）で全項目達成済み。OAuth本番有効化（D）・ChatGPT
+Connector再作成（F）はOwner自身の操作待ち。

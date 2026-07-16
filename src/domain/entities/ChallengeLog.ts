@@ -10,6 +10,10 @@ export interface ChallengeLogRecord {
   readonly title: string; // 例: 「赤福」
   readonly category?: string; // 例: 食べ物 / 体験 / その他
   readonly note?: string;
+  /** Version24（Owner決定）：推定値を保存する場合の推定明示（Reflection.tsと同じ設計）。 */
+  readonly estimated?: boolean;
+  readonly estimationBasis?: string;
+  readonly confidence?: 'low' | 'medium' | 'high';
 }
 
 export class ChallengeLog {

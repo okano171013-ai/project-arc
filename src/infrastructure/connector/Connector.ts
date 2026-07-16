@@ -20,7 +20,9 @@ export type ConnectorProposalType =
   | 'ExternalKnowledge'
   | 'Appearance'
   | 'ManagementFeedback'
-  | 'AgentMessage';
+  | 'AgentMessage'
+  | 'ChallengeLog'
+  | 'AgentDelegationGrant';
 
 export type ConnectorApprovalLevel = 'Level0' | 'Level1' | 'Level2';
 
@@ -42,12 +44,25 @@ export interface ConnectorProposal {
   readonly createdAt: string;
   readonly signals?: ConnectorApprovalSignals;
   readonly approvalLevel?: ConnectorApprovalLevel;
+  /** Version24：有効なAgentDelegationGrantによりOwnerのdoなしで即時書き込みされた場合のみtrue。 */
+  readonly autoApproved?: boolean;
+  readonly result?: unknown;
 }
 
 export interface ConnectorApprovalDecision {
   readonly id: string;
   readonly record: Record<string, unknown>;
   readonly createdAt: string;
+}
+
+export type ConnectorAgentDelegationGrantStatus = 'Active' | 'Paused' | 'Revoked';
+
+export interface ConnectorAgentDelegationGrant {
+  readonly id: string;
+  readonly record: Record<string, unknown>;
+  readonly createdAt: string;
+  readonly status: ConnectorAgentDelegationGrantStatus;
+  readonly usageCount: number;
 }
 
 export type ManagementFeedbackResolution =
@@ -222,6 +237,17 @@ export class Connector {
     level?: ConnectorApprovalLevel,
   ): Promise<{ decisions: ConnectorApprovalDecision[] }> {
     const path = level ? `/approval-decisions?level=${encodeURIComponent(level)}` : '/approval-decisions';
+    return this.request('GET', path);
+  }
+
+  // --- AgentDelegationGrant（Version24、Constitution第4条限定改定） ---
+  // 書き込みはcreateProposal/approveProposal（type: 'AgentDelegationGrant'）
+  // をそのまま使う。読み取りのみ専用メソッドを持つ。
+
+  async listAgentDelegationGrants(
+    status?: ConnectorAgentDelegationGrantStatus,
+  ): Promise<{ grants: ConnectorAgentDelegationGrant[] }> {
+    const path = status ? `/agent-delegation-grants?status=${encodeURIComponent(status)}` : '/agent-delegation-grants';
     return this.request('GET', path);
   }
 
