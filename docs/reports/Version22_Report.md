@@ -1,5 +1,7 @@
 # Version22 Report: Authority Boundary and Secure Approval
 
+**コミットハッシュ**：`b0764ad`（`feature/v4-v6-smart-capture`ブランチ）
+
 `docs/reports/TEMPLATE.md`の14章構成に準拠。
 
 ## 1. Version概要
