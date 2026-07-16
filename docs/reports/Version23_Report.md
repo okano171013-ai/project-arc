@@ -1,5 +1,7 @@
 # Version23 Report: Life Log Auto-Save Delegation（設計・次Version計画）
 
+**コミットハッシュ**：`73c493a`（`feature/v4-v6-smart-capture`ブランチ）
+
 `docs/reports/TEMPLATE.md`の14章構成に準拠。**本Versionはコード実装を
 含まない設計・次Version計画の提示のみ**——Owner決定（AgentMessage
 `f81e9141-...`）自身が「次Version実装計画を提示してください」と
