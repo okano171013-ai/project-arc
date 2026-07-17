@@ -29,6 +29,10 @@ import { JsonFileAgentMessageRepository } from '../../adapters/repositories/Json
 import { JsonFileApprovalDecisionRepository } from '../../adapters/repositories/JsonFileApprovalDecisionRepository.js';
 import { JsonFileChallengeLogRepository } from '../../adapters/repositories/JsonFileChallengeLogRepository.js';
 import { JsonFileAgentDelegationGrantRepository } from '../../adapters/repositories/JsonFileAgentDelegationGrantRepository.js';
+import { JsonFileMealLogRepository } from '../../adapters/repositories/JsonFileMealLogRepository.js';
+import { JsonFileNutritionLogRepository } from '../../adapters/repositories/JsonFileNutritionLogRepository.js';
+import { JsonFileWeightLogRepository } from '../../adapters/repositories/JsonFileWeightLogRepository.js';
+import { JsonFileFinanceLogRepository } from '../../adapters/repositories/JsonFileFinanceLogRepository.js';
 import type { ProposalType, Proposal } from '../../domain/value-objects/Proposal.js';
 import type { ManagementFeedbackResolution } from '../../domain/entities/ManagementFeedback.js';
 import type { MemoryCategory } from '../../domain/entities/MemoryEntry.js';
@@ -43,6 +47,18 @@ const TYPES: ProposalType[] = [
   'AgentMessage',
   'ChallengeLog',
   'AgentDelegationGrant',
+  'MealLog',
+  'NutritionLog',
+  'WeightLog',
+  'FinanceLog',
+];
+const AGENT_DELEGATION_GRANT_SCOPES: AgentDelegationGrantScope[] = [
+  'Reflection',
+  'ChallengeLog',
+  'MealLog',
+  'NutritionLog',
+  'WeightLog',
+  'FinanceLog',
 ];
 const MEMORY_CATEGORIES: MemoryCategory[] = [
   'Assets', 'Appearance', 'Goals', 'Preferences', 'Education',
@@ -66,6 +82,10 @@ function buildGateway(): WriteProposalGatewayUseCase {
     new JsonFileApprovalDecisionRepository(),
     new JsonFileChallengeLogRepository(),
     new JsonFileAgentDelegationGrantRepository(),
+    new JsonFileMealLogRepository(),
+    new JsonFileNutritionLogRepository(),
+    new JsonFileWeightLogRepository(),
+    new JsonFileFinanceLogRepository(),
   );
 }
 
@@ -183,11 +203,15 @@ async function promptPayload(rl: Rl, type: ProposalType): Promise<Record<string,
         const id = await rl.question('対象GrantのID: ');
         return { action: resolvedAction, id };
       }
-      const scopeRaw = await rl.question('scope (カンマ区切り、Reflection/ChallengeLog): ');
+      const scopeRaw = await rl.question(
+        `scope (カンマ区切り、${AGENT_DELEGATION_GRANT_SCOPES.join('/')}): `,
+      );
       const scope = scopeRaw
         .split(',')
         .map((s) => s.trim())
-        .filter((s): s is AgentDelegationGrantScope => s === 'Reflection' || s === 'ChallengeLog');
+        .filter((s): s is AgentDelegationGrantScope =>
+          (AGENT_DELEGATION_GRANT_SCOPES as string[]).includes(s),
+        );
       const expiresAtDays = await rl.question('有効期限 (今日から何日後): ');
       const usageLimitRaw = await rl.question('上限回数: ');
       const reason = await rl.question('理由: ');
@@ -195,6 +219,71 @@ async function promptPayload(rl: Rl, type: ProposalType): Promise<Record<string,
       return {
         action: 'create',
         record: { scope, expiresAt, usageLimit: Number(usageLimitRaw), reason },
+      };
+    }
+    case 'MealLog': {
+      const occurredAt = await rl.question('日時 (ISO8601、例: 2026-07-17T12:00:00+09:00): ');
+      const itemsRaw = await rl.question('食べたもの (カンマ区切り): ');
+      const mealTypeRaw = await rl.question('食事区分 (1=breakfast/2=lunch/3=dinner/4=snack/5=other、任意): ');
+      const mealTypeMap: Record<string, 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'other'> = {
+        '1': 'breakfast',
+        '2': 'lunch',
+        '3': 'dinner',
+        '4': 'snack',
+        '5': 'other',
+      };
+      const notes = await rl.question('メモ (任意): ');
+      return {
+        record: {
+          occurredAt,
+          items: itemsRaw.split(',').map((s) => s.trim()).filter(Boolean),
+          mealType: mealTypeMap[mealTypeRaw.trim()],
+          notes: notes || undefined,
+        },
+      };
+    }
+    case 'NutritionLog': {
+      const mealLogId = await rl.question('対象MealLogのID: ');
+      const caloriesRaw = await rl.question('カロリー kcal (任意): ');
+      const basis = await rl.question('推定根拠 (例: 写真からの推定): ');
+      const confidenceRaw = await rl.question('確信度 (1=low/2=medium/3=high、任意): ');
+      const confidenceMap: Record<string, 'low' | 'medium' | 'high'> = { '1': 'low', '2': 'medium', '3': 'high' };
+      const uncertaintyNote = await rl.question('確信度未入力の場合は不確実性の説明: ');
+      return {
+        record: {
+          mealLogId,
+          calories: caloriesRaw ? Number(caloriesRaw) : undefined,
+          estimated: true,
+          basis,
+          confidence: confidenceMap[confidenceRaw.trim()],
+          uncertaintyNote: uncertaintyNote || undefined,
+        },
+      };
+    }
+    case 'WeightLog': {
+      const measuredAt = await rl.question('計測日時 (ISO8601、例: 2026-07-17T07:00:00+09:00): ');
+      const weightKgRaw = await rl.question('体重 kg: ');
+      const measurementContext = await rl.question('状況 (例: 起床後、任意): ');
+      return {
+        record: {
+          measuredAt,
+          weightKg: Number(weightKgRaw),
+          measurementContext: measurementContext || undefined,
+        },
+      };
+    }
+    case 'FinanceLog': {
+      const occurredAt = await rl.question('日時 (ISO8601、例: 2026-07-17T12:00:00+09:00): ');
+      const typeRaw = await rl.question('種別 (1=Income/2=Expense): ');
+      const amountRaw = await rl.question('金額: ');
+      const category = await rl.question('カテゴリ (任意): ');
+      return {
+        record: {
+          occurredAt,
+          type: typeRaw.trim() === '1' ? 'Income' : 'Expense',
+          amount: Number(amountRaw),
+          category: category || undefined,
+        },
       };
     }
   }

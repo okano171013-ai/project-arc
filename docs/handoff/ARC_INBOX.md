@@ -151,6 +151,22 @@ grant作成→承認→自動保存→監査記録→重複拒否→取消し→
 （ファイルには記録していない）。手順は`docs/setup/
 remote-mcp-oauth-migration.md`参照。
 
+**処理済み**：Version25「Life Log Phase 2」（`docs/reports/
+Version25_Report.md`）。Owner本人発信のAgentMessage（id
+`70926e76-...`）による指示——Version24の`AgentDelegationGrant`
+（Reflection・ChallengeLog限定）のscopeを、食事・栄養・体重・収支の
+4カテゴリへ拡張した。4つの新規Entity（`MealLog`・`NutritionLog`・
+`WeightLog`・`FinanceLog`、Owner確認済みの記録粒度：食事単位・1計測
+1記録・取引単位）、`AgentDelegationGrantScope`の6型拡張、
+idempotencyKeyによる重複防止、5つの読み取り専用MCP Tool・対応する
+HTTP Routeを実装した。Version24の型固定Level2ルール・重複防止・
+監査・default denyは無変更のまま拡張された。実HTTPリクエストで
+grant作成→承認→MealLog自動保存→重複拒否→一覧取得→idempotencyKey
+dedup→usageCount増加の一連を実機確認済み。OAuth本番有効化・`.env`
+変更は指示書により対象外（未着手）。訂正・削除UseCaseは次Version
+課題として持ち越し（原文は`docs/handoff/archive/
+Version25_ARC_Brief.md`に保管）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください
 （またはARCが直接AgentMessageとして送ってくることもあります

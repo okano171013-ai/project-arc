@@ -22,7 +22,11 @@ export type ConnectorProposalType =
   | 'ManagementFeedback'
   | 'AgentMessage'
   | 'ChallengeLog'
-  | 'AgentDelegationGrant';
+  | 'AgentDelegationGrant'
+  | 'MealLog'
+  | 'NutritionLog'
+  | 'WeightLog'
+  | 'FinanceLog';
 
 export type ConnectorApprovalLevel = 'Level0' | 'Level1' | 'Level2';
 
@@ -63,6 +67,68 @@ export interface ConnectorAgentDelegationGrant {
   readonly createdAt: string;
   readonly status: ConnectorAgentDelegationGrantStatus;
   readonly usageCount: number;
+}
+
+export interface ConnectorMealLog {
+  readonly id: string;
+  readonly record: Record<string, unknown>;
+  readonly createdAt: string;
+}
+
+export interface ConnectorNutritionLog {
+  readonly id: string;
+  readonly record: Record<string, unknown>;
+  readonly createdAt: string;
+}
+
+export interface ConnectorWeightLog {
+  readonly id: string;
+  readonly record: Record<string, unknown>;
+  readonly createdAt: string;
+}
+
+export interface ConnectorFinanceLog {
+  readonly id: string;
+  readonly record: Record<string, unknown>;
+  readonly createdAt: string;
+}
+
+export interface ConnectorNutritionSummary {
+  readonly date: string;
+  readonly totals: {
+    calories: number;
+    proteinG: number;
+    fatG: number;
+    carbohydrateG: number;
+    fiberG: number;
+    saltG: number;
+  };
+  readonly mealLogCount: number;
+  readonly nutritionLogCount: number;
+  readonly containsEstimatedValues: boolean;
+}
+
+export interface ListMealLogsInput {
+  limit: number;
+  date?: string;
+  mealType?: string;
+}
+
+export interface ListNutritionLogsInput {
+  limit: number;
+  mealLogId?: string;
+}
+
+export interface ListWeightLogsInput {
+  limit: number;
+  date?: string;
+}
+
+export interface ListFinanceLogsInput {
+  limit: number;
+  date?: string;
+  category?: string;
+  type?: 'Income' | 'Expense';
 }
 
 export type ManagementFeedbackResolution =
@@ -249,6 +315,41 @@ export class Connector {
   ): Promise<{ grants: ConnectorAgentDelegationGrant[] }> {
     const path = status ? `/agent-delegation-grants?status=${encodeURIComponent(status)}` : '/agent-delegation-grants';
     return this.request('GET', path);
+  }
+
+  // --- Life Log Phase 2（Version25） ---
+  // 書き込みはcreateProposal/approveProposal（type: 'MealLog'等）を
+  // そのまま使う。読み取りのみ専用メソッドを持つ。
+
+  async listMealLogs(input: ListMealLogsInput): Promise<{ logs: ConnectorMealLog[] }> {
+    const params = new URLSearchParams({ limit: String(input.limit) });
+    if (input.date) params.set('date', input.date);
+    if (input.mealType) params.set('mealType', input.mealType);
+    return this.request('GET', `/meal-logs?${params.toString()}`);
+  }
+
+  async listNutritionLogs(input: ListNutritionLogsInput): Promise<{ logs: ConnectorNutritionLog[] }> {
+    const params = new URLSearchParams({ limit: String(input.limit) });
+    if (input.mealLogId) params.set('mealLogId', input.mealLogId);
+    return this.request('GET', `/nutrition-logs?${params.toString()}`);
+  }
+
+  async summarizeNutritionByDate(date: string): Promise<ConnectorNutritionSummary> {
+    return this.request('GET', `/nutrition-logs/summary?date=${encodeURIComponent(date)}`);
+  }
+
+  async listWeightLogs(input: ListWeightLogsInput): Promise<{ logs: ConnectorWeightLog[] }> {
+    const params = new URLSearchParams({ limit: String(input.limit) });
+    if (input.date) params.set('date', input.date);
+    return this.request('GET', `/weight-logs?${params.toString()}`);
+  }
+
+  async listFinanceLogs(input: ListFinanceLogsInput): Promise<{ logs: ConnectorFinanceLog[] }> {
+    const params = new URLSearchParams({ limit: String(input.limit) });
+    if (input.date) params.set('date', input.date);
+    if (input.category) params.set('category', input.category);
+    if (input.type) params.set('type', input.type);
+    return this.request('GET', `/finance-logs?${params.toString()}`);
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {

@@ -1,4 +1,4 @@
-# 提案（Version24でPhase1実装済み）：通常生活記録の自動保存
+# 提案（Version24でPhase1・Version25でPhase2実装済み）：通常生活記録の自動保存
 
 **ステータス**：Owner決定（AgentMessage `f81e9141-...`）を受け、
 AgentMessage `1e02902f-...`（正式実装指示）に基づきVersion24で
@@ -8,8 +8,14 @@ ChallengeLog限定）、Constitution第4条の限定改定（ADR 0051）。
 ず、明示的な限定改定という別の結論に置き換わった（ADR 0050は
 「却下・ADR 0051に置き換え」ステータスへ更新済み）。5章の技術設計・
 6章の確認事項は歴史的経緯として残すが、実際の実装はADR 0051・
-`docs/reports/Version24_Report.md`を参照すること。Phase2（食事・
-栄養・体重・収入）は未実装のまま次Version以降の課題。
+`docs/reports/Version24_Report.md`を参照すること。
+
+続いてAgentMessage `70926e76-...`（正式実装指示）に基づきVersion25で
+**Phase2（食事・栄養・体重・収支）も実装した**——`MealLog`・
+`NutritionLog`・`WeightLog`・`FinanceLog`の4 Entityと、
+`AgentDelegationGrant`のscope拡張（6型）。下記「Phase2の記録粒度」
+の回答をそのまま設計へ反映した（食事単位・1計測1記録・取引単位）。
+詳細はADR 0052・`docs/reports/Version25_Report.md`参照。
 
 **Phase2の記録粒度（ARC回答、AgentMessage `fb9ee72f-...`、
 2026-07-16）**：6章の質問3への回答が届いた。

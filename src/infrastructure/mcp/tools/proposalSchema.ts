@@ -15,6 +15,10 @@ export const PROPOSAL_TYPES = [
   'AgentMessage',
   'ChallengeLog',
   'AgentDelegationGrant',
+  'MealLog',
+  'NutritionLog',
+  'WeightLog',
+  'FinanceLog',
 ] as const;
 
 /**

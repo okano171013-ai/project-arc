@@ -66,6 +66,10 @@ const proposalTypeSchema = z
     'AgentMessage',
     'ChallengeLog',
     'AgentDelegationGrant',
+    'MealLog',
+    'NutritionLog',
+    'WeightLog',
+    'FinanceLog',
   ])
   .openapi('ProposalType');
 
@@ -291,6 +295,68 @@ registerGet({
   }),
   responseDescription: 'AgentDelegationGrantの一覧',
   responseSchema: z.object({ grants: z.array(z.record(z.unknown())) }),
+});
+
+// --- Life Log Phase 2（Version25） ---
+
+registerGet({
+  operationId: 'listMealLogs',
+  path: '/meal-logs',
+  summary: 'MealLog（食事記録）を新しい順に最大limit件取得する',
+  query: z.object({
+    limit: z.string(),
+    date: z.string().optional(),
+    mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack', 'other']).optional(),
+  }),
+  responseDescription: 'MealLogの一覧',
+  responseSchema: z.object({ logs: z.array(z.record(z.unknown())) }),
+});
+
+registerGet({
+  operationId: 'listNutritionLogs',
+  path: '/nutrition-logs',
+  summary: 'NutritionLog（栄養推定記録）を新しい順に最大limit件取得する',
+  query: z.object({
+    limit: z.string(),
+    mealLogId: z.string().optional(),
+  }),
+  responseDescription: 'NutritionLogの一覧',
+  responseSchema: z.object({ logs: z.array(z.record(z.unknown())) }),
+});
+
+registerGet({
+  operationId: 'summarizeNutritionByDate',
+  path: '/nutrition-logs/summary',
+  summary: '指定日のNutritionLogをMealLog経由で紐づけ、日次合計を都度再計算して返す（保存はしない）',
+  query: z.object({ date: z.string() }),
+  responseDescription: '日次栄養合計',
+  responseSchema: z.record(z.unknown()),
+});
+
+registerGet({
+  operationId: 'listWeightLogs',
+  path: '/weight-logs',
+  summary: 'WeightLog（体重記録）を新しい順に最大limit件取得する',
+  query: z.object({
+    limit: z.string(),
+    date: z.string().optional(),
+  }),
+  responseDescription: 'WeightLogの一覧',
+  responseSchema: z.object({ logs: z.array(z.record(z.unknown())) }),
+});
+
+registerGet({
+  operationId: 'listFinanceLogs',
+  path: '/finance-logs',
+  summary: 'FinanceLog（収支の原取引記録）を新しい順に最大limit件取得する',
+  query: z.object({
+    limit: z.string(),
+    date: z.string().optional(),
+    category: z.string().optional(),
+    type: z.enum(['Income', 'Expense']).optional(),
+  }),
+  responseDescription: 'FinanceLogの一覧',
+  responseSchema: z.object({ logs: z.array(z.record(z.unknown())) }),
 });
 
 export function generateOpenApiDocument() {

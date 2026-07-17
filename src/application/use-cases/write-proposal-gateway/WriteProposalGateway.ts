@@ -11,6 +11,10 @@ import type { AgentMessageRepository } from '../../ports/AgentMessageRepository.
 import type { ApprovalDecisionRepository } from '../../ports/ApprovalDecisionRepository.js';
 import type { ChallengeLogRepository } from '../../ports/ChallengeLogRepository.js';
 import type { AgentDelegationGrantRepository } from '../../ports/AgentDelegationGrantRepository.js';
+import type { MealLogRepository } from '../../ports/MealLogRepository.js';
+import type { NutritionLogRepository } from '../../ports/NutritionLogRepository.js';
+import type { WeightLogRepository } from '../../ports/WeightLogRepository.js';
+import type { FinanceLogRepository } from '../../ports/FinanceLogRepository.js';
 import { RecordDailyReflectionUseCase } from '../reflection/RecordDailyReflection.js';
 import { AddMemoryEntryUseCase } from '../memory/AddMemoryEntry.js';
 import { AddExternalKnowledgeUseCase } from '../external-knowledge/AddExternalKnowledge.js';
@@ -19,11 +23,27 @@ import { AddManagementFeedbackUseCase } from '../management-feedback/AddManageme
 import { AddAgentMessageUseCase } from '../agent-message/AddAgentMessage.js';
 import { AddChallengeLogUseCase } from '../challenge/AddChallengeLog.js';
 import { ManageAgentDelegationGrantUseCase } from '../agent-delegation-grant/ManageAgentDelegationGrant.js';
+import { AddMealLogUseCase } from '../meal/AddMealLog.js';
+import { AddNutritionLogUseCase } from '../nutrition/AddNutritionLog.js';
+import { AddWeightLogUseCase } from '../weight/AddWeightLog.js';
+import { AddFinanceLogUseCase } from '../finance/AddFinanceLog.js';
 import { ClassifyApprovalLevelUseCase } from '../approval-policy/ClassifyApprovalLevel.js';
 import { RecordApprovalDecisionUseCase } from '../approval-policy/RecordApprovalDecision.js';
 
-/** Version24：この2型のみ、有効なAgentDelegationGrantがあれば自動承認の対象になりうる。 */
-const AUTO_APPROVABLE_TYPES: readonly ProposalType[] = ['Reflection', 'ChallengeLog'];
+/**
+ * Version24で導入、Version25で拡張：この6型のみ、有効な
+ * AgentDelegationGrantがあれば自動承認の対象になりうる。
+ * `AgentDelegationGrant`自体は絶対に含めない（型固定Level2ルールと
+ * 合わせた二重の安全装置、ADR 0051）。
+ */
+const AUTO_APPROVABLE_TYPES: readonly ProposalType[] = [
+  'Reflection',
+  'ChallengeLog',
+  'MealLog',
+  'NutritionLog',
+  'WeightLog',
+  'FinanceLog',
+];
 
 /**
  * typeごとのpayload構造だけを検証するzodスキーマ。ここでの検証は
@@ -119,13 +139,69 @@ const payloadSchemas: Record<ProposalType, z.ZodTypeAny> = {
     action: z.enum(['create', 'pause', 'resume', 'revoke']),
     record: z
       .object({
-        scope: z.array(z.enum(['Reflection', 'ChallengeLog'])).min(1),
+        scope: z
+          .array(z.enum(['Reflection', 'ChallengeLog', 'MealLog', 'NutritionLog', 'WeightLog', 'FinanceLog']))
+          .min(1),
         expiresAt: z.string(),
         usageLimit: z.number().positive(),
         reason: z.string().min(1),
       })
       .optional(),
     id: z.string().optional(),
+  }),
+  MealLog: z.object({
+    record: z.object({
+      occurredAt: z.string(),
+      mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack', 'other']).optional(),
+      items: z.array(z.string()).min(1),
+      portion: z.string().optional(),
+      source: z.string().optional(),
+      notes: z.string().optional(),
+      photoPath: z.string().optional(),
+      idempotencyKey: z.string().optional(),
+      estimated: z.boolean().optional(),
+      estimationBasis: z.string().optional(),
+      confidence: z.enum(['low', 'medium', 'high']).optional(),
+    }),
+  }),
+  NutritionLog: z.object({
+    record: z.object({
+      mealLogId: z.string().min(1),
+      calories: z.number().optional(),
+      proteinG: z.number().optional(),
+      fatG: z.number().optional(),
+      carbohydrateG: z.number().optional(),
+      fiberG: z.number().optional(),
+      saltG: z.number().optional(),
+      estimated: z.boolean(),
+      basis: z.string().min(1),
+      confidence: z.enum(['low', 'medium', 'high']).optional(),
+      uncertaintyNote: z.string().optional(),
+      idempotencyKey: z.string().optional(),
+    }),
+  }),
+  WeightLog: z.object({
+    record: z.object({
+      measuredAt: z.string(),
+      weightKg: z.number(),
+      measurementContext: z.string().optional(),
+      source: z.string().optional(),
+      notes: z.string().optional(),
+      idempotencyKey: z.string().optional(),
+    }),
+  }),
+  FinanceLog: z.object({
+    record: z.object({
+      occurredAt: z.string(),
+      type: z.enum(['Income', 'Expense']),
+      amount: z.number(),
+      currency: z.string().optional(),
+      category: z.string().optional(),
+      paymentMethod: z.string().optional(),
+      merchantOrSource: z.string().optional(),
+      notes: z.string().optional(),
+      idempotencyKey: z.string().optional(),
+    }),
   }),
 };
 
@@ -170,6 +246,10 @@ export class WriteProposalGatewayUseCase {
   private readonly addAgentMessage: AddAgentMessageUseCase;
   private readonly addChallengeLog: AddChallengeLogUseCase;
   private readonly manageAgentDelegationGrant: ManageAgentDelegationGrantUseCase;
+  private readonly addMealLog: AddMealLogUseCase;
+  private readonly addNutritionLog: AddNutritionLogUseCase;
+  private readonly addWeightLog: AddWeightLogUseCase;
+  private readonly addFinanceLog: AddFinanceLogUseCase;
   private readonly classifyApprovalLevel: ClassifyApprovalLevelUseCase;
   private readonly recordApprovalDecision: RecordApprovalDecisionUseCase;
 
@@ -184,6 +264,10 @@ export class WriteProposalGatewayUseCase {
     approvalDecisionRepository: ApprovalDecisionRepository,
     challengeLogRepository: ChallengeLogRepository,
     private readonly agentDelegationGrantRepository: AgentDelegationGrantRepository,
+    mealLogRepository: MealLogRepository,
+    nutritionLogRepository: NutritionLogRepository,
+    weightLogRepository: WeightLogRepository,
+    financeLogRepository: FinanceLogRepository,
   ) {
     this.recordDailyReflection = new RecordDailyReflectionUseCase(reflectionRepository);
     this.addMemoryEntry = new AddMemoryEntryUseCase(memoryRepository);
@@ -196,6 +280,10 @@ export class WriteProposalGatewayUseCase {
     this.addAgentMessage = new AddAgentMessageUseCase(agentMessageRepository);
     this.addChallengeLog = new AddChallengeLogUseCase(challengeLogRepository);
     this.manageAgentDelegationGrant = new ManageAgentDelegationGrantUseCase(agentDelegationGrantRepository);
+    this.addMealLog = new AddMealLogUseCase(mealLogRepository);
+    this.addNutritionLog = new AddNutritionLogUseCase(nutritionLogRepository);
+    this.addWeightLog = new AddWeightLogUseCase(weightLogRepository);
+    this.addFinanceLog = new AddFinanceLogUseCase(financeLogRepository);
     this.classifyApprovalLevel = new ClassifyApprovalLevelUseCase();
     this.recordApprovalDecision = new RecordApprovalDecisionUseCase(approvalDecisionRepository);
   }
@@ -366,6 +454,30 @@ export class WriteProposalGatewayUseCase {
       case 'AgentDelegationGrant': {
         const result = await this.manageAgentDelegationGrant.execute(
           payload as unknown as Parameters<ManageAgentDelegationGrantUseCase['execute']>[0],
+        );
+        return { type, result };
+      }
+      case 'MealLog': {
+        const result = await this.addMealLog.execute(
+          payload as unknown as Parameters<AddMealLogUseCase['execute']>[0],
+        );
+        return { type, result };
+      }
+      case 'NutritionLog': {
+        const result = await this.addNutritionLog.execute(
+          payload as unknown as Parameters<AddNutritionLogUseCase['execute']>[0],
+        );
+        return { type, result };
+      }
+      case 'WeightLog': {
+        const result = await this.addWeightLog.execute(
+          payload as unknown as Parameters<AddWeightLogUseCase['execute']>[0],
+        );
+        return { type, result };
+      }
+      case 'FinanceLog': {
+        const result = await this.addFinanceLog.execute(
+          payload as unknown as Parameters<AddFinanceLogUseCase['execute']>[0],
         );
         return { type, result };
       }

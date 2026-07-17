@@ -20,6 +20,14 @@ import type { ChallengeLog } from '../../../domain/entities/ChallengeLog.js';
 import type { ChallengeLogRepository } from '../../ports/ChallengeLogRepository.js';
 import { AgentDelegationGrant } from '../../../domain/entities/AgentDelegationGrant.js';
 import type { AgentDelegationGrantRepository } from '../../ports/AgentDelegationGrantRepository.js';
+import type { MealLog } from '../../../domain/entities/MealLog.js';
+import type { MealLogRepository } from '../../ports/MealLogRepository.js';
+import type { NutritionLog } from '../../../domain/entities/NutritionLog.js';
+import type { NutritionLogRepository } from '../../ports/NutritionLogRepository.js';
+import type { WeightLog } from '../../../domain/entities/WeightLog.js';
+import type { WeightLogRepository } from '../../ports/WeightLogRepository.js';
+import type { FinanceLog } from '../../../domain/entities/FinanceLog.js';
+import type { FinanceLogRepository } from '../../ports/FinanceLogRepository.js';
 
 class FakeReflectionRepository implements ReflectionRepository {
   store = new Map<string, Reflection>();
@@ -157,6 +165,46 @@ class FakeAgentDelegationGrantRepository implements AgentDelegationGrantReposito
   }
 }
 
+class FakeMealLogRepository implements MealLogRepository {
+  store: MealLog[] = [];
+  async save(log: MealLog): Promise<void> {
+    this.store.push(log);
+  }
+  async findAll(): Promise<MealLog[]> {
+    return this.store;
+  }
+}
+
+class FakeNutritionLogRepository implements NutritionLogRepository {
+  store: NutritionLog[] = [];
+  async save(log: NutritionLog): Promise<void> {
+    this.store.push(log);
+  }
+  async findAll(): Promise<NutritionLog[]> {
+    return this.store;
+  }
+}
+
+class FakeWeightLogRepository implements WeightLogRepository {
+  store: WeightLog[] = [];
+  async save(log: WeightLog): Promise<void> {
+    this.store.push(log);
+  }
+  async findAll(): Promise<WeightLog[]> {
+    return this.store;
+  }
+}
+
+class FakeFinanceLogRepository implements FinanceLogRepository {
+  store: FinanceLog[] = [];
+  async save(log: FinanceLog): Promise<void> {
+    this.store.push(log);
+  }
+  async findAll(): Promise<FinanceLog[]> {
+    return this.store;
+  }
+}
+
 function buildGateway() {
   const reflectionRepo = new FakeReflectionRepository();
   const memoryRepo = new FakeMemoryRepository();
@@ -168,6 +216,10 @@ function buildGateway() {
   const approvalDecisionRepo = new FakeApprovalDecisionRepository();
   const challengeLogRepo = new FakeChallengeLogRepository();
   const agentDelegationGrantRepo = new FakeAgentDelegationGrantRepository();
+  const mealLogRepo = new FakeMealLogRepository();
+  const nutritionLogRepo = new FakeNutritionLogRepository();
+  const weightLogRepo = new FakeWeightLogRepository();
+  const financeLogRepo = new FakeFinanceLogRepository();
   const gateway = new WriteProposalGatewayUseCase(
     reflectionRepo,
     memoryRepo,
@@ -179,6 +231,10 @@ function buildGateway() {
     approvalDecisionRepo,
     challengeLogRepo,
     agentDelegationGrantRepo,
+    mealLogRepo,
+    nutritionLogRepo,
+    weightLogRepo,
+    financeLogRepo,
   );
   return {
     gateway,
@@ -192,6 +248,10 @@ function buildGateway() {
     approvalDecisionRepo,
     challengeLogRepo,
     agentDelegationGrantRepo,
+    mealLogRepo,
+    nutritionLogRepo,
+    weightLogRepo,
+    financeLogRepo,
   };
 }
 
@@ -296,6 +356,34 @@ describe('WriteProposalGatewayUseCase', () => {
       { record: { direction: 'ToClaudeCode', content: '指示書の内容' } },
       (ctx: ReturnType<typeof buildGateway>) => ctx.agentMessageRepo.store.size,
     ],
+    [
+      'MealLog' as const,
+      { record: { occurredAt: '2026-07-17T12:00:00.000Z', items: ['味噌汁', 'ご飯'] } },
+      (ctx: ReturnType<typeof buildGateway>) => ctx.mealLogRepo.store.length,
+    ],
+    [
+      'NutritionLog' as const,
+      {
+        record: {
+          mealLogId: 'm-1',
+          calories: 600,
+          estimated: true,
+          basis: '写真からの推定',
+          confidence: 'medium',
+        },
+      },
+      (ctx: ReturnType<typeof buildGateway>) => ctx.nutritionLogRepo.store.length,
+    ],
+    [
+      'WeightLog' as const,
+      { record: { measuredAt: '2026-07-17T07:00:00.000Z', weightKg: 68.5 } },
+      (ctx: ReturnType<typeof buildGateway>) => ctx.weightLogRepo.store.length,
+    ],
+    [
+      'FinanceLog' as const,
+      { record: { occurredAt: '2026-07-17T12:00:00.000Z', type: 'Expense', amount: 1200 } },
+      (ctx: ReturnType<typeof buildGateway>) => ctx.financeLogRepo.store.length,
+    ],
   ])('approveProposal persists a %s proposal via the corresponding UseCase (承認時の保存)', async (type, payload, countOf) => {
     const proposal = await ctx.gateway.createProposal({
       type,
@@ -364,7 +452,13 @@ describe('WriteProposalGatewayUseCase', () => {
   });
 
   describe('AgentDelegationGrant auto-approval (Version24, Constitution第4条限定改定)', () => {
-    async function seedGrant(ctx2: ReturnType<typeof buildGateway>, overrides: Partial<{ usageLimit: number; scope: ('Reflection' | 'ChallengeLog')[] }> = {}) {
+    async function seedGrant(
+      ctx2: ReturnType<typeof buildGateway>,
+      overrides: Partial<{
+        usageLimit: number;
+        scope: ('Reflection' | 'ChallengeLog' | 'MealLog' | 'NutritionLog' | 'WeightLog' | 'FinanceLog')[];
+      }> = {},
+    ) {
       const grant = AgentDelegationGrant.create({
         id: 'grant-1',
         record: {
@@ -488,5 +582,84 @@ describe('WriteProposalGatewayUseCase', () => {
       expect(proposal.autoApproved).toBeUndefined();
       expect(ctx.challengeLogRepo.store).toHaveLength(0);
     });
+
+    it.each([
+      [
+        'MealLog' as const,
+        { record: { occurredAt: '2026-07-17T12:00:00.000Z', items: ['味噌汁'] } },
+        (ctx2: ReturnType<typeof buildGateway>) => ctx2.mealLogRepo.store.length,
+      ],
+      [
+        'NutritionLog' as const,
+        {
+          record: {
+            mealLogId: 'm-1',
+            calories: 600,
+            estimated: true,
+            basis: '写真からの推定',
+            confidence: 'medium',
+          },
+        },
+        (ctx2: ReturnType<typeof buildGateway>) => ctx2.nutritionLogRepo.store.length,
+      ],
+      [
+        'WeightLog' as const,
+        { record: { measuredAt: '2026-07-17T07:00:00.000Z', weightKg: 68.5 } },
+        (ctx2: ReturnType<typeof buildGateway>) => ctx2.weightLogRepo.store.length,
+      ],
+      [
+        'FinanceLog' as const,
+        { record: { occurredAt: '2026-07-17T12:00:00.000Z', type: 'Expense', amount: 1200 } },
+        (ctx2: ReturnType<typeof buildGateway>) => ctx2.financeLogRepo.store.length,
+      ],
+    ])(
+      'auto-approves a %s proposal when a valid grant covers it (Version25: Life Log Phase 2の自動承認)',
+      async (type, payload, countOf) => {
+        await seedGrant(ctx, { scope: [type] });
+        const proposal = await ctx.gateway.createProposal({
+          type,
+          target: `${type}の提案`,
+          payload,
+          reason: 'ARCによる記録',
+        });
+
+        expect(proposal.autoApproved).toBe(true);
+        expect(countOf(ctx)).toBe(1);
+      },
+    );
+
+    it.each([
+      ['MealLog' as const, { record: { occurredAt: '2026-07-17T12:00:00.000Z', items: ['味噌汁'] } }],
+      [
+        'NutritionLog' as const,
+        {
+          record: {
+            mealLogId: 'm-1',
+            calories: 600,
+            estimated: true,
+            basis: '写真からの推定',
+            confidence: 'medium',
+          },
+        },
+      ],
+      ['WeightLog' as const, { record: { measuredAt: '2026-07-17T07:00:00.000Z', weightKg: 68.5 } }],
+      [
+        'FinanceLog' as const,
+        { record: { occurredAt: '2026-07-17T12:00:00.000Z', type: 'Expense', amount: 1200 } },
+      ],
+    ])(
+      'does not auto-approve %s when the grant scope excludes it (scope外は対象外、Version25)',
+      async (type, payload) => {
+        await seedGrant(ctx, { scope: ['Reflection'] });
+        const proposal = await ctx.gateway.createProposal({
+          type,
+          target: `${type}の提案`,
+          payload,
+          reason: 'ARCによる記録',
+        });
+
+        expect(proposal.autoApproved).toBeUndefined();
+      },
+    );
   });
 });

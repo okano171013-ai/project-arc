@@ -29,6 +29,10 @@ import type { ManagementFeedback } from '../domain/entities/ManagementFeedback.j
 import type { AgentMessage } from '../domain/entities/AgentMessage.js';
 import type { ApprovalDecision } from '../domain/entities/ApprovalDecision.js';
 import type { AgentDelegationGrant } from '../domain/entities/AgentDelegationGrant.js';
+import type { MealLog } from '../domain/entities/MealLog.js';
+import type { NutritionLog } from '../domain/entities/NutritionLog.js';
+import type { WeightLog } from '../domain/entities/WeightLog.js';
+import type { FinanceLog } from '../domain/entities/FinanceLog.js';
 
 export function serializeReflection(reflection: Reflection) {
   return {
@@ -218,6 +222,38 @@ export function serializeAgentDelegationGrant(grant: AgentDelegationGrant) {
     createdAt: grant.createdAt.toISOString(),
     status: grant.status,
     usageCount: grant.usageCount,
+  };
+}
+
+export function serializeMealLog(log: MealLog) {
+  return {
+    id: log.id,
+    record: log.record,
+    createdAt: log.createdAt.toISOString(),
+  };
+}
+
+export function serializeNutritionLog(log: NutritionLog) {
+  return {
+    id: log.id,
+    record: log.record,
+    createdAt: log.createdAt.toISOString(),
+  };
+}
+
+export function serializeWeightLog(log: WeightLog) {
+  return {
+    id: log.id,
+    record: log.record,
+    createdAt: log.createdAt.toISOString(),
+  };
+}
+
+export function serializeFinanceLog(log: FinanceLog) {
+  return {
+    id: log.id,
+    record: log.record,
+    createdAt: log.createdAt.toISOString(),
   };
 }
 

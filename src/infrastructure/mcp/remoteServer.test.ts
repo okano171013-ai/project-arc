@@ -59,7 +59,7 @@ describe('Remote MCP Server (Streamable HTTP)', () => {
 
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name)).toContain('read_reflection');
-    expect(tools).toHaveLength(12);
+    expect(tools).toHaveLength(17);
 
     const reflections = await client.callTool({ name: 'read_reflection', arguments: { limit: 5 } });
     expect(reflections.isError).toBeFalsy();

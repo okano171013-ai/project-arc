@@ -30,6 +30,11 @@ import { registerManagementFeedbackResolveTool } from './tools/managementFeedbac
 import { registerAgentMessageListTool } from './tools/agentMessageList.js';
 import { registerApprovalDecisionListTool } from './tools/approvalDecisionList.js';
 import { registerAgentDelegationGrantListTool } from './tools/agentDelegationGrantList.js';
+import { registerMealLogListTool } from './tools/mealLogList.js';
+import { registerNutritionLogListTool } from './tools/nutritionLogList.js';
+import { registerNutritionSummaryByDateTool } from './tools/nutritionSummaryByDate.js';
+import { registerWeightLogListTool } from './tools/weightLogList.js';
+import { registerFinanceLogListTool } from './tools/financeLogList.js';
 
 export function buildMcpServer(connector: Connector): McpServer {
   const server = new McpServer({ name: 'project-arc', version: '1.0.0' });
@@ -46,6 +51,11 @@ export function buildMcpServer(connector: Connector): McpServer {
   registerAgentMessageListTool(server, connector);
   registerApprovalDecisionListTool(server, connector);
   registerAgentDelegationGrantListTool(server, connector);
+  registerMealLogListTool(server, connector);
+  registerNutritionLogListTool(server, connector);
+  registerNutritionSummaryByDateTool(server, connector);
+  registerWeightLogListTool(server, connector);
+  registerFinanceLogListTool(server, connector);
 
   return server;
 }

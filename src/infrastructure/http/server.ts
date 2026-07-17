@@ -57,8 +57,15 @@ import { AddAgentMessageUseCase } from '../../application/use-cases/agent-messag
 import { ListAgentMessagesUseCase } from '../../application/use-cases/agent-message/ListAgentMessages.js';
 import { ListApprovalDecisionsUseCase } from '../../application/use-cases/approval-policy/ListApprovalDecisions.js';
 import { ListAgentDelegationGrantsUseCase } from '../../application/use-cases/agent-delegation-grant/ListAgentDelegationGrants.js';
+import { ListMealLogsUseCase } from '../../application/use-cases/meal/ListMealLogs.js';
+import { ListNutritionLogsUseCase } from '../../application/use-cases/nutrition/ListNutritionLogs.js';
+import { SummarizeNutritionByDateUseCase } from '../../application/use-cases/nutrition/SummarizeNutritionByDate.js';
+import { ListWeightLogsUseCase } from '../../application/use-cases/weight/ListWeightLogs.js';
+import { ListFinanceLogsUseCase } from '../../application/use-cases/finance/ListFinanceLogs.js';
 import type { ExternalKnowledgeStatus } from '../../domain/entities/ExternalKnowledge.js';
 import type { AgentDelegationGrantStatus } from '../../domain/entities/AgentDelegationGrant.js';
+import type { MealType } from '../../domain/entities/MealLog.js';
+import type { FinanceLogType } from '../../domain/entities/FinanceLog.js';
 import type { ProposalType, Proposal } from '../../domain/value-objects/Proposal.js';
 import type { ApprovalLevel, ApprovalSignals } from '../../domain/value-objects/ApprovalLevel.js';
 
@@ -77,6 +84,10 @@ import { JsonFileManagementFeedbackRepository } from '../../adapters/repositorie
 import { JsonFileAgentMessageRepository } from '../../adapters/repositories/JsonFileAgentMessageRepository.js';
 import { JsonFileApprovalDecisionRepository } from '../../adapters/repositories/JsonFileApprovalDecisionRepository.js';
 import { JsonFileAgentDelegationGrantRepository } from '../../adapters/repositories/JsonFileAgentDelegationGrantRepository.js';
+import { JsonFileMealLogRepository } from '../../adapters/repositories/JsonFileMealLogRepository.js';
+import { JsonFileNutritionLogRepository } from '../../adapters/repositories/JsonFileNutritionLogRepository.js';
+import { JsonFileWeightLogRepository } from '../../adapters/repositories/JsonFileWeightLogRepository.js';
+import { JsonFileFinanceLogRepository } from '../../adapters/repositories/JsonFileFinanceLogRepository.js';
 import { RuleBasedCaptureClassifier } from '../../adapters/providers/RuleBasedCaptureClassifier.js';
 import { isAuthorized } from '../security/apiKeyAuth.js';
 import { loadEnv } from '../config/env.js';
@@ -99,6 +110,10 @@ import {
   serializeApprovalDecision,
   serializeAgentDelegationGrant,
   serializeChallengeLog,
+  serializeMealLog,
+  serializeNutritionLog,
+  serializeWeightLog,
+  serializeFinanceLog,
 } from '../../application/serializers.js';
 import type { Reflection } from '../../domain/entities/Reflection.js';
 import type { MemoryEntry } from '../../domain/entities/MemoryEntry.js';
@@ -111,6 +126,10 @@ import type {
   ManagementFeedbackResolution,
 } from '../../domain/entities/ManagementFeedback.js';
 import type { AgentMessage, AgentMessageDirection } from '../../domain/entities/AgentMessage.js';
+import type { MealLog } from '../../domain/entities/MealLog.js';
+import type { NutritionLog } from '../../domain/entities/NutritionLog.js';
+import type { WeightLog } from '../../domain/entities/WeightLog.js';
+import type { FinanceLog } from '../../domain/entities/FinanceLog.js';
 
 export interface BuildAppOptions {
   /** テスト時に本番の`data/`と隔離するためのディレクトリ差し替え。 */
@@ -169,6 +188,12 @@ export function buildUseCases(options: BuildAppOptions = {}) {
   const agentDelegationGrantRepository = new JsonFileAgentDelegationGrantRepository(
     repoPath(dataDir, 'agent-delegation-grants.json'),
   );
+  const mealLogRepository = new JsonFileMealLogRepository(repoPath(dataDir, 'meal-log.json'));
+  const nutritionLogRepository = new JsonFileNutritionLogRepository(
+    repoPath(dataDir, 'nutrition-log.json'),
+  );
+  const weightLogRepository = new JsonFileWeightLogRepository(repoPath(dataDir, 'weight-log.json'));
+  const financeLogRepository = new JsonFileFinanceLogRepository(repoPath(dataDir, 'finance-log.json'));
   const classifier = new RuleBasedCaptureClassifier();
 
   return {
@@ -259,6 +284,11 @@ export function buildUseCases(options: BuildAppOptions = {}) {
     listAgentMessages: new ListAgentMessagesUseCase(agentMessageRepository),
     listApprovalDecisions: new ListApprovalDecisionsUseCase(approvalDecisionRepository),
     listAgentDelegationGrants: new ListAgentDelegationGrantsUseCase(agentDelegationGrantRepository),
+    listMealLogs: new ListMealLogsUseCase(mealLogRepository),
+    listNutritionLogs: new ListNutritionLogsUseCase(nutritionLogRepository),
+    summarizeNutritionByDate: new SummarizeNutritionByDateUseCase(mealLogRepository, nutritionLogRepository),
+    listWeightLogs: new ListWeightLogsUseCase(weightLogRepository),
+    listFinanceLogs: new ListFinanceLogsUseCase(financeLogRepository),
     readGateway: new ReadGatewayUseCase(
       reflectionRepository,
       appearanceLogRepository,
@@ -281,6 +311,10 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       approvalDecisionRepository,
       challengeLogRepository,
       agentDelegationGrantRepository,
+      mealLogRepository,
+      nutritionLogRepository,
+      weightLogRepository,
+      financeLogRepository,
     ),
   };
 }
@@ -366,6 +400,22 @@ function serializeApproveResult(type: ProposalType, result: unknown): unknown {
       return { log: serializeChallengeLog((result as { log: ChallengeLog }).log) };
     case 'AgentDelegationGrant':
       return { grant: serializeAgentDelegationGrant((result as { grant: AgentDelegationGrant }).grant) };
+    case 'MealLog': {
+      const r = result as { log: MealLog; deduped: boolean };
+      return { log: serializeMealLog(r.log), deduped: r.deduped };
+    }
+    case 'NutritionLog': {
+      const r = result as { log: NutritionLog; deduped: boolean };
+      return { log: serializeNutritionLog(r.log), deduped: r.deduped };
+    }
+    case 'WeightLog': {
+      const r = result as { log: WeightLog; deduped: boolean };
+      return { log: serializeWeightLog(r.log), deduped: r.deduped };
+    }
+    case 'FinanceLog': {
+      const r = result as { log: FinanceLog; deduped: boolean };
+      return { log: serializeFinanceLog(r.log), deduped: r.deduped };
+    }
   }
 }
 
@@ -830,6 +880,54 @@ export function createApp(options: BuildAppOptions = {}) {
       const status = (url.searchParams.get('status') ?? undefined) as AgentDelegationGrantStatus | undefined;
       const result = await useCases.listAgentDelegationGrants.execute({ status });
       return ok({ grants: result.grants.map(serializeAgentDelegationGrant) });
+    }),
+
+    // --- Life Log Phase 2（Version25） ---
+    // 書き込みは既存のPOST /proposal/*（type: 'MealLog'等）をそのまま
+    // 使う——一覧取得のみ専用ルートを持つ（agent-messagesと同型）。
+    route('GET', '/meal-logs', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const limit = requireLimit(url);
+      const date = url.searchParams.get('date') ?? undefined;
+      const mealType = (url.searchParams.get('mealType') ?? undefined) as MealType | undefined;
+      const result = await useCases.listMealLogs.execute({ limit, date, mealType });
+      return ok({ logs: result.logs.map(serializeMealLog) });
+    }),
+
+    route('GET', '/nutrition-logs', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const limit = requireLimit(url);
+      const mealLogId = url.searchParams.get('mealLogId') ?? undefined;
+      const result = await useCases.listNutritionLogs.execute({ limit, mealLogId });
+      return ok({ logs: result.logs.map(serializeNutritionLog) });
+    }),
+
+    route('GET', '/nutrition-logs/summary', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const date = url.searchParams.get('date');
+      if (!date) {
+        throw new Error('date is required');
+      }
+      const result = await useCases.summarizeNutritionByDate.execute({ date });
+      return ok(result);
+    }),
+
+    route('GET', '/weight-logs', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const limit = requireLimit(url);
+      const date = url.searchParams.get('date') ?? undefined;
+      const result = await useCases.listWeightLogs.execute({ limit, date });
+      return ok({ logs: result.logs.map(serializeWeightLog) });
+    }),
+
+    route('GET', '/finance-logs', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const limit = requireLimit(url);
+      const date = url.searchParams.get('date') ?? undefined;
+      const category = url.searchParams.get('category') ?? undefined;
+      const type = (url.searchParams.get('type') ?? undefined) as FinanceLogType | undefined;
+      const result = await useCases.listFinanceLogs.execute({ limit, date, category, type });
+      return ok({ logs: result.logs.map(serializeFinanceLog) });
     }),
   ];
 

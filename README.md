@@ -21,7 +21,61 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version22のスコープ（現在地）
+## Version25のスコープ（現在地）
+
+テーマ：「Life Log Phase 2」— Version24で実装した`AgentDelegationGrant`
+（Owner決定に基づく生活記録の自動保存）のscopeを、食事・栄養・体重・
+収支の4カテゴリへ拡張する、Owner本人発信の正式指示（AgentMessage
+`70926e76-...`）。Version23の調査で判明した「Reflectionの拡張では
+表現できない」ギャップを埋めた。詳細はADR 0052・
+[`docs/reports/Version25_Report.md`](./docs/reports/Version25_Report.md)参照。
+
+- **4つの新規Entity**（`MealLog`・`NutritionLog`・`WeightLog`・
+  `FinanceLog`）— 食事単位・1計測1記録・取引単位という、Owner確認済み
+  の記録粒度でそれぞれ設計。推定値（栄養）はOwner本人の発言と区別する
+  `estimated`/`basis`/`confidence`を`create()`で構造的に必須化
+- **`AgentDelegationGrant`のscope拡張**（6型：Reflection・
+  ChallengeLog・MealLog・NutritionLog・WeightLog・FinanceLog）—
+  Version24で確立した型固定Level2ルール・重複防止・監査・default
+  denyは無変更のまま、`AUTO_APPROVABLE_TYPES`への型追加のみで拡張
+- **idempotencyKeyによる重複防止** — 4 Entity共通。同一キーの再送は
+  新規保存せず既存レコードを返す（`deduped: true`）
+- **新規MCP Tool 5つ**（`meal_log_list`・`nutrition_log_list`・
+  `nutrition_summary_by_date`・`weight_log_list`・`finance_log_list`、
+  いずれも読み取り専用）・対応するHTTP Route — 書き込みは既存の
+  `proposal_create`/`approve`が新ProposalTypeを受け付けるだけ（ADR
+  0039の「書き込み経路を増やさない」方針を継続）
+- OAuth本番有効化・`.env`変更は今回のスコープに含まれていない
+
+### 旧Version24のスコープ：「OAuth Production Activation and Scoped Life-Log Delegation」
+
+テーマ：Version22 Feedbackの3つの承認事項（OAuth本番有効化、生活記録
+限定のLevel1委譲、Constitution第4条の限定改定）を全て承認した、
+Owner本人発信の正式指示（AgentMessage `1e02902f-...`）。詳細はADR
+0051・`docs/reports/Version24_Report.md`参照。
+
+- **Constitution第4条の限定改定**（`docs/constitution.md`）—
+  Ownerが`AgentDelegationGrant`として発行した範囲内でのみ、ARCが
+  個別`do`なしに記録を保存できる。Project ARC採択後、初めての
+  Constitution改定
+- **`AgentDelegationGrant`**（Reflection・ChallengeLog限定）—
+  状態機械（Active/Paused/Revoked、Revokedからのresumeはコード
+  レベルで拒否）、型固定Level2ルールとAUTO_APPROVABLE_TYPES除外
+  による二重の安全装置、重複防止、監査ログ（`approver: 'Owner' |
+  'auto-save'`）
+- **OAuth本番有効化**（`.env`・本番サービス再起動）— Claude Codeの
+  実行環境の安全機構によりブロックされ、Owner自身の手作業として実施
+
+### 旧Version23のスコープ：「Life Log Auto-Save Delegation（設計）」
+
+テーマ：Owner決定「通常生活記録の自動保存を許可する」（AgentMessage
+`f81e9141-...`）を受けた設計フェーズ。コード実装なし。既存Entityと
+生活記録カテゴリの対応関係を調査し、食事・栄養・体重・収支には対応する
+Entityが存在しない「ギャップ」を特定、Constitution整合性の結論と
+次Version計画を提示した。詳細は
+[`docs/proposals/life-log-auto-save-delegation.md`](./docs/proposals/life-log-auto-save-delegation.md)参照。
+
+### 旧Version22のスコープ：「Authority Boundary and Secure Approval」
 
 テーマ：「Authority Boundary and Secure Approval」— Version21の
 完了報告への応答としてARCから届いた指示。Level0/1/2の単一権限表、

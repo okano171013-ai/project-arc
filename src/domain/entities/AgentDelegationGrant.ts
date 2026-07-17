@@ -14,7 +14,10 @@
 
 import type { ProposalType } from '../value-objects/Proposal.js';
 
-export type AgentDelegationGrantScope = Extract<ProposalType, 'Reflection' | 'ChallengeLog'>;
+export type AgentDelegationGrantScope = Extract<
+  ProposalType,
+  'Reflection' | 'ChallengeLog' | 'MealLog' | 'NutritionLog' | 'WeightLog' | 'FinanceLog'
+>;
 
 export type AgentDelegationGrantStatus = 'Active' | 'Paused' | 'Revoked';
 

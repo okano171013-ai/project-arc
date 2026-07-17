@@ -24,7 +24,11 @@ export type ProposalType =
   | 'ManagementFeedback'
   | 'AgentMessage'
   | 'ChallengeLog'
-  | 'AgentDelegationGrant';
+  | 'AgentDelegationGrant'
+  | 'MealLog'
+  | 'NutritionLog'
+  | 'WeightLog'
+  | 'FinanceLog';
 
 export interface Proposal {
   readonly type: ProposalType;

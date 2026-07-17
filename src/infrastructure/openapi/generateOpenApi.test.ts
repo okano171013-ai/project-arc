@@ -23,6 +23,11 @@ describe('generateOpenApiDocument', () => {
         '/agent-messages',
         '/approval-decisions',
         '/agent-delegation-grants',
+        '/meal-logs',
+        '/nutrition-logs',
+        '/nutrition-logs/summary',
+        '/weight-logs',
+        '/finance-logs',
       ].sort(),
     );
 

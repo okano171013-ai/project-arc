@@ -569,3 +569,59 @@ Version23のDoDは「設計・次Version計画の提示」という本Versionの
 Version24のDoDは、Claude Codeが実行できる範囲（B・C・E、コード実装・
 テスト・実機確認）で全項目達成済み。OAuth本番有効化（D）・ChatGPT
 Connector再作成（F）はOwner自身の操作待ち。
+
+## Version25完了チェックリスト
+
+- [x] `pnpm test` が全て緑（369件、`MealLog`/`NutritionLog`/
+      `WeightLog`/`FinanceLog`の単体テスト18件・
+      `WriteProposalGateway`への追加テスト（承認時保存4件・
+      自動承認4件・scope外拒否4件）を含む）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] 4つの新規Entity（`MealLog`・`NutritionLog`・`WeightLog`・
+      `FinanceLog`）を、Owner確認済みの記録粒度（食事単位・1計測
+      1記録・取引単位）で実装・単体テスト済み
+- [x] `NutritionLog`の`estimated`/`basis`/`confidence`または
+      `uncertaintyNote`必須化を`create()`で構造的に検証・テスト済み
+- [x] `AgentDelegationGrantScope`を6型に拡張、`AUTO_APPROVABLE_TYPES`
+      に4型追加——Version24の型固定Level2ルール・重複防止・監査・
+      default denyは無変更のまま適用されることをテストで確認
+- [x] idempotencyKeyによる重複防止を4つの`AddXUseCase`全てに実装・
+      テスト済み
+- [x] Repository・UseCase・MCP Tool（`meal_log_list`・
+      `nutrition_log_list`・`nutrition_summary_by_date`・
+      `weight_log_list`・`finance_log_list`）・HTTP Route・
+      永続化・型・バリデーションを配線済み
+- [x] `limit`必須・最大100（既存ReadGateway方針）を4つのList UseCase
+      全てに実装、date/category/mealType/type等の絞り込みを実装
+- [x] **実HTTPリクエストでの実機確認**：grant作成（scope:
+      MealLog）→承認→MealLog Proposal作成で`autoApproved: true`→
+      重複approve拒否→`GET /meal-logs`で一覧確認→同一idempotencyKeyの
+      再送でdeduped確認→`GET /agent-delegation-grants`でusageCount
+      増加確認、の一連を確認済み。検証用データ・スクリプトは確認後に
+      削除済み
+- [x] 実機確認の過程で、`serializeApproveResult`（HTTP層）が新規4型の
+      caseを欠いていた実装漏れを発見・修正済み（ADR 0052参照）
+- [x] ADR 0052（4 Entity設計、scope拡張、二重管理境界、
+      idempotencyKey設計思想、Timeline統合を見送った理由）を作成済み
+- [x] `docs/authority-table.md`・`docs/proposals/
+      life-log-auto-save-delegation.md`をVersion25の内容に合わせて
+      更新済み
+- [x] `README.md`をVersion22時点から現在（Version25）まで更新
+      （Version23・24の未反映分を含む）
+- [x] `docs/handoff/archive/Version25_ARC_Brief.md`を作成済み
+- [x] `docs/handoff/ARC_INBOX.md`に処理済みエントリを追記済み
+- [x] `docs/reports/Version25_Report.md`を生成済み（14章構成）
+- [x] `docs/reports/Version25_ARC_Feedback.md`
+      （tags: `mf:fb9ee72f-a144-4d65-88a5-f78a113c536c`・
+      `version25`を含む）を生成済み
+- [ ] **訂正・削除UseCase**（Reflection/ChallengeLog同様、今回追加した
+      4 EntityもUseCaseが存在しない）——指示書のスコープ外、次Version
+      課題として明示的に持ち越し
+- [ ] **OAuth本番有効化・Timeline横断統合・日次代表値（体重）**——
+      指示書が明示的に対象外・条件付き要件としたため未実装
+
+Version25のDoDは、指示書が明示的に要求した範囲（4 Entity・Repository・
+UseCase・MCP・HTTP・自動保存境界拡張・重複防止・推定値区別・テスト・
+ADR・Report）で全項目達成済み。訂正・削除UseCase、OAuth関連作業は
+指示書の明示的なスコープ外として次Version以降へ持ち越し。
