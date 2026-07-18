@@ -21,7 +21,22 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version27のスコープ（現在地）
+## Version28のスコープ（現在地）
+
+テーマ：「Remote MCP Capability Registry」— ChatGPTの既存チャットや
+長寿命MCPプロセスが古いTool定義を保持した場合に、接続先の版と機能を
+機械的に判別できる読み取り専用Registryを追加した。詳細はADR 0055・
+[`docs/reports/Version28_Report.md`](./docs/reports/Version28_Report.md)参照。
+
+- **`capability_registry_get`** — `schemaVersion`、Project ARC Version、
+  起動中の`buildCommit`、`toolCount`・`toolNames`、`proposalTypes`を返す
+- **24 Toolの単一正本** — Registryの一覧と実際の`tools/list`が完全一致
+  することを統合テストで保証し、Tool追加時の一覧更新漏れを検出
+- **stdio・Remote MCP共通** — 両接続が同じ`buildMcpServer()`を利用する
+  既存設計を維持し、公開面や書き込み経路は増やさない
+- **診断専用** — commit hashやTool一覧を認可判断には使用しない
+
+### 旧Version27のスコープ：「Study Session Ingestion」
 
 テーマ：「Study Session Ingestion」— ARC Study Timer（Owner本人が
 使う外部の学習タイマーアプリ）から学習セッションログを受信・保存する
@@ -41,7 +56,8 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
   逆に、常に401を返す（公開トンネル上に常駐するエンドポイントのため）
 - **CORS許可オリジン**（`STUDY_TIMER_ALLOWED_ORIGINS`）を環境変数で
   制限。未設定ならブラウザからのクロスオリジンは常に拒否
-- **MCP Toolは意図的に追加しない**（23件のまま）——ARC自身はこの経路
+- **Version27ではMCP Toolを意図的に追加しなかった**（当時23件、
+  Version28の診断Tool追加後は24件）——ARC自身はこの経路
   を呼び出す手段を持たず、「既存Proposal承認経路とは別の、汎用書き込み
   に使えない専用経路」という指示書要件を構造的に満たす
 

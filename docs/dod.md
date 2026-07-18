@@ -770,3 +770,29 @@ Version27のDoDは、Claude Codeが実行できる範囲（Entity・UseCase・
 HTTP・Connector・Remote MCP転送・テスト・ADR・Report）で全項目
 達成済み。`STUDY_TIMER_API_TOKEN`の実運用設定と実タイマーアプリからの
 疎通確認はOwner自身の操作待ち。
+
+## Version28完了チェックリスト
+
+- [x] 読み取り専用MCP Tool `capability_registry_get`を実装
+- [x] `schemaVersion`・`projectVersion`・`buildCommit`・`toolCount`・
+      `toolNames`・`proposalTypes`を返す
+- [x] `MCP_TOOL_NAMES`を24 Toolの単一正本として定義
+- [x] `PROPOSAL_TYPES`を再利用し、Proposal型の二重定義を回避
+- [x] stdio・Remote MCPが同じRegistryを提供
+- [x] MCP `tools/list`とRegistry一覧の完全一致をテスト化
+- [x] Remote MCPテストの期待値を24 Toolへ更新
+- [x] TypeScript typecheck合格
+- [x] Version28変更ファイルのESLint合格
+- [x] 実stdio MCP Clientで24 Tool・16 Proposal型・build commitを確認
+- [x] ADR 0055、Version28 Report、ARC向けFeedbackを作成
+- [x] README・roadmapをVersion28完了状態へ更新
+- [x] 認証、外部公開範囲、秘密情報、書き込み経路、Constitution/
+      Principlesを変更していない
+
+Codex隔離環境ではesbuildがリポジトリ親ディレクトリを読めずVitest設定
+ロード前に停止したため、実装時点では`pnpm test`自体を検証できなかった
+（実MCP Client・typecheck・lintは合格）。Claude Code側の別セッション
+で改めて`pnpm test`を実行した結果、505件全て緑（Version27完了時点504
+件から+1件）であることを確認済み。
+
+Version28のDoDは全項目達成済み。

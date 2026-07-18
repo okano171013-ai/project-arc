@@ -198,6 +198,18 @@ Bearer token（`STUDY_TIMER_API_TOKEN`）・CORS制限で保護した上で、
 アプリからの疎通確認はOwner確認後（原文は`docs/handoff/archive/
 Version27_ARC_Brief.md`に保管）。
 
+**処理済み**：Version28「Remote MCP Capability Registry」（`docs/
+reports/Version28_Report.md`）。外部からのAgentMessageではなく、
+`docs/roadmap.md`優先開発候補リストの最優先項目としてClaude Code/
+Codexの判断により着手——ChatGPTの既存チャットや長寿命Remote MCP
+プロセスが更新前のTool定義を保持する事象を、読み取り専用MCP Tool
+`capability_registry_get`（`schemaVersion`・`projectVersion`・
+`buildCommit`・`toolCount`/`toolNames`・`proposalTypes`を返す）で
+機械的に検出可能にした。stdio・Remote MCP双方が同じ`buildMcpServer()`
+を使うため実装を分岐させず、MCP Tool一覧は24件（23→24）になった。
+書き込み経路・認証・外部公開範囲は無変更（原文は`docs/handoff/
+archive/Version28_ARC_Brief.md`に保管）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください
 （またはARCが直接AgentMessageとして送ってくることもあります

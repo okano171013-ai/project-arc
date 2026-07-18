@@ -18,9 +18,14 @@ ARC Connector、Remote MCP、Approval Policy、限定自動保存、Life Log、
 今回のスコープ外で、下表では優先2を「StudyLog配線」のみに絞って
 引き続き候補として残す。
 
+**Version28は完了済み**：下表の優先1「Remote MCP Capability Registry」を
+実装し、24 Tool・16 Proposal型・schema/build情報を単一の読み取り専用
+Registryから取得可能にした（`docs/reports/Version28_Report.md`・ADR 0055参照）。
+次の推奨VersionはVersion29「Runner Control Plane」とする。
+
 | 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
 |---:|---|---|---|
-| 1 | Remote MCP Capability Registry | チャットや長寿命プロセスごとのツール定義差異をなくす。Version16〜18のMCP基盤を、schemaVersion/buildCommit/toolCountを返す単一レジストリへ発展させる | 新規ChatGPTチャット・ローカルMCP・公開URLで同一ツール名とProposal型を取得し、差異を自動検出できる |
+| 1 | Remote MCP Capability Registry（**Version28で完了済み**） | チャットや長寿命プロセスごとのツール定義差異をなくす。Version16〜18のMCP基盤を、schemaVersion/buildCommit/toolCountを返す単一レジストリへ発展させる | 新規ChatGPTチャット・ローカルMCP・公開URLで同一ツール名とProposal型を取得し、差異を自動検出できる |
 | 2 | StudyLog配線（Study Session Gatewayは**Version27で完了済み**） | Version1から存在するStudyLog未配線を解消する。Version27で追加した`StudySession`（外部タイマーからの1セッション単位のログ）との関係整理（統合するか別Entityとして併存させるか）をOwnerに確認した上で配線する | 既存StudyLog Repository/UseCase/Routeが配線される、または廃止判断がされる。`StudySession`との二重管理境界が文書化される |
 | 3 | Runner Control Plane | Version20のCollaboration RunnerとVersion26のCheck-in Runnerのlock/state/logを共通化し、起動順・再起動・版確認・kill switchを一元管理する | PC再起動後も単一インスタンスで復旧し、古いプロセスと古いビルドを検出できる |
 | 4 | AgentEvent・未読管理・AgentTask最小実装 | Version17〜20のAgentMessage運用と100項目バックログの最優先事項を実装へ進める。指示・Feedback・承認待ちを処理状態付きで追跡する | 未読見落としと二重処理を防ぎ、Version・受入条件・commit・test結果をTaskへ紐付けられる |

@@ -41,6 +41,7 @@ import { registerInterventionListTool } from './tools/interventionList.js';
 import { registerInterventionPolicySettingsGetTool } from './tools/interventionPolicySettingsGet.js';
 import { registerDailyBehaviorScoreGetTool } from './tools/dailyBehaviorScoreGet.js';
 import { registerInterventionEffectivenessGetTool } from './tools/interventionEffectivenessGet.js';
+import { registerCapabilityRegistryGetTool } from './tools/capabilityRegistryGet.js';
 
 export function buildMcpServer(connector: Connector): McpServer {
   const server = new McpServer({ name: 'project-arc', version: '1.0.0' });
@@ -68,6 +69,7 @@ export function buildMcpServer(connector: Connector): McpServer {
   registerInterventionPolicySettingsGetTool(server, connector);
   registerDailyBehaviorScoreGetTool(server, connector);
   registerInterventionEffectivenessGetTool(server, connector);
+  registerCapabilityRegistryGetTool(server);
 
   return server;
 }

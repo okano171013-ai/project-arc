@@ -7,12 +7,14 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { createApp } from '../http/server.js';
 import { Connector } from '../connector/Connector.js';
 import { buildMcpServer } from './server.js';
+import { CAPABILITY_SCHEMA_VERSION, MCP_TOOL_NAMES, PROJECT_ARC_VERSION } from './capabilityRegistry.js';
+import { PROPOSAL_TYPES } from './tools/proposalSchema.js';
 
 /**
  * MCP Tool層のend-to-endテスト。指示書15章の精神
  * （実物を起動して駆動する）に従い、実際のHTTP APIサーバーを起動し、
  * SDKが提供する`InMemoryTransport`でClient/McpServerを接続して、
- * 実際のMCPプロトコル（JSON Schema検証を含む）越しに23ツールを
+ * 実際のMCPプロトコル（JSON Schema検証を含む）越しに24ツールを
  * 検証する。
  */
 describe('Project ARC MCP Server', () => {
@@ -47,36 +49,23 @@ describe('Project ARC MCP Server', () => {
     return content[0]?.text ?? '';
   }
 
-  it('lists all 23 registered tools', async () => {
+  it('lists exactly the tools declared by the capability registry', async () => {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
-    expect(names).toEqual(
-      [
-        'agent_delegation_grant_list',
-        'agent_message_list',
-        'approval_decision_list',
-        'check_in_list',
-        'daily_behavior_score_get',
-        'distraction_signal_list',
-        'finance_log_list',
-        'intervention_effectiveness_get',
-        'intervention_list',
-        'intervention_policy_settings_get',
-        'management_feedback_list',
-        'management_feedback_resolve',
-        'meal_log_list',
-        'nutrition_log_list',
-        'nutrition_summary_by_date',
-        'proposal_approve',
-        'proposal_create',
-        'proposal_reject',
-        'read_decision',
-        'read_external',
-        'read_reflection',
-        'read_timeline',
-        'weight_log_list',
-      ].sort(),
-    );
+    expect(names).toEqual([...MCP_TOOL_NAMES].sort());
+  });
+
+  it('returns canonical MCP build and schema metadata', async () => {
+    const result = await client.callTool({ name: 'capability_registry_get', arguments: {} });
+    expect(result.isError).toBeFalsy();
+    const registry = JSON.parse(textOf(result));
+
+    expect(registry.schemaVersion).toBe(CAPABILITY_SCHEMA_VERSION);
+    expect(registry.projectVersion).toBe(PROJECT_ARC_VERSION);
+    expect(registry.buildCommit).toMatch(/^(unknown|[0-9a-f]{40})$/);
+    expect(registry.toolCount).toBe(MCP_TOOL_NAMES.length);
+    expect(registry.toolNames).toEqual([...MCP_TOOL_NAMES].sort());
+    expect(registry.proposalTypes).toEqual([...PROPOSAL_TYPES].sort());
   });
 
   it('read_reflection requires limit and returns reflections (JSON Schema検証)', async () => {
