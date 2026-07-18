@@ -204,6 +204,31 @@ export interface ListInterventionsInput {
   status?: 'Pending' | 'Acknowledged' | 'Dismissed' | 'Snoozed';
 }
 
+export interface RecordStudySessionInput {
+  sessionId: string;
+  subject: string;
+  task?: string;
+  startedAt: string;
+  endedAt: string;
+  durationMs: number;
+  source: string;
+  clientCreatedAt: string;
+}
+
+export interface RecordStudySessionResult {
+  sessionId: string;
+  storedAt?: string;
+  duplicate?: boolean;
+}
+
+export interface SummarizeStudySessionsResult {
+  from: string;
+  to: string;
+  sessionCount: number;
+  totalDurationMs: number;
+  bySubject: Record<string, number>;
+}
+
 export type ManagementFeedbackResolution =
   | 'Open'
   | 'Accepted'
@@ -467,6 +492,23 @@ export class Connector {
     return this.request(
       'GET',
       `/intervention-effectiveness?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    );
+  }
+
+  // --- Study Session Ingestion（Version27） ---
+  // `remoteServer.ts`（公開トンネル側）が専用のStudy Timer tokenで
+  // 認証した後、この2メソッド経由でARC Connector HTTP APIへ内部転送する
+  // （ADR 0054）。ARC自身（MCP Tool経由）はこの2メソッドを呼び出す手段を
+  // 持たない——意図的に対応するMCP Toolを用意しない。
+
+  async recordStudySession(input: RecordStudySessionInput): Promise<RecordStudySessionResult> {
+    return this.request('POST', '/api/study-sessions', input);
+  }
+
+  async summarizeStudySessions(from: string, to: string): Promise<SummarizeStudySessionsResult> {
+    return this.request(
+      'GET',
+      `/api/study-sessions/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
     );
   }
 

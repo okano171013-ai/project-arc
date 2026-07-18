@@ -642,6 +642,75 @@ describe('ARC Connector HTTP API', () => {
     const byVersion = await call('GET', '/agent-messages?relatedVersion=Version17');
     expect((byVersion.json.data as { messages: unknown[] }).messages).toHaveLength(1);
   });
+
+  // --- Study Session Ingestion（Version27） ---
+
+  // 実際の壁時計時刻に対して安全に過去となるよう、固定の過去日付
+  // （2026-07-17）を使う——StudySessionは「未来のstartedAt/endedAt」を
+  // 拒否するため、テスト実行時刻に依存しない日付が必要（entity単体
+  // テストのように`now`を注入できないHTTP経由のテストのため）。
+
+  it('POST /api/study-sessions records a session, dedupes on repeated sessionId', async () => {
+    const record = {
+      sessionId: 'timer-session-1',
+      subject: '行政法',
+      task: '判例百選',
+      startedAt: '2026-07-17T10:00:00.000Z',
+      endedAt: '2026-07-17T11:00:00.000Z',
+      durationMs: 60 * 60 * 1000,
+      source: 'arc-study-timer',
+      clientCreatedAt: '2026-07-17T11:00:05.000Z',
+    };
+    const first = await call('POST', '/api/study-sessions', record);
+    expect(first.status).toBe(201);
+    const firstData = first.json.data as { sessionId: string; storedAt: string; duplicate?: boolean };
+    expect(firstData.sessionId).toBe('timer-session-1');
+    expect(firstData.duplicate).toBeUndefined();
+
+    const second = await call('POST', '/api/study-sessions', { ...record, subject: '民訴法' });
+    expect(second.status).toBe(200);
+    const secondData = second.json.data as { sessionId: string; duplicate?: boolean };
+    expect(secondData.duplicate).toBe(true);
+    expect(secondData.sessionId).toBe('timer-session-1');
+  });
+
+  it('POST /api/study-sessions rejects an invalid record', async () => {
+    const result = await call('POST', '/api/study-sessions', {
+      sessionId: 'bad-session',
+      subject: '行政法',
+      startedAt: '2026-07-17T10:00:00.000Z',
+      endedAt: '2026-07-17T10:00:00.000Z',
+      durationMs: 0,
+      source: 'arc-study-timer',
+      clientCreatedAt: '2026-07-17T10:00:00.000Z',
+    });
+    expect(result.status).toBe(400);
+  });
+
+  it('GET /api/study-sessions/summary aggregates duration by subject within range', async () => {
+    await call('POST', '/api/study-sessions', {
+      sessionId: 'summary-1',
+      subject: '行政法',
+      startedAt: '2026-07-17T09:00:00.000Z',
+      endedAt: '2026-07-17T09:30:00.000Z',
+      durationMs: 30 * 60 * 1000,
+      source: 'arc-study-timer',
+      clientCreatedAt: '2026-07-17T09:30:05.000Z',
+    });
+    const summary = await call(
+      'GET',
+      '/api/study-sessions/summary?from=2026-07-17T00:00:00.000Z&to=2026-07-18T00:00:00.000Z',
+    );
+    expect(summary.status).toBe(200);
+    const data = summary.json.data as { sessionCount: number; totalDurationMs: number };
+    expect(data.sessionCount).toBe(1);
+    expect(data.totalDurationMs).toBe(30 * 60 * 1000);
+  });
+
+  it('GET /api/study-sessions/summary requires from and to', async () => {
+    const result = await call('GET', '/api/study-sessions/summary');
+    expect(result.status).toBe(400);
+  });
 });
 
 describe('ARC Connector HTTP API — API Key Authentication (Version15)', () => {

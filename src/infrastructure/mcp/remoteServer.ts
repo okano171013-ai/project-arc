@@ -53,6 +53,7 @@ import { loadConnectorConfig } from '../connector/connectorConfig.js';
 import { loadEnv } from '../config/env.js';
 import { buildMcpServer } from './server.js';
 import { LocalOAuthProvider } from '../security/oauth/LocalOAuthProvider.js';
+import { matchesStudySessionPath, handleStudySessionRequest, type StudySessionRouteOptions } from '../http/studySessionRoute.js';
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
@@ -73,18 +74,40 @@ export interface RemoteMcpOAuthOptions {
  * `oauth`省略時（既定）は、ADR 0044のまま生の`node:http`サーバーを
  * 返す——Version18〜21から1バイトも挙動を変えない。`oauth`指定時のみ
  * Expressで`mcpAuthRouter`（SDK同梱、Version22で追加）を配線する。
+ *
+ * `studySession`（Version27）はどちらの分岐でも同じ`handleStudySession
+ * Request`を呼ぶ——`/mcp`のOAuth有無とは独立した、専用Bearer tokenに
+ * よる別の認証境界（ADR 0054）。
  */
-export function createRemoteMcpApp(connector: Connector, oauth?: RemoteMcpOAuthOptions): Server {
+export function createRemoteMcpApp(
+  connector: Connector,
+  oauth?: RemoteMcpOAuthOptions,
+  studySession?: StudySessionRouteOptions,
+): Server {
   const transports: Record<string, StreamableHTTPServerTransport> = {};
+  const studySessionOptions: StudySessionRouteOptions = studySession ?? { apiToken: undefined, allowedOrigins: [] };
 
   if (!oauth) {
     return createServer((req, res) => {
+      const pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
+      if (matchesStudySessionPath(pathname)) {
+        void handleStudySessionRequest(req, res, connector, studySessionOptions);
+        return;
+      }
       void handleRequest(req, res, connector, transports);
     });
   }
 
   const provider = new LocalOAuthProvider(oauth.ownerPasscode);
   const app = express();
+
+  app.use((req, res, next) => {
+    if (matchesStudySessionPath(req.path)) {
+      void handleStudySessionRequest(req, res, connector, studySessionOptions);
+      return;
+    }
+    next();
+  });
 
   // `mcpAuthRouter`配下の各ハンドラ（authorize/token/register/revoke）は
   // 内部で個別にボディパーサーを適用済み（SDK側の実装）。`/mcp`には
@@ -181,7 +204,14 @@ if (isMainModule()) {
     };
   }
 
-  const app = createRemoteMcpApp(connector, oauth);
+  const studySession: StudySessionRouteOptions = {
+    apiToken: env.STUDY_TIMER_API_TOKEN,
+    allowedOrigins: env.STUDY_TIMER_ALLOWED_ORIGINS
+      ? env.STUDY_TIMER_ALLOWED_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean)
+      : [],
+  };
+
+  const app = createRemoteMcpApp(connector, oauth, studySession);
   app.listen(env.MCP_HTTP_PORT, '127.0.0.1', () => {
     if (oauth) {
       console.error(
@@ -194,5 +224,10 @@ if (isMainModule()) {
           '(NO AUTH — anyone who can reach this port/tunnel can call it, see ADR 0044)',
       );
     }
+    console.error(
+      studySession.apiToken
+        ? `  /api/study-sessions is active (allowed origins: ${studySession.allowedOrigins.join(', ') || '(none — non-browser clients only)'})`
+        : '  /api/study-sessions is disabled (STUDY_TIMER_API_TOKEN not set, fail-closed)',
+    );
   });
 }

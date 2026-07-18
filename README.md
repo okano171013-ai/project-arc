@@ -21,7 +21,31 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version26のスコープ（現在地）
+## Version27のスコープ（現在地）
+
+テーマ：「Study Session Ingestion」— ARC Study Timer（Owner本人が
+使う外部の学習タイマーアプリ）から学習セッションログを受信・保存する
+専用HTTPS APIの実装依頼（AgentMessage `9ea53178-...`、Version21完了後
+に届いていたが見落とされ、今回のセッションで発見・実装）。詳細はADR
+0054・[`docs/reports/Version27_Report.md`](./docs/reports/Version27_Report.md)参照。
+
+- **`StudySession` Entity** — `sessionId`による冪等化、12時間の最大
+  duration、5分のクロックスキュー許容付き未来時刻拒否
+- **公開エンドポイントは`remoteServer.ts`側**（`server.ts`は
+  127.0.0.1限定でトンネルされないため）——実際のUseCase/Repositoryは
+  既存慣習どおり`server.ts`に実装し、`remoteServer.ts`は既存の
+  `Connector`経由で内部転送する薄い層のみを追加（ADR 0038の
+  「Connectorのみに依存する」原則を踏襲）
+- **専用のfail-closed認証**（`STUDY_TIMER_API_TOKEN`）——`ARC_API_KEY`
+  とは独立した秘密情報。未設定時は無認証で開く既存の`ARC_API_KEY`とは
+  逆に、常に401を返す（公開トンネル上に常駐するエンドポイントのため）
+- **CORS許可オリジン**（`STUDY_TIMER_ALLOWED_ORIGINS`）を環境変数で
+  制限。未設定ならブラウザからのクロスオリジンは常に拒否
+- **MCP Toolは意図的に追加しない**（23件のまま）——ARC自身はこの経路
+  を呼び出す手段を持たず、「既存Proposal承認経路とは別の、汎用書き込み
+  に使えない専用経路」という指示書要件を構造的に満たす
+
+### 旧Version26のスコープ：「行動介入レイヤーと厳格コーチング」
 
 テーマ：「行動介入レイヤー」— 先延ばし・重要課題からの逃避・過剰な
 スマホ利用を早期検知し行動修正を促す仕組みを求めた、Owner本人発信の

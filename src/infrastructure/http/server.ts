@@ -68,6 +68,8 @@ import { ListInterventionsUseCase } from '../../application/use-cases/interventi
 import { MeasureInterventionEffectivenessUseCase } from '../../application/use-cases/intervention/MeasureInterventionEffectiveness.js';
 import { GetInterventionPolicySettingsUseCase } from '../../application/use-cases/intervention-policy/GetInterventionPolicySettings.js';
 import { GetDailyBehaviorScoreUseCase } from '../../application/use-cases/behavior-score/GetDailyBehaviorScore.js';
+import { RecordStudySessionUseCase } from '../../application/use-cases/study-session/RecordStudySession.js';
+import { SummarizeStudySessionsUseCase } from '../../application/use-cases/study-session/SummarizeStudySessions.js';
 import type { ExternalKnowledgeStatus } from '../../domain/entities/ExternalKnowledge.js';
 import type { AgentDelegationGrantStatus } from '../../domain/entities/AgentDelegationGrant.js';
 import type { MealType } from '../../domain/entities/MealLog.js';
@@ -100,6 +102,7 @@ import { JsonFileCheckInRepository } from '../../adapters/repositories/JsonFileC
 import { JsonFileDistractionSignalRepository } from '../../adapters/repositories/JsonFileDistractionSignalRepository.js';
 import { JsonFileInterventionRepository } from '../../adapters/repositories/JsonFileInterventionRepository.js';
 import { JsonFileInterventionPolicySettingsRepository } from '../../adapters/repositories/JsonFileInterventionPolicySettingsRepository.js';
+import { JsonFileStudySessionRepository } from '../../adapters/repositories/JsonFileStudySessionRepository.js';
 import { RuleBasedCaptureClassifier } from '../../adapters/providers/RuleBasedCaptureClassifier.js';
 import { isAuthorized } from '../security/apiKeyAuth.js';
 import { loadEnv } from '../config/env.js';
@@ -222,6 +225,7 @@ export function buildUseCases(options: BuildAppOptions = {}) {
   const interventionPolicySettingsRepository = new JsonFileInterventionPolicySettingsRepository(
     repoPath(dataDir, 'intervention-policy-settings.json'),
   );
+  const studySessionRepository = new JsonFileStudySessionRepository(repoPath(dataDir, 'study-sessions.json'));
   const classifier = new RuleBasedCaptureClassifier();
 
   return {
@@ -328,6 +332,8 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       interventionRepository,
       interventionPolicySettingsRepository,
     ),
+    recordStudySession: new RecordStudySessionUseCase(studySessionRepository),
+    summarizeStudySessions: new SummarizeStudySessionsUseCase(studySessionRepository),
     readGateway: new ReadGatewayUseCase(
       reflectionRepository,
       appearanceLogRepository,
@@ -1044,6 +1050,43 @@ export function createApp(options: BuildAppOptions = {}) {
         throw new Error('from and to are required');
       }
       const result = await useCases.measureInterventionEffectiveness.execute({ from, to });
+      return ok(result);
+    }),
+
+    // --- Study Session Ingestion（Version27） ---
+    // 既存のProposal承認経路（/proposal/*）とは独立した経路。ここは
+    // 既存の`ARC_API_KEY`ゲート（handleRequest冒頭）でのみ保護される
+    // ——`remoteServer.ts`（公開トンネル側）が、専用のStudy Timer token
+    // で認証した後にConnector経由でここへ内部転送する構成（ADR 0054）。
+    // MCP Toolは意図的に用意しない——ARC自身はこの経路を呼べない。
+    route('POST', '/api/study-sessions', async (req) => {
+      const body = await readJsonBody(req);
+      const result = await useCases.recordStudySession.execute({
+        record: {
+          sessionId: body.sessionId as string,
+          subject: body.subject as string,
+          task: body.task as string | undefined,
+          startedAt: body.startedAt as string,
+          endedAt: body.endedAt as string,
+          durationMs: body.durationMs as number,
+          source: body.source as string,
+          clientCreatedAt: body.clientCreatedAt as string,
+        },
+      });
+      if (result.duplicate) {
+        return ok({ duplicate: true, sessionId: result.session.record.sessionId });
+      }
+      return ok({ sessionId: result.session.record.sessionId, storedAt: result.session.storedAt.toISOString() }, 201);
+    }),
+
+    route('GET', '/api/study-sessions/summary', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const from = url.searchParams.get('from');
+      const to = url.searchParams.get('to');
+      if (!from || !to) {
+        throw new Error('from and to are required');
+      }
+      const result = await useCases.summarizeStudySessions.execute({ from, to });
       return ok(result);
     }),
   ];

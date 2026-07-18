@@ -182,6 +182,22 @@ screen-time-integration-feasibility.md`）。実タスク登録・実効果測�
 Owner確認後（原文は`docs/handoff/archive/Version26_ARC_Brief.md`に
 保管）。
 
+**処理済み**：Version27「Study Session Ingestion」（`docs/reports/
+Version27_Report.md`）。AgentMessage（id `9ea53178-...`、
+relatedVersionタグは`Version21`だが実際は別件）による指示——
+ARC Study Timerから学習セッションを受信するHTTPS APIを求めた。
+Version21完了直後に届いていたが、Version22〜26の間見落とされ続けて
+おり、今回のセッションで`agent_message_list`の全件確認により発見・
+実装した。`StudySession` Entity・`POST /api/study-sessions`・
+`GET /api/study-sessions/summary`を、実際に外部から到達できる
+`remoteServer.ts`（公開トンネル側）に配置し、専用のfail-closed
+Bearer token（`STUDY_TIMER_API_TOKEN`）・CORS制限で保護した上で、
+既存の`Connector`経由で`server.ts`へ内部転送する構成とした（ADR
+0054）。対応するMCP Toolは意図的に追加していない——ARC自身はこの
+経路を呼び出せない。`STUDY_TIMER_API_TOKEN`の実運用設定・実タイマー
+アプリからの疎通確認はOwner確認後（原文は`docs/handoff/archive/
+Version27_ARC_Brief.md`に保管）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください
 （またはARCが直接AgentMessageとして送ってくることもあります

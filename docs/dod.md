@@ -702,3 +702,71 @@ Repository・UseCase・決定的ルールエンジン・MCP・HTTP・自動保�
 調査）で全項目達成済み。実連携・自動承認範囲の拡大・タスク登録・実効果
 測定は、指示書の明示的なスコープ外またはOwner確認が必要な事項として
 次Version以降へ持ち越し。
+
+## Version27完了チェックリスト
+
+- [x] `pnpm test` が全て緑（504件、`StudySession`単体テスト9件・
+      `RecordStudySessionUseCase`/`SummarizeStudySessionsUseCase`の
+      テスト6件・`server.ts`のHTTPテスト4件・`remoteServer.ts`の
+      Study Session Ingestion専用テスト8件を含む）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `StudySession` Entity（`sessionId`/`subject`/`task`/`startedAt`/
+      `endedAt`/`durationMs`/`source`/`clientCreatedAt`、12時間の
+      最大duration・5分のクロックスキュー許容付き未来時刻拒否・
+      欠損値拒否）を実装・単体テスト済み
+- [x] `RecordStudySessionUseCase`：`sessionId`による冪等化
+      （Version25のidempotencyKey方式と同型）を実装・テスト済み
+- [x] `SummarizeStudySessionsUseCase`：`[from, to)`範囲での
+      科目別・合計duration集計を実装・テスト済み
+- [x] `server.ts`（ARC Connector HTTP API、port 3939、127.0.0.1限定）に
+      `POST /api/study-sessions`・`GET /api/study-sessions/summary`を
+      追加——既存の`ARC_API_KEY`ゲートの対象内
+- [x] `Connector`に`recordStudySession`・`summarizeStudySessions`を
+      追加（既存のRead/Write系メソッドと同型）
+- [x] `remoteServer.ts`（Remote MCP、port 3940、公開トンネル側）に
+      `studySessionRoute.ts`を追加——専用の`STUDY_TIMER_API_TOKEN`
+      （未設定なら常に401、fail-closed）・CORS許可オリジン
+      （`STUDY_TIMER_ALLOWED_ORIGINS`）による独立した認証境界を
+      経由し、Connector経由で`server.ts`へ内部転送する（ADR 0054）
+- [x] `/mcp`のOAuth有無（`MCP_OAUTH_ENABLED`）と独立して
+      `/api/study-sessions`系ルートが機能することをテスト済み
+      （oauth未設定・oauth設定済みの両分岐に配線）
+- [x] **実HTTPリクエストでの実機確認**：`server.test.ts`・
+      `remoteServer.studySession.test.ts`の両方で、実際の
+      `node:http`サーバー（`createApp`/`createRemoteMcpApp`）に対して
+      実際の`fetch`リクエストを送り、以下を確認済み——
+      無token/誤token拒否（401）、正しいtokenでの新規保存（201）・
+      同一`sessionId`再送時のdedup（200、`duplicate:true`）、
+      不正レコードの拒否（400）、期間集計、許可オリジンのみへの
+      CORSヘッダー付与、OPTIONSプリフライトの無認証応答、
+      `/mcp`が本機能追加の影響を受けず無認証のまま動作すること、
+      token未設定時は全リクエストが401になること（Version7以降の
+      HTTP API検証方針により、対話式CLIのような別途の実機確認手順は
+      不要——実サーバー・実`fetch`によるテストがそのまま実機確認を
+      兼ねる）
+- [x] MCP Tool一覧が23件のまま変化しないことを確認済み——この機能に
+      対応するMCP Toolは意図的に追加していない（ARC自身はこの経路を
+      呼び出す手段を持たない、指示書「他種別への汎用書き込みには
+      使えない」要件）
+- [x] `.env.example`に`STUDY_TIMER_API_TOKEN`・
+      `STUDY_TIMER_ALLOWED_ORIGINS`を追記済み
+- [x] ADR 0054（プロセス配置の判断・fail-closed認証の設計理由・
+      書き込み経路を増やさない既存方針との関係・検討した代替案）を
+      作成済み
+- [x] `docs/handoff/archive/Version27_ARC_Brief.md`を作成済み
+- [x] `docs/handoff/ARC_INBOX.md`に処理済みエントリを追記済み
+- [x] README / docsに実装との乖離がない
+- [x] `docs/reports/Version27_Report.md`を生成済み（14章構成）
+- [x] `docs/reports/Version27_ARC_Feedback.md`を生成済み
+- [ ] **実際のngrokトンネル経由・実タイマーアプリからの疎通確認**——
+      Claude Codeの実行環境では外部ネットワーク・実デバイスからの
+      到達を検証できないため対象外。Owner自身が`STUDY_TIMER_API_TOKEN`
+      を`.env`へ設定し、タイマーアプリ側にBearer tokenを渡した上での
+      実地確認が必要（OAuth本番有効化と同様、秘密情報の設定を伴うため
+      Claude Codeの実行環境の安全機構によりブロックされる）
+
+Version27のDoDは、Claude Codeが実行できる範囲（Entity・UseCase・
+HTTP・Connector・Remote MCP転送・テスト・ADR・Report）で全項目
+達成済み。`STUDY_TIMER_API_TOKEN`の実運用設定と実タイマーアプリからの
+疎通確認はOwner自身の操作待ち。

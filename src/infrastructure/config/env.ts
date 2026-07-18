@@ -33,6 +33,13 @@ const envSchema = z.object({
   // あるため使わず、文字列`"true"`との厳密一致のみを`true`とする。
   MCP_OAUTH_ENABLED: z.preprocess((v) => v === 'true', z.boolean()).default(false),
   MCP_OAUTH_OWNER_PASSCODE: z.string().optional(),
+  // Study Session Ingestion（Version27）。未設定ならremoteServer.tsの
+  // /api/study-sessionsは常に401を返す（fail-closed、ADR 0054）——
+  // MCP_OAUTH_ENABLEDとは独立した別の認証境界。
+  STUDY_TIMER_API_TOKEN: z.string().optional(),
+  // カンマ区切りの許可オリジン一覧。未設定ならブラウザからのクロス
+  // オリジンリクエストは常に拒否される（CORSヘッダーを一切付与しない）。
+  STUDY_TIMER_ALLOWED_ORIGINS: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
