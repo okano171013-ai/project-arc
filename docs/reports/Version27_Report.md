@@ -2,6 +2,8 @@
 
 `docs/reports/TEMPLATE.md`の14章構成に準拠。
 
+**コミットハッシュ**：`c5e0896`（`feature/v4-v6-smart-capture`ブランチ）
+
 ## 1. Version概要
 
 **テーマ**：ARC Study Timer（Owner本人が使う外部の学習タイマーアプリ）
