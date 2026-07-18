@@ -31,6 +31,7 @@
     "mcp:remote": "tsx src/infrastructure/mcp/remoteServer.ts",
     "openapi:generate": "tsx src/infrastructure/openapi/generateOpenApi.ts",
     "runner": "tsx src/infrastructure/runner/collaborationRunner.ts",
+    "checkin-runner": "tsx src/infrastructure/runner/checkInPrompter.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",
     "test:watch": "vitest",

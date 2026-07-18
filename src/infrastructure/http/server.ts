@@ -62,10 +62,18 @@ import { ListNutritionLogsUseCase } from '../../application/use-cases/nutrition/
 import { SummarizeNutritionByDateUseCase } from '../../application/use-cases/nutrition/SummarizeNutritionByDate.js';
 import { ListWeightLogsUseCase } from '../../application/use-cases/weight/ListWeightLogs.js';
 import { ListFinanceLogsUseCase } from '../../application/use-cases/finance/ListFinanceLogs.js';
+import { ListCheckInsUseCase } from '../../application/use-cases/check-in/ListCheckIns.js';
+import { ListDistractionSignalsUseCase } from '../../application/use-cases/distraction-signal/ListDistractionSignals.js';
+import { ListInterventionsUseCase } from '../../application/use-cases/intervention/ListInterventions.js';
+import { MeasureInterventionEffectivenessUseCase } from '../../application/use-cases/intervention/MeasureInterventionEffectiveness.js';
+import { GetInterventionPolicySettingsUseCase } from '../../application/use-cases/intervention-policy/GetInterventionPolicySettings.js';
+import { GetDailyBehaviorScoreUseCase } from '../../application/use-cases/behavior-score/GetDailyBehaviorScore.js';
 import type { ExternalKnowledgeStatus } from '../../domain/entities/ExternalKnowledge.js';
 import type { AgentDelegationGrantStatus } from '../../domain/entities/AgentDelegationGrant.js';
 import type { MealType } from '../../domain/entities/MealLog.js';
 import type { FinanceLogType } from '../../domain/entities/FinanceLog.js';
+import type { DistractionSignalKind } from '../../domain/entities/DistractionSignal.js';
+import type { InterventionStatus } from '../../domain/entities/Intervention.js';
 import type { ProposalType, Proposal } from '../../domain/value-objects/Proposal.js';
 import type { ApprovalLevel, ApprovalSignals } from '../../domain/value-objects/ApprovalLevel.js';
 
@@ -88,6 +96,10 @@ import { JsonFileMealLogRepository } from '../../adapters/repositories/JsonFileM
 import { JsonFileNutritionLogRepository } from '../../adapters/repositories/JsonFileNutritionLogRepository.js';
 import { JsonFileWeightLogRepository } from '../../adapters/repositories/JsonFileWeightLogRepository.js';
 import { JsonFileFinanceLogRepository } from '../../adapters/repositories/JsonFileFinanceLogRepository.js';
+import { JsonFileCheckInRepository } from '../../adapters/repositories/JsonFileCheckInRepository.js';
+import { JsonFileDistractionSignalRepository } from '../../adapters/repositories/JsonFileDistractionSignalRepository.js';
+import { JsonFileInterventionRepository } from '../../adapters/repositories/JsonFileInterventionRepository.js';
+import { JsonFileInterventionPolicySettingsRepository } from '../../adapters/repositories/JsonFileInterventionPolicySettingsRepository.js';
 import { RuleBasedCaptureClassifier } from '../../adapters/providers/RuleBasedCaptureClassifier.js';
 import { isAuthorized } from '../security/apiKeyAuth.js';
 import { loadEnv } from '../config/env.js';
@@ -114,6 +126,10 @@ import {
   serializeNutritionLog,
   serializeWeightLog,
   serializeFinanceLog,
+  serializeCheckIn,
+  serializeDistractionSignal,
+  serializeIntervention,
+  serializeInterventionPolicySettings,
 } from '../../application/serializers.js';
 import type { Reflection } from '../../domain/entities/Reflection.js';
 import type { MemoryEntry } from '../../domain/entities/MemoryEntry.js';
@@ -130,6 +146,10 @@ import type { MealLog } from '../../domain/entities/MealLog.js';
 import type { NutritionLog } from '../../domain/entities/NutritionLog.js';
 import type { WeightLog } from '../../domain/entities/WeightLog.js';
 import type { FinanceLog } from '../../domain/entities/FinanceLog.js';
+import type { CheckIn } from '../../domain/entities/CheckIn.js';
+import type { DistractionSignal } from '../../domain/entities/DistractionSignal.js';
+import type { Intervention } from '../../domain/entities/Intervention.js';
+import type { InterventionPolicySettings } from '../../domain/entities/InterventionPolicySettings.js';
 
 export interface BuildAppOptions {
   /** テスト時に本番の`data/`と隔離するためのディレクトリ差し替え。 */
@@ -194,6 +214,14 @@ export function buildUseCases(options: BuildAppOptions = {}) {
   );
   const weightLogRepository = new JsonFileWeightLogRepository(repoPath(dataDir, 'weight-log.json'));
   const financeLogRepository = new JsonFileFinanceLogRepository(repoPath(dataDir, 'finance-log.json'));
+  const checkInRepository = new JsonFileCheckInRepository(repoPath(dataDir, 'check-ins.json'));
+  const distractionSignalRepository = new JsonFileDistractionSignalRepository(
+    repoPath(dataDir, 'distraction-signals.json'),
+  );
+  const interventionRepository = new JsonFileInterventionRepository(repoPath(dataDir, 'interventions.json'));
+  const interventionPolicySettingsRepository = new JsonFileInterventionPolicySettingsRepository(
+    repoPath(dataDir, 'intervention-policy-settings.json'),
+  );
   const classifier = new RuleBasedCaptureClassifier();
 
   return {
@@ -289,6 +317,17 @@ export function buildUseCases(options: BuildAppOptions = {}) {
     summarizeNutritionByDate: new SummarizeNutritionByDateUseCase(mealLogRepository, nutritionLogRepository),
     listWeightLogs: new ListWeightLogsUseCase(weightLogRepository),
     listFinanceLogs: new ListFinanceLogsUseCase(financeLogRepository),
+    listCheckIns: new ListCheckInsUseCase(checkInRepository),
+    listDistractionSignals: new ListDistractionSignalsUseCase(distractionSignalRepository),
+    listInterventions: new ListInterventionsUseCase(interventionRepository),
+    measureInterventionEffectiveness: new MeasureInterventionEffectivenessUseCase(interventionRepository),
+    getInterventionPolicySettings: new GetInterventionPolicySettingsUseCase(interventionPolicySettingsRepository),
+    getDailyBehaviorScore: new GetDailyBehaviorScoreUseCase(
+      reflectionRepository,
+      checkInRepository,
+      interventionRepository,
+      interventionPolicySettingsRepository,
+    ),
     readGateway: new ReadGatewayUseCase(
       reflectionRepository,
       appearanceLogRepository,
@@ -315,6 +354,10 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       nutritionLogRepository,
       weightLogRepository,
       financeLogRepository,
+      checkInRepository,
+      distractionSignalRepository,
+      interventionRepository,
+      interventionPolicySettingsRepository,
     ),
   };
 }
@@ -415,6 +458,22 @@ function serializeApproveResult(type: ProposalType, result: unknown): unknown {
     case 'FinanceLog': {
       const r = result as { log: FinanceLog; deduped: boolean };
       return { log: serializeFinanceLog(r.log), deduped: r.deduped };
+    }
+    case 'CheckIn': {
+      const r = result as { checkIn: CheckIn; deduped: boolean };
+      return { checkIn: serializeCheckIn(r.checkIn), deduped: r.deduped };
+    }
+    case 'DistractionSignal': {
+      const r = result as { signal: DistractionSignal; deduped: boolean };
+      return { signal: serializeDistractionSignal(r.signal), deduped: r.deduped };
+    }
+    case 'InterventionResponse': {
+      const r = result as { intervention: Intervention };
+      return { intervention: serializeIntervention(r.intervention) };
+    }
+    case 'InterventionPolicySettings': {
+      const r = result as { settings: InterventionPolicySettings };
+      return { settings: serializeInterventionPolicySettings(r.settings) };
     }
   }
 }
@@ -928,6 +987,64 @@ export function createApp(options: BuildAppOptions = {}) {
       const type = (url.searchParams.get('type') ?? undefined) as FinanceLogType | undefined;
       const result = await useCases.listFinanceLogs.execute({ limit, date, category, type });
       return ok({ logs: result.logs.map(serializeFinanceLog) });
+    }),
+
+    // --- 行動介入レイヤー（Version26） ---
+    // 書き込みは既存のPOST /proposal/*（type: 'CheckIn'等）をそのまま
+    // 使う——一覧取得のみ専用ルートを持つ（Life Log Phase 2と同型）。
+    // Interventionの生成（GenerateInterventionsUseCase）は意図的に
+    // HTTP Route化しない——ローカルスケジューラ（checkInPrompter.ts）
+    // のみが直接importして呼ぶ（Remote MCPが無認証のまま新規の書き込み
+    // 経路を増やさないため、ADR 0053参照）。
+    route('GET', '/check-ins', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const limit = requireLimit(url);
+      const date = url.searchParams.get('date') ?? undefined;
+      const result = await useCases.listCheckIns.execute({ limit, date });
+      return ok({ checkIns: result.checkIns.map(serializeCheckIn) });
+    }),
+
+    route('GET', '/distraction-signals', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const limit = requireLimit(url);
+      const date = url.searchParams.get('date') ?? undefined;
+      const kind = (url.searchParams.get('kind') ?? undefined) as DistractionSignalKind | undefined;
+      const result = await useCases.listDistractionSignals.execute({ limit, date, kind });
+      return ok({ signals: result.signals.map(serializeDistractionSignal) });
+    }),
+
+    route('GET', '/interventions', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const limit = requireLimit(url);
+      const status = (url.searchParams.get('status') ?? undefined) as InterventionStatus | undefined;
+      const result = await useCases.listInterventions.execute({ limit, status });
+      return ok({ interventions: result.interventions.map(serializeIntervention) });
+    }),
+
+    route('GET', '/intervention-policy-settings', async () => {
+      const result = await useCases.getInterventionPolicySettings.execute();
+      return ok(result);
+    }),
+
+    route('GET', '/daily-behavior-score', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const date = url.searchParams.get('date');
+      if (!date) {
+        throw new Error('date is required');
+      }
+      const result = await useCases.getDailyBehaviorScore.execute({ date });
+      return ok(result);
+    }),
+
+    route('GET', '/intervention-effectiveness', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const from = url.searchParams.get('from');
+      const to = url.searchParams.get('to');
+      if (!from || !to) {
+        throw new Error('from and to are required');
+      }
+      const result = await useCases.measureInterventionEffectiveness.execute({ from, to });
+      return ok(result);
     }),
   ];
 

@@ -625,3 +625,80 @@ Connector再作成（F）はOwner自身の操作待ち。
 Version25のDoDは、4 Entity・Repository・UseCase・訂正履歴・MCP・HTTP・
 自動保存境界拡張・重複防止・推定値区別・テスト・ADR・Reportで達成済み。
 削除UseCaseとOAuth関連作業は、承認境界を越えないよう未実装。
+
+## Version26完了チェックリスト
+
+- [x] `pnpm test` が全て緑（478件、CheckIn/DistractionSignal/
+      Intervention/InterventionPolicySettingsの単体テスト48件・
+      GenerateInterventionsルールエンジンのテスト18件・
+      RespondToIntervention/ListInterventions/
+      MeasureInterventionEffectiveness/InterventionPolicySettingsの
+      テスト14件・GetDailyBehaviorScoreのテスト5件・checkInPrompter
+      のテスト4件・WriteProposalGatewayへの追加テストを含む）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] 4つの新規Entity（`CheckIn`・`DistractionSignal`・
+      `Intervention`・`InterventionPolicySettings`）を実装・
+      単体テスト済み
+- [x] `CheckIn`の「未達3点セット」（missedReason/correctiveAction/
+      resumeAt）を`create()`で構造的に必須化・テスト済み
+- [x] `DistractionSignal`の`confidence`/`basis`常時必須化・テスト済み
+- [x] `Intervention`の状態機械（Pending/Acknowledged/Dismissed/
+      Snoozed、`wakeIfDue`の機械的な日時比較）を実装・テスト済み
+- [x] 決定的ルールエンジン（`GenerateInterventionsUseCase`、5ルール：
+      overdue-checkin/distraction-cluster/missed-goal-no-restart/
+      library-no-timer/scheduled-task-not-started）を実装、quiet
+      hours・除外ウィンドウ・dedup・却下クールダウン・1日上限を
+      含めてテスト済み
+- [x] `AgentDelegationGrantScope`を8型に拡張（CheckIn・
+      DistractionSignal追加）、`AUTO_APPROVABLE_TYPES`にも追加
+- [x] `InterventionPolicySettings`を型固定Level2ルール・
+      自動承認対象外の二重ロックで保護（`AgentDelegationGrant`と
+      同格の安全境界）
+- [x] `Intervention`自体はProposalTypeにしない設計とし、
+      Remote MCP/HTTPに新しい書き込み可能エンドポイントを追加して
+      いないことをテストで確認済み（ADR 0053、Version22脅威モデルの
+      教訓を踏まえた判断）
+- [x] `GetDailyBehaviorScoreUseCase`：既存`Reflection.score()`を
+      変更せず、80点基準（`IDEAL_LIFE_SCORE_BASELINE`定数）・
+      前日比・7日/30日比較（データ不足時は`available: false`で
+      明示）を実装・テスト済み
+- [x] `checkInPrompter.ts`（新規スクリプト、`pnpm run
+      checkin-runner`）を実装・テスト済み。
+      `scripts/register-scheduled-tasks.ps1`に3つ目のタスクブロック
+      を追記済み（**実際のタスク登録はOwner確認後**）
+- [x] **実HTTPリクエストでの実機確認**：grant作成（scope:
+      DistractionSignal, CheckIn）→3件のDistractionSignal自動保存→
+      checkInPrompter相当のロジック実行でdistraction-cluster
+      Intervention（Warning）生成確認→`GET /interventions`で
+      Pending確認→InterventionResponse Proposal（dismiss、Owner
+      do必須）→再実行でdismissクールダウンによる抑制確認→
+      `GET /daily-behavior-score`でinterventionPenalty=0確認→
+      CheckIn/InterventionPolicySettingsのレスポンス本体確認→
+      `/interventions/generate`等の書き込み可能ルートが存在しない
+      （404）ことを確認、の一連を確認済み。検証用スクリプト・
+      隔離データディレクトリは確認後に削除済み
+- [x] ADR 0053（Article 2との緊張の解消、セキュリティ判断の根拠、
+      4 Entity設計、Intervention非Proposal化の理由）を作成済み
+- [x] Screen Time/Opal連携の実現可能性調査
+      （`docs/operations/screen-time-integration-feasibility.md`）
+      を作成済み——実装ではなく調査のみ（指示書6章の要求通り）
+- [x] `docs/authority-table.md`をVersion26の内容に合わせて更新済み
+- [ ] **Screen Time/Opal/YouTube/SNSの実連携**——調査のみに留め、
+      実装は次Version以降（iOS制約上、直接取得不能）
+- [ ] **`InterventionResponse`の自動承認・`intervention_generate`の
+      MCP Tool化**——Owner確認前に自動化範囲を広げない判断のため
+      未実装、次Version確認事項として明示
+- [ ] **新規スケジュールタスクの実際の登録**——スクリプトは実装・
+      テスト済みだが、`register-scheduled-tasks.ps1`の実行
+      （Owner機への実登録）はOwner確認後に行う
+- [ ] **実際の効果測定値**——`MeasureInterventionEffectivenessUseCase`
+      は実装・合成データでテスト済みだが、実データによる測定は
+      実運用の蓄積が前提
+
+Version26のDoDは、指示書が明示的に要求した範囲（4 Entity・
+Repository・UseCase・決定的ルールエンジン・MCP・HTTP・自動保存境界
+拡張・重複防止・推定値区別・テスト・ADR・Report・フィージビリティ
+調査）で全項目達成済み。実連携・自動承認範囲の拡大・タスク登録・実効果
+測定は、指示書の明示的なスコープ外またはOwner確認が必要な事項として
+次Version以降へ持ち越し。

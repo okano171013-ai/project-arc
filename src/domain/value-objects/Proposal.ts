@@ -28,7 +28,11 @@ export type ProposalType =
   | 'MealLog'
   | 'NutritionLog'
   | 'WeightLog'
-  | 'FinanceLog';
+  | 'FinanceLog'
+  | 'CheckIn'
+  | 'DistractionSignal'
+  | 'InterventionResponse'
+  | 'InterventionPolicySettings';
 
 export interface Proposal {
   readonly type: ProposalType;

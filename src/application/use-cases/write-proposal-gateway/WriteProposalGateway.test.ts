@@ -28,6 +28,14 @@ import type { WeightLog } from '../../../domain/entities/WeightLog.js';
 import type { WeightLogRepository } from '../../ports/WeightLogRepository.js';
 import type { FinanceLog } from '../../../domain/entities/FinanceLog.js';
 import type { FinanceLogRepository } from '../../ports/FinanceLogRepository.js';
+import type { CheckIn } from '../../../domain/entities/CheckIn.js';
+import type { CheckInRepository } from '../../ports/CheckInRepository.js';
+import type { DistractionSignal } from '../../../domain/entities/DistractionSignal.js';
+import type { DistractionSignalRepository } from '../../ports/DistractionSignalRepository.js';
+import { Intervention } from '../../../domain/entities/Intervention.js';
+import type { InterventionRepository } from '../../ports/InterventionRepository.js';
+import type { InterventionPolicySettings } from '../../../domain/entities/InterventionPolicySettings.js';
+import type { InterventionPolicySettingsRepository } from '../../ports/InterventionPolicySettingsRepository.js';
 
 class FakeReflectionRepository implements ReflectionRepository {
   store = new Map<string, Reflection>();
@@ -205,6 +213,51 @@ class FakeFinanceLogRepository implements FinanceLogRepository {
   }
 }
 
+class FakeCheckInRepository implements CheckInRepository {
+  store: CheckIn[] = [];
+  async save(c: CheckIn): Promise<void> {
+    this.store.push(c);
+  }
+  async findAll(): Promise<CheckIn[]> {
+    return this.store;
+  }
+}
+
+class FakeDistractionSignalRepository implements DistractionSignalRepository {
+  store: DistractionSignal[] = [];
+  async save(s: DistractionSignal): Promise<void> {
+    this.store.push(s);
+  }
+  async findAll(): Promise<DistractionSignal[]> {
+    return this.store;
+  }
+}
+
+class FakeInterventionRepository implements InterventionRepository {
+  store: Intervention[] = [];
+  async save(i: Intervention): Promise<void> {
+    const idx = this.store.findIndex((x) => x.id === i.id);
+    if (idx >= 0) this.store[idx] = i;
+    else this.store.push(i);
+  }
+  async findById(id: string): Promise<Intervention | null> {
+    return this.store.find((i) => i.id === id) ?? null;
+  }
+  async findAll(): Promise<Intervention[]> {
+    return this.store;
+  }
+}
+
+class FakeInterventionPolicySettingsRepository implements InterventionPolicySettingsRepository {
+  settings: InterventionPolicySettings | undefined;
+  async save(s: InterventionPolicySettings): Promise<void> {
+    this.settings = s;
+  }
+  async find(): Promise<InterventionPolicySettings | undefined> {
+    return this.settings;
+  }
+}
+
 function buildGateway() {
   const reflectionRepo = new FakeReflectionRepository();
   const memoryRepo = new FakeMemoryRepository();
@@ -220,6 +273,10 @@ function buildGateway() {
   const nutritionLogRepo = new FakeNutritionLogRepository();
   const weightLogRepo = new FakeWeightLogRepository();
   const financeLogRepo = new FakeFinanceLogRepository();
+  const checkInRepo = new FakeCheckInRepository();
+  const distractionSignalRepo = new FakeDistractionSignalRepository();
+  const interventionRepo = new FakeInterventionRepository();
+  const interventionPolicySettingsRepo = new FakeInterventionPolicySettingsRepository();
   const gateway = new WriteProposalGatewayUseCase(
     reflectionRepo,
     memoryRepo,
@@ -235,6 +292,10 @@ function buildGateway() {
     nutritionLogRepo,
     weightLogRepo,
     financeLogRepo,
+    checkInRepo,
+    distractionSignalRepo,
+    interventionRepo,
+    interventionPolicySettingsRepo,
   );
   return {
     gateway,
@@ -252,6 +313,10 @@ function buildGateway() {
     nutritionLogRepo,
     weightLogRepo,
     financeLogRepo,
+    checkInRepo,
+    distractionSignalRepo,
+    interventionRepo,
+    interventionPolicySettingsRepo,
   };
 }
 
@@ -384,6 +449,24 @@ describe('WriteProposalGatewayUseCase', () => {
       { record: { occurredAt: '2026-07-17T12:00:00.000Z', type: 'Expense', amount: 1200 } },
       (ctx: ReturnType<typeof buildGateway>) => ctx.financeLogRepo.store.length,
     ],
+    [
+      'CheckIn' as const,
+      { record: { occurredAt: '2026-07-18T10:00:00.000Z', currentActivity: '判例百選', nextTwoHourGoal: '3件読む' } },
+      (ctx: ReturnType<typeof buildGateway>) => ctx.checkInRepo.store.length,
+    ],
+    [
+      'DistractionSignal' as const,
+      {
+        record: {
+          occurredAt: '2026-07-18T10:00:00.000Z',
+          kind: 'YouTube',
+          source: 'OwnerReported',
+          basis: 'Owner申告',
+          confidence: 'high',
+        },
+      },
+      (ctx: ReturnType<typeof buildGateway>) => ctx.distractionSignalRepo.store.length,
+    ],
   ])('approveProposal persists a %s proposal via the corresponding UseCase (承認時の保存)', async (type, payload, countOf) => {
     const proposal = await ctx.gateway.createProposal({
       type,
@@ -456,7 +539,16 @@ describe('WriteProposalGatewayUseCase', () => {
       ctx2: ReturnType<typeof buildGateway>,
       overrides: Partial<{
         usageLimit: number;
-        scope: ('Reflection' | 'ChallengeLog' | 'MealLog' | 'NutritionLog' | 'WeightLog' | 'FinanceLog')[];
+        scope: (
+          | 'Reflection'
+          | 'ChallengeLog'
+          | 'MealLog'
+          | 'NutritionLog'
+          | 'WeightLog'
+          | 'FinanceLog'
+          | 'CheckIn'
+          | 'DistractionSignal'
+        )[];
       }> = {},
     ) {
       const grant = AgentDelegationGrant.create({
@@ -612,8 +704,32 @@ describe('WriteProposalGatewayUseCase', () => {
         { record: { occurredAt: '2026-07-17T12:00:00.000Z', type: 'Expense', amount: 1200 } },
         (ctx2: ReturnType<typeof buildGateway>) => ctx2.financeLogRepo.store.length,
       ],
+      [
+        'CheckIn' as const,
+        {
+          record: {
+            occurredAt: '2026-07-18T10:00:00.000Z',
+            currentActivity: '判例百選',
+            nextTwoHourGoal: '3件読む',
+          },
+        },
+        (ctx2: ReturnType<typeof buildGateway>) => ctx2.checkInRepo.store.length,
+      ],
+      [
+        'DistractionSignal' as const,
+        {
+          record: {
+            occurredAt: '2026-07-18T10:00:00.000Z',
+            kind: 'YouTube',
+            source: 'OwnerReported',
+            basis: 'Owner申告',
+            confidence: 'high',
+          },
+        },
+        (ctx2: ReturnType<typeof buildGateway>) => ctx2.distractionSignalRepo.store.length,
+      ],
     ])(
-      'auto-approves a %s proposal when a valid grant covers it (Version25: Life Log Phase 2の自動承認)',
+      'auto-approves a %s proposal when a valid grant covers it (Version25/26: Life Log/行動介入レイヤーの自動承認)',
       async (type, payload, countOf) => {
         await seedGrant(ctx, { scope: [type] });
         const proposal = await ctx.gateway.createProposal({
@@ -647,8 +763,30 @@ describe('WriteProposalGatewayUseCase', () => {
         'FinanceLog' as const,
         { record: { occurredAt: '2026-07-17T12:00:00.000Z', type: 'Expense', amount: 1200 } },
       ],
+      [
+        'CheckIn' as const,
+        {
+          record: {
+            occurredAt: '2026-07-18T10:00:00.000Z',
+            currentActivity: '判例百選',
+            nextTwoHourGoal: '3件読む',
+          },
+        },
+      ],
+      [
+        'DistractionSignal' as const,
+        {
+          record: {
+            occurredAt: '2026-07-18T10:00:00.000Z',
+            kind: 'YouTube',
+            source: 'OwnerReported',
+            basis: 'Owner申告',
+            confidence: 'high',
+          },
+        },
+      ],
     ])(
-      'does not auto-approve %s when the grant scope excludes it (scope外は対象外、Version25)',
+      'does not auto-approve %s when the grant scope excludes it (scope外は対象外、Version25/26)',
       async (type, payload) => {
         await seedGrant(ctx, { scope: ['Reflection'] });
         const proposal = await ctx.gateway.createProposal({
@@ -661,5 +799,100 @@ describe('WriteProposalGatewayUseCase', () => {
         expect(proposal.autoApproved).toBeUndefined();
       },
     );
+  });
+
+  describe('InterventionPolicySettings and InterventionResponse (Version26, 行動介入レイヤー)', () => {
+    it('always classifies InterventionPolicySettings as Level2 regardless of signals (type固定Level2ルール)', async () => {
+      const proposal = await ctx.gateway.createProposal({
+        type: 'InterventionPolicySettings',
+        target: '介入ポリシー設定の更新',
+        payload: {
+          record: {
+            checkInIntervalMinutes: 120,
+            activeHoursStart: '07:00',
+            activeHoursEnd: '23:00',
+            quietHoursStart: '23:00',
+            quietHoursEnd: '07:00',
+            dailyNotificationLimit: 6,
+            minDistractionConfidenceForWarning: 'medium',
+            dedupWindowMinutes: 120,
+            dismissCooldownHours: 4,
+            exclusionWindows: [],
+          },
+        },
+        reason: '理由',
+      });
+
+      expect(proposal.approvalLevel).toBe('Level2');
+      expect(proposal.autoApproved).toBeUndefined();
+    });
+
+    async function seedGrantFor(
+      ctx2: ReturnType<typeof buildGateway>,
+      scope: ('CheckIn' | 'DistractionSignal')[],
+    ) {
+      const grant = AgentDelegationGrant.create({
+        id: 'grant-100',
+        record: {
+          scope,
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          usageLimit: 5,
+          reason: 'テスト用委譲',
+        },
+      });
+      await ctx2.agentDelegationGrantRepo.save(grant);
+    }
+
+    it('never auto-approves InterventionPolicySettings even with an (irrelevant) grant covering everything else', async () => {
+      await seedGrantFor(ctx, ['CheckIn', 'DistractionSignal']);
+      const proposal = await ctx.gateway.createProposal({
+        type: 'InterventionPolicySettings',
+        target: '介入ポリシー設定の更新',
+        payload: {
+          record: {
+            checkInIntervalMinutes: 120,
+            activeHoursStart: '07:00',
+            activeHoursEnd: '23:00',
+            quietHoursStart: '23:00',
+            quietHoursEnd: '07:00',
+            dailyNotificationLimit: 6,
+            minDistractionConfidenceForWarning: 'medium',
+            dedupWindowMinutes: 120,
+            dismissCooldownHours: 4,
+            exclusionWindows: [],
+          },
+        },
+        reason: '理由',
+      });
+
+      expect(proposal.autoApproved).toBeUndefined();
+    });
+
+    it('does not auto-approve InterventionResponse even with a grant covering everything else (Owner do必須のまま)', async () => {
+      const intervention = Intervention.create({
+        id: 'i-100',
+        record: {
+          generatedAt: '2026-07-18T10:00:00.000Z',
+          intensity: 'Warning',
+          triggerRuleId: 'overdue-checkin',
+          message: 'x',
+        },
+      });
+      await ctx.interventionRepo.save(intervention);
+      await seedGrantFor(ctx, ['CheckIn', 'DistractionSignal']);
+
+      const proposal = await ctx.gateway.createProposal({
+        type: 'InterventionResponse',
+        target: 'Intervention i-100への応答',
+        payload: { action: 'acknowledge', id: 'i-100' },
+        reason: 'Owner確認',
+      });
+      expect(proposal.autoApproved).toBeUndefined();
+
+      const result = await ctx.gateway.approveProposal(proposal);
+      expect(result.type).toBe('InterventionResponse');
+      const stored = await ctx.interventionRepo.findById('i-100');
+      expect(stored?.status).toBe('Acknowledged');
+    });
   });
 });

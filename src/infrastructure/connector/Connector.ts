@@ -26,7 +26,11 @@ export type ConnectorProposalType =
   | 'MealLog'
   | 'NutritionLog'
   | 'WeightLog'
-  | 'FinanceLog';
+  | 'FinanceLog'
+  | 'CheckIn'
+  | 'DistractionSignal'
+  | 'InterventionResponse'
+  | 'InterventionPolicySettings';
 
 export type ConnectorApprovalLevel = 'Level0' | 'Level1' | 'Level2';
 
@@ -129,6 +133,75 @@ export interface ListFinanceLogsInput {
   date?: string;
   category?: string;
   type?: 'Income' | 'Expense';
+}
+
+export interface ConnectorCheckIn {
+  readonly id: string;
+  readonly record: Record<string, unknown>;
+  readonly createdAt: string;
+}
+
+export interface ConnectorDistractionSignal {
+  readonly id: string;
+  readonly record: Record<string, unknown>;
+  readonly createdAt: string;
+}
+
+export interface ConnectorIntervention {
+  readonly id: string;
+  readonly record: Record<string, unknown>;
+  readonly createdAt: string;
+  readonly status: 'Pending' | 'Acknowledged' | 'Dismissed' | 'Snoozed';
+  readonly respondedAt?: string;
+  readonly responseNote?: string;
+  readonly snoozedUntil?: string;
+  readonly resumedActivityAt?: string;
+}
+
+export interface ConnectorInterventionPolicySettings {
+  readonly record: Record<string, unknown>;
+  readonly isDefault: boolean;
+}
+
+export interface ConnectorDailyBehaviorScore {
+  readonly date: string;
+  readonly reflectionScore: number | undefined;
+  readonly checkInCompletionRate: number | undefined;
+  readonly interventionPenalty: number;
+  readonly compositeScore: number | undefined;
+  readonly idealBaseline: number;
+  readonly vsIdealBaseline: number | undefined;
+  readonly previousDayDelta: number | undefined;
+  readonly sevenDayComparison: Record<string, unknown>;
+  readonly thirtyDayComparison: Record<string, unknown>;
+}
+
+export interface ConnectorInterventionEffectiveness {
+  readonly totalGenerated: number;
+  readonly acknowledgedCount: number;
+  readonly dismissedCount: number;
+  readonly snoozedCount: number;
+  readonly pendingCount: number;
+  readonly dismissRate: number | undefined;
+  readonly snoozeRate: number | undefined;
+  readonly avgResumeMinutes: number | undefined;
+  readonly byIntensity: Record<string, unknown>;
+}
+
+export interface ListCheckInsInput {
+  limit: number;
+  date?: string;
+}
+
+export interface ListDistractionSignalsInput {
+  limit: number;
+  date?: string;
+  kind?: string;
+}
+
+export interface ListInterventionsInput {
+  limit: number;
+  status?: 'Pending' | 'Acknowledged' | 'Dismissed' | 'Snoozed';
 }
 
 export type ManagementFeedbackResolution =
@@ -350,6 +423,51 @@ export class Connector {
     if (input.category) params.set('category', input.category);
     if (input.type) params.set('type', input.type);
     return this.request('GET', `/finance-logs?${params.toString()}`);
+  }
+
+  // --- 行動介入レイヤー（Version26） ---
+  // 書き込みはcreateProposal/approveProposal（type: 'CheckIn'等）を
+  // そのまま使う。読み取りのみ専用メソッドを持つ。Interventionの生成
+  // 自体はこのConnector経由では呼べない（ADR 0053、ローカルスケジューラ
+  // のみが呼ぶ設計）。
+
+  async listCheckIns(input: ListCheckInsInput): Promise<{ checkIns: ConnectorCheckIn[] }> {
+    const params = new URLSearchParams({ limit: String(input.limit) });
+    if (input.date) params.set('date', input.date);
+    return this.request('GET', `/check-ins?${params.toString()}`);
+  }
+
+  async listDistractionSignals(
+    input: ListDistractionSignalsInput,
+  ): Promise<{ signals: ConnectorDistractionSignal[] }> {
+    const params = new URLSearchParams({ limit: String(input.limit) });
+    if (input.date) params.set('date', input.date);
+    if (input.kind) params.set('kind', input.kind);
+    return this.request('GET', `/distraction-signals?${params.toString()}`);
+  }
+
+  async listInterventions(input: ListInterventionsInput): Promise<{ interventions: ConnectorIntervention[] }> {
+    const params = new URLSearchParams({ limit: String(input.limit) });
+    if (input.status) params.set('status', input.status);
+    return this.request('GET', `/interventions?${params.toString()}`);
+  }
+
+  async getInterventionPolicySettings(): Promise<ConnectorInterventionPolicySettings> {
+    return this.request('GET', '/intervention-policy-settings');
+  }
+
+  async getDailyBehaviorScore(date: string): Promise<ConnectorDailyBehaviorScore> {
+    return this.request('GET', `/daily-behavior-score?date=${encodeURIComponent(date)}`);
+  }
+
+  async measureInterventionEffectiveness(
+    from: string,
+    to: string,
+  ): Promise<ConnectorInterventionEffectiveness> {
+    return this.request(
+      'GET',
+      `/intervention-effectiveness?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    );
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {

@@ -33,6 +33,10 @@ import { JsonFileMealLogRepository } from '../../adapters/repositories/JsonFileM
 import { JsonFileNutritionLogRepository } from '../../adapters/repositories/JsonFileNutritionLogRepository.js';
 import { JsonFileWeightLogRepository } from '../../adapters/repositories/JsonFileWeightLogRepository.js';
 import { JsonFileFinanceLogRepository } from '../../adapters/repositories/JsonFileFinanceLogRepository.js';
+import { JsonFileCheckInRepository } from '../../adapters/repositories/JsonFileCheckInRepository.js';
+import { JsonFileDistractionSignalRepository } from '../../adapters/repositories/JsonFileDistractionSignalRepository.js';
+import { JsonFileInterventionRepository } from '../../adapters/repositories/JsonFileInterventionRepository.js';
+import { JsonFileInterventionPolicySettingsRepository } from '../../adapters/repositories/JsonFileInterventionPolicySettingsRepository.js';
 import type { ProposalType, Proposal } from '../../domain/value-objects/Proposal.js';
 import type { ManagementFeedbackResolution } from '../../domain/entities/ManagementFeedback.js';
 import type { MemoryCategory } from '../../domain/entities/MemoryEntry.js';
@@ -51,6 +55,10 @@ const TYPES: ProposalType[] = [
   'NutritionLog',
   'WeightLog',
   'FinanceLog',
+  'CheckIn',
+  'DistractionSignal',
+  'InterventionResponse',
+  'InterventionPolicySettings',
 ];
 const AGENT_DELEGATION_GRANT_SCOPES: AgentDelegationGrantScope[] = [
   'Reflection',
@@ -59,6 +67,8 @@ const AGENT_DELEGATION_GRANT_SCOPES: AgentDelegationGrantScope[] = [
   'NutritionLog',
   'WeightLog',
   'FinanceLog',
+  'CheckIn',
+  'DistractionSignal',
 ];
 const MEMORY_CATEGORIES: MemoryCategory[] = [
   'Assets', 'Appearance', 'Goals', 'Preferences', 'Education',
@@ -86,6 +96,10 @@ function buildGateway(): WriteProposalGatewayUseCase {
     new JsonFileNutritionLogRepository(),
     new JsonFileWeightLogRepository(),
     new JsonFileFinanceLogRepository(),
+    new JsonFileCheckInRepository(),
+    new JsonFileDistractionSignalRepository(),
+    new JsonFileInterventionRepository(),
+    new JsonFileInterventionPolicySettingsRepository(),
   );
 }
 
@@ -283,6 +297,95 @@ async function promptPayload(rl: Rl, type: ProposalType): Promise<Record<string,
           type: typeRaw.trim() === '1' ? 'Income' : 'Expense',
           amount: Number(amountRaw),
           category: category || undefined,
+        },
+      };
+    }
+    case 'CheckIn': {
+      const occurredAt = await rl.question('日時 (ISO8601、例: 2026-07-18T14:00:00+09:00): ');
+      const currentActivity = await rl.question('今何をしているか: ');
+      const nextTwoHourGoal = await rl.question('次の2時間で終える成果: ');
+      const statusRaw = await rl.question('前回の目標結果 (1=achieved/2=partial/3=missed、任意): ');
+      const statusMap: Record<string, 'achieved' | 'partial' | 'missed'> = {
+        '1': 'achieved',
+        '2': 'partial',
+        '3': 'missed',
+      };
+      const previousGoalStatus = statusMap[statusRaw.trim()];
+      let missedReason: string | undefined;
+      let correctiveAction: string | undefined;
+      let resumeAt: string | undefined;
+      if (previousGoalStatus === 'partial' || previousGoalStatus === 'missed') {
+        missedReason = await rl.question('未達の原因: ');
+        correctiveAction = await rl.question('修正行動: ');
+        resumeAt = await rl.question('再開時刻 (ISO8601): ');
+      }
+      return {
+        record: {
+          occurredAt,
+          currentActivity,
+          nextTwoHourGoal,
+          previousGoalStatus,
+          missedReason,
+          correctiveAction,
+          resumeAt,
+        },
+      };
+    }
+    case 'DistractionSignal': {
+      const occurredAt = await rl.question('日時 (ISO8601、例: 2026-07-18T14:00:00+09:00): ');
+      const kindRaw = await rl.question(
+        '種類 (1=YouTube/2=SNS/3=AimlessSearch/4=LongBreak/5=EasyTaskEscape/6=NoTimerAtLibrary/7=ScheduledTaskNotStarted/8=Other): ',
+      );
+      const kindMap: Record<string, string> = {
+        '1': 'YouTube',
+        '2': 'SNS',
+        '3': 'AimlessSearch',
+        '4': 'LongBreak',
+        '5': 'EasyTaskEscape',
+        '6': 'NoTimerAtLibrary',
+        '7': 'ScheduledTaskNotStarted',
+        '8': 'Other',
+      };
+      const basis = await rl.question('根拠: ');
+      const confidenceRaw = await rl.question('確信度 (1=low/2=medium/3=high): ');
+      const confidenceMap: Record<string, 'low' | 'medium' | 'high'> = { '1': 'low', '2': 'medium', '3': 'high' };
+      return {
+        record: {
+          occurredAt,
+          kind: kindMap[kindRaw.trim()] ?? 'Other',
+          source: 'OwnerReported',
+          basis,
+          confidence: confidenceMap[confidenceRaw.trim()] ?? 'low',
+        },
+      };
+    }
+    case 'InterventionResponse': {
+      const id = await rl.question('対象InterventionのID: ');
+      const actionRaw = await rl.question('操作 (1=acknowledge/2=dismiss/3=snooze): ');
+      const actionMap: Record<string, 'acknowledge' | 'dismiss' | 'snooze'> = {
+        '1': 'acknowledge',
+        '2': 'dismiss',
+        '3': 'snooze',
+      };
+      const action = actionMap[actionRaw.trim()] ?? 'acknowledge';
+      const note = action === 'dismiss' ? await rl.question('却下理由: ') : undefined;
+      const snoozeUntil = action === 'snooze' ? await rl.question('スヌーズ先時刻 (ISO8601): ') : undefined;
+      return { action, id, note, snoozeUntil };
+    }
+    case 'InterventionPolicySettings': {
+      console.log('InterventionPolicySettingsはMCP/HTTP経由での設定を推奨します（CLIでは既定値を提案）。');
+      return {
+        record: {
+          checkInIntervalMinutes: 120,
+          activeHoursStart: '07:00',
+          activeHoursEnd: '23:00',
+          quietHoursStart: '23:00',
+          quietHoursEnd: '07:00',
+          dailyNotificationLimit: 6,
+          minDistractionConfidenceForWarning: 'medium',
+          dedupWindowMinutes: 120,
+          dismissCooldownHours: 4,
+          exclusionWindows: [],
         },
       };
     }

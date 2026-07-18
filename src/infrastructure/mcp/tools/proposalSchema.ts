@@ -19,6 +19,10 @@ export const PROPOSAL_TYPES = [
   'NutritionLog',
   'WeightLog',
   'FinanceLog',
+  'CheckIn',
+  'DistractionSignal',
+  'InterventionResponse',
+  'InterventionPolicySettings',
 ] as const;
 
 /**

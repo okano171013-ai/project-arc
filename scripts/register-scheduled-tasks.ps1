@@ -7,14 +7,19 @@
   No administrator rights required — registers as the current user with
   a logon trigger (Register-ScheduledTask, ScheduledTasks module).
 
-  Registers two tasks:
+  Registers three tasks:
     1. ProjectARC-AutoStart: runs start-all.ps1 at logon
        (starts pnpm run api / mcp:remote / ngrok)
     2. ProjectARC-CollaborationRunner: runs pnpm run runner every 15
        minutes (mechanically detects new AgentMessage/ManagementFeedback
        only, ADR 0046)
+    3. ProjectARC-CheckInPrompter: runs pnpm run checkin-runner every
+       2 hours (決定的ルールエンジンによるIntervention生成のみ、
+       Version26、ADR 0053) — 新規タスク。他の2つと違い、外部ネットワーク
+       アクセスを一切行わないローカル専用スクリプトを起動する
+       （`GenerateInterventionsUseCase`を直接importして呼ぶ設計のため）。
 
-  Both tasks use -MultipleInstances IgnoreNew (don't start a new run if
+  All tasks use -MultipleInstances IgnoreNew (don't start a new run if
   one is already in progress — duplicate-execution prevention) and
   -StartWhenAvailable (still runs after a missed logon / reboot
   recovery).
@@ -23,9 +28,11 @@
   To disable:
     Disable-ScheduledTask -TaskName 'ProjectARC-AutoStart'
     Disable-ScheduledTask -TaskName 'ProjectARC-CollaborationRunner'
+    Disable-ScheduledTask -TaskName 'ProjectARC-CheckInPrompter'
   To remove entirely:
     Unregister-ScheduledTask -TaskName 'ProjectARC-AutoStart' -Confirm:$false
     Unregister-ScheduledTask -TaskName 'ProjectARC-CollaborationRunner' -Confirm:$false
+    Unregister-ScheduledTask -TaskName 'ProjectARC-CheckInPrompter' -Confirm:$false
 #>
 
 $ErrorActionPreference = 'Stop'
@@ -61,5 +68,24 @@ Register-ScheduledTask -TaskName 'ProjectARC-CollaborationRunner' `
     -Description 'Project ARC: runs the Collaboration Runner every 15 min, mechanical new-item detection only (Version20, ADR 0046)' `
     -Force | Out-Null
 Write-Output "[register] ProjectARC-CollaborationRunner registered"
+
+# --- 3. ProjectARC-CheckInPrompter (every 2 hours) ---
+# Version26、ADR 0053。GenerateInterventionsUseCase（決定的ルール
+# エンジン）を直接importして呼ぶローカル専用スクリプト——ネットワーク
+# 経由の書き込み可能エンドポイントは一切追加しない。
+$checkInAction = New-ScheduledTaskAction -Execute 'powershell.exe' `
+    -Argument "-NoProfile -ExecutionPolicy Bypass -Command `"Set-Location -LiteralPath '$root'; pnpm run checkin-runner`""
+$checkInTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) `
+    -RepetitionInterval (New-TimeSpan -Minutes 120) `
+    -RepetitionDuration (New-TimeSpan -Days 3650)
+$checkInSettings = New-ScheduledTaskSettingsSet `
+    -MultipleInstances IgnoreNew `
+    -StartWhenAvailable
+
+Register-ScheduledTask -TaskName 'ProjectARC-CheckInPrompter' `
+    -Action $checkInAction -Trigger $checkInTrigger -Settings $checkInSettings `
+    -Description 'Project ARC: runs the Check-In Prompter every 2 hours, deterministic rule-based intervention generation only (Version26, ADR 0053)' `
+    -Force | Out-Null
+Write-Output "[register] ProjectARC-CheckInPrompter registered"
 
 Write-Output "[register] done. Verify with: Get-ScheduledTask -TaskName 'ProjectARC-*'"

@@ -28,6 +28,12 @@ describe('generateOpenApiDocument', () => {
         '/nutrition-logs/summary',
         '/weight-logs',
         '/finance-logs',
+        '/check-ins',
+        '/distraction-signals',
+        '/interventions',
+        '/intervention-policy-settings',
+        '/daily-behavior-score',
+        '/intervention-effectiveness',
       ].sort(),
     );
 

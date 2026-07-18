@@ -35,6 +35,12 @@ import { registerNutritionLogListTool } from './tools/nutritionLogList.js';
 import { registerNutritionSummaryByDateTool } from './tools/nutritionSummaryByDate.js';
 import { registerWeightLogListTool } from './tools/weightLogList.js';
 import { registerFinanceLogListTool } from './tools/financeLogList.js';
+import { registerCheckInListTool } from './tools/checkInList.js';
+import { registerDistractionSignalListTool } from './tools/distractionSignalList.js';
+import { registerInterventionListTool } from './tools/interventionList.js';
+import { registerInterventionPolicySettingsGetTool } from './tools/interventionPolicySettingsGet.js';
+import { registerDailyBehaviorScoreGetTool } from './tools/dailyBehaviorScoreGet.js';
+import { registerInterventionEffectivenessGetTool } from './tools/interventionEffectivenessGet.js';
 
 export function buildMcpServer(connector: Connector): McpServer {
   const server = new McpServer({ name: 'project-arc', version: '1.0.0' });
@@ -56,6 +62,12 @@ export function buildMcpServer(connector: Connector): McpServer {
   registerNutritionSummaryByDateTool(server, connector);
   registerWeightLogListTool(server, connector);
   registerFinanceLogListTool(server, connector);
+  registerCheckInListTool(server, connector);
+  registerDistractionSignalListTool(server, connector);
+  registerInterventionListTool(server, connector);
+  registerInterventionPolicySettingsGetTool(server, connector);
+  registerDailyBehaviorScoreGetTool(server, connector);
+  registerInterventionEffectivenessGetTool(server, connector);
 
   return server;
 }

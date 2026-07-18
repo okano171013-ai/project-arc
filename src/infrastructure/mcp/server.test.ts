@@ -12,7 +12,7 @@ import { buildMcpServer } from './server.js';
  * MCP Tool層のend-to-endテスト。指示書15章の精神
  * （実物を起動して駆動する）に従い、実際のHTTP APIサーバーを起動し、
  * SDKが提供する`InMemoryTransport`でClient/McpServerを接続して、
- * 実際のMCPプロトコル（JSON Schema検証を含む）越しに17ツールを
+ * 実際のMCPプロトコル（JSON Schema検証を含む）越しに23ツールを
  * 検証する。
  */
 describe('Project ARC MCP Server', () => {
@@ -47,7 +47,7 @@ describe('Project ARC MCP Server', () => {
     return content[0]?.text ?? '';
   }
 
-  it('lists all 17 registered tools', async () => {
+  it('lists all 23 registered tools', async () => {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual(
@@ -55,7 +55,13 @@ describe('Project ARC MCP Server', () => {
         'agent_delegation_grant_list',
         'agent_message_list',
         'approval_decision_list',
+        'check_in_list',
+        'daily_behavior_score_get',
+        'distraction_signal_list',
         'finance_log_list',
+        'intervention_effectiveness_get',
+        'intervention_list',
+        'intervention_policy_settings_get',
         'management_feedback_list',
         'management_feedback_resolve',
         'meal_log_list',

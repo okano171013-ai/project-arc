@@ -15,6 +15,10 @@ import type { MealLogRepository } from '../../ports/MealLogRepository.js';
 import type { NutritionLogRepository } from '../../ports/NutritionLogRepository.js';
 import type { WeightLogRepository } from '../../ports/WeightLogRepository.js';
 import type { FinanceLogRepository } from '../../ports/FinanceLogRepository.js';
+import type { CheckInRepository } from '../../ports/CheckInRepository.js';
+import type { DistractionSignalRepository } from '../../ports/DistractionSignalRepository.js';
+import type { InterventionRepository } from '../../ports/InterventionRepository.js';
+import type { InterventionPolicySettingsRepository } from '../../ports/InterventionPolicySettingsRepository.js';
 import { RecordDailyReflectionUseCase } from '../reflection/RecordDailyReflection.js';
 import { AddMemoryEntryUseCase } from '../memory/AddMemoryEntry.js';
 import { AddExternalKnowledgeUseCase } from '../external-knowledge/AddExternalKnowledge.js';
@@ -27,14 +31,21 @@ import { AddMealLogUseCase } from '../meal/AddMealLog.js';
 import { AddNutritionLogUseCase } from '../nutrition/AddNutritionLog.js';
 import { AddWeightLogUseCase } from '../weight/AddWeightLog.js';
 import { AddFinanceLogUseCase } from '../finance/AddFinanceLog.js';
+import { AddCheckInUseCase } from '../check-in/AddCheckIn.js';
+import { AddDistractionSignalUseCase } from '../distraction-signal/AddDistractionSignal.js';
+import { RespondToInterventionUseCase } from '../intervention/RespondToIntervention.js';
+import { UpdateInterventionPolicySettingsUseCase } from '../intervention-policy/UpdateInterventionPolicySettings.js';
 import { ClassifyApprovalLevelUseCase } from '../approval-policy/ClassifyApprovalLevel.js';
 import { RecordApprovalDecisionUseCase } from '../approval-policy/RecordApprovalDecision.js';
 
 /**
- * Version24で導入、Version25で拡張：この6型のみ、有効な
+ * Version24で導入、Version25・Version26で拡張：この8型のみ、有効な
  * AgentDelegationGrantがあれば自動承認の対象になりうる。
- * `AgentDelegationGrant`自体は絶対に含めない（型固定Level2ルールと
- * 合わせた二重の安全装置、ADR 0051）。
+ * `AgentDelegationGrant`自体・`InterventionPolicySettings`・
+ * `InterventionResponse`は絶対に含めない（型固定Level2ルールと
+ * 合わせた二重の安全装置、ADR 0051/0053）——`InterventionResponse`
+ * （却下・スヌーズ等）の自動化はOwner確認前に広げない、という
+ * Version26の明示的な判断（`docs/reports/Version26_Report.md`参照）。
  */
 const AUTO_APPROVABLE_TYPES: readonly ProposalType[] = [
   'Reflection',
@@ -43,6 +54,8 @@ const AUTO_APPROVABLE_TYPES: readonly ProposalType[] = [
   'NutritionLog',
   'WeightLog',
   'FinanceLog',
+  'CheckIn',
+  'DistractionSignal',
 ];
 
 /**
@@ -140,7 +153,18 @@ const payloadSchemas: Record<ProposalType, z.ZodTypeAny> = {
     record: z
       .object({
         scope: z
-          .array(z.enum(['Reflection', 'ChallengeLog', 'MealLog', 'NutritionLog', 'WeightLog', 'FinanceLog']))
+          .array(
+            z.enum([
+              'Reflection',
+              'ChallengeLog',
+              'MealLog',
+              'NutritionLog',
+              'WeightLog',
+              'FinanceLog',
+              'CheckIn',
+              'DistractionSignal',
+            ]),
+          )
           .min(1),
         expiresAt: z.string(),
         usageLimit: z.number().positive(),
@@ -203,6 +227,73 @@ const payloadSchemas: Record<ProposalType, z.ZodTypeAny> = {
       idempotencyKey: z.string().optional(),
     }),
   }),
+  CheckIn: z.object({
+    record: z.object({
+      occurredAt: z.string(),
+      currentActivity: z.string().min(1),
+      alignedWithTopPriority: z.boolean().optional(),
+      nextTwoHourGoal: z.string().min(1),
+      previousGoalStatus: z.enum(['achieved', 'partial', 'missed']).optional(),
+      missedReason: z.string().optional(),
+      correctiveAction: z.string().optional(),
+      resumeAt: z.string().optional(),
+      notes: z.string().optional(),
+      idempotencyKey: z.string().optional(),
+      estimated: z.boolean().optional(),
+      estimationBasis: z.string().optional(),
+      confidence: z.enum(['low', 'medium', 'high']).optional(),
+    }),
+  }),
+  DistractionSignal: z.object({
+    record: z.object({
+      occurredAt: z.string(),
+      kind: z.enum([
+        'YouTube',
+        'SNS',
+        'AimlessSearch',
+        'LongBreak',
+        'EasyTaskEscape',
+        'NoTimerAtLibrary',
+        'ScheduledTaskNotStarted',
+        'Other',
+      ]),
+      source: z.enum(['OwnerReported', 'ExternalMetric', 'ARCInference']),
+      basis: z.string().min(1),
+      confidence: z.enum(['low', 'medium', 'high']),
+      metricValue: z.number().optional(),
+      metricUnit: z.string().optional(),
+      notes: z.string().optional(),
+      idempotencyKey: z.string().optional(),
+    }),
+  }),
+  InterventionResponse: z.object({
+    action: z.enum(['acknowledge', 'dismiss', 'snooze']),
+    id: z.string().min(1),
+    note: z.string().optional(),
+    snoozeUntil: z.string().optional(),
+    resumedActivityAt: z.string().optional(),
+  }),
+  InterventionPolicySettings: z.object({
+    record: z.object({
+      checkInIntervalMinutes: z.number().int().positive(),
+      activeHoursStart: z.string(),
+      activeHoursEnd: z.string(),
+      quietHoursStart: z.string(),
+      quietHoursEnd: z.string(),
+      dailyNotificationLimit: z.number().int().positive(),
+      minDistractionConfidenceForWarning: z.enum(['low', 'medium', 'high']),
+      dedupWindowMinutes: z.number().int().positive(),
+      dismissCooldownHours: z.number().int().positive(),
+      exclusionWindows: z.array(
+        z.object({
+          reason: z.enum(['class', 'commute', 'sleep', 'medical', 'other']),
+          start: z.string(),
+          end: z.string(),
+          note: z.string().optional(),
+        }),
+      ),
+    }),
+  }),
 };
 
 export interface CreateProposalInput {
@@ -250,6 +341,10 @@ export class WriteProposalGatewayUseCase {
   private readonly addNutritionLog: AddNutritionLogUseCase;
   private readonly addWeightLog: AddWeightLogUseCase;
   private readonly addFinanceLog: AddFinanceLogUseCase;
+  private readonly addCheckIn: AddCheckInUseCase;
+  private readonly addDistractionSignal: AddDistractionSignalUseCase;
+  private readonly respondToIntervention: RespondToInterventionUseCase;
+  private readonly updateInterventionPolicySettings: UpdateInterventionPolicySettingsUseCase;
   private readonly classifyApprovalLevel: ClassifyApprovalLevelUseCase;
   private readonly recordApprovalDecision: RecordApprovalDecisionUseCase;
 
@@ -268,6 +363,10 @@ export class WriteProposalGatewayUseCase {
     nutritionLogRepository: NutritionLogRepository,
     weightLogRepository: WeightLogRepository,
     financeLogRepository: FinanceLogRepository,
+    checkInRepository: CheckInRepository,
+    distractionSignalRepository: DistractionSignalRepository,
+    interventionRepository: InterventionRepository,
+    interventionPolicySettingsRepository: InterventionPolicySettingsRepository,
   ) {
     this.recordDailyReflection = new RecordDailyReflectionUseCase(reflectionRepository);
     this.addMemoryEntry = new AddMemoryEntryUseCase(memoryRepository);
@@ -284,6 +383,12 @@ export class WriteProposalGatewayUseCase {
     this.addNutritionLog = new AddNutritionLogUseCase(nutritionLogRepository);
     this.addWeightLog = new AddWeightLogUseCase(weightLogRepository);
     this.addFinanceLog = new AddFinanceLogUseCase(financeLogRepository);
+    this.addCheckIn = new AddCheckInUseCase(checkInRepository);
+    this.addDistractionSignal = new AddDistractionSignalUseCase(distractionSignalRepository);
+    this.respondToIntervention = new RespondToInterventionUseCase(interventionRepository);
+    this.updateInterventionPolicySettings = new UpdateInterventionPolicySettingsUseCase(
+      interventionPolicySettingsRepository,
+    );
     this.classifyApprovalLevel = new ClassifyApprovalLevelUseCase();
     this.recordApprovalDecision = new RecordApprovalDecisionUseCase(approvalDecisionRepository);
   }
@@ -478,6 +583,30 @@ export class WriteProposalGatewayUseCase {
       case 'FinanceLog': {
         const result = await this.addFinanceLog.execute(
           payload as unknown as Parameters<AddFinanceLogUseCase['execute']>[0],
+        );
+        return { type, result };
+      }
+      case 'CheckIn': {
+        const result = await this.addCheckIn.execute(
+          payload as unknown as Parameters<AddCheckInUseCase['execute']>[0],
+        );
+        return { type, result };
+      }
+      case 'DistractionSignal': {
+        const result = await this.addDistractionSignal.execute(
+          payload as unknown as Parameters<AddDistractionSignalUseCase['execute']>[0],
+        );
+        return { type, result };
+      }
+      case 'InterventionResponse': {
+        const result = await this.respondToIntervention.execute(
+          payload as unknown as Parameters<RespondToInterventionUseCase['execute']>[0],
+        );
+        return { type, result };
+      }
+      case 'InterventionPolicySettings': {
+        const result = await this.updateInterventionPolicySettings.execute(
+          payload as unknown as Parameters<UpdateInterventionPolicySettingsUseCase['execute']>[0],
         );
         return { type, result };
       }

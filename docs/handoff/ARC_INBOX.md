@@ -167,6 +167,21 @@ dedup→usageCount増加の一連を実機確認済み。OAuth本番有効化・
 課題として持ち越し（原文は`docs/handoff/archive/
 Version25_ARC_Brief.md`に保管）。
 
+**処理済み**：Version26「行動介入レイヤー」（`docs/reports/
+Version26_Report.md`）。Owner本人発信のAgentMessage（id
+`31dcb191-...`）による指示——先延ばし・重要課題からの逃避・過剰な
+スマホ利用を早期検知し行動修正を促す仕組みを求めた。4つの新規Entity
+（`CheckIn`・`DistractionSignal`・`Intervention`・
+`InterventionPolicySettings`）、決定的ルールエンジン（5ルール）、
+`daily_behavior_score_get`（80点基準・前日比・7日/30日比較）を実装。
+Interventionの生成はMCP Tool化・HTTP Route化せず、Owner本人の
+マシン上のスクリプトからのみ呼べる設計とした（Version22脅威モデルの
+教訓を踏まえた判断、ADR 0053）。Screen Time/Opal等の実連携は
+iOS制約上直接取得不能と判明し、調査のみに留めた（`docs/operations/
+screen-time-integration-feasibility.md`）。実タスク登録・実効果測定は
+Owner確認後（原文は`docs/handoff/archive/Version26_ARC_Brief.md`に
+保管）。
+
 次の指示書を待っています。新しい指示が来たら、このファイルの
 「ここにARCの指示書を貼り付け」以下を置き換えてください
 （またはARCが直接AgentMessageとして送ってくることもあります

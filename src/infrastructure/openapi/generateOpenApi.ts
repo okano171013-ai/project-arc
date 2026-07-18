@@ -70,6 +70,10 @@ const proposalTypeSchema = z
     'NutritionLog',
     'WeightLog',
     'FinanceLog',
+    'CheckIn',
+    'DistractionSignal',
+    'InterventionResponse',
+    'InterventionPolicySettings',
   ])
   .openapi('ProposalType');
 
@@ -357,6 +361,72 @@ registerGet({
   }),
   responseDescription: 'FinanceLogの一覧',
   responseSchema: z.object({ logs: z.array(z.record(z.unknown())) }),
+});
+
+// --- 行動介入レイヤー（Version26） ---
+
+registerGet({
+  operationId: 'listCheckIns',
+  path: '/check-ins',
+  summary: 'CheckIn（原則2時間ごとの行動確認記録）を新しい順に最大limit件取得する',
+  query: z.object({
+    limit: z.string(),
+    date: z.string().optional(),
+  }),
+  responseDescription: 'CheckInの一覧',
+  responseSchema: z.object({ checkIns: z.array(z.record(z.unknown())) }),
+});
+
+registerGet({
+  operationId: 'listDistractionSignals',
+  path: '/distraction-signals',
+  summary: 'DistractionSignal（逃避・注意散漫の候補シグナル）を新しい順に最大limit件取得する',
+  query: z.object({
+    limit: z.string(),
+    date: z.string().optional(),
+    kind: z.string().optional(),
+  }),
+  responseDescription: 'DistractionSignalの一覧',
+  responseSchema: z.object({ signals: z.array(z.record(z.unknown())) }),
+});
+
+registerGet({
+  operationId: 'listInterventions',
+  path: '/interventions',
+  summary: 'Intervention（決定的ルールエンジンが生成した介入）を新しい順に最大limit件取得する',
+  query: z.object({
+    limit: z.string(),
+    status: z.enum(['Pending', 'Acknowledged', 'Dismissed', 'Snoozed']).optional(),
+  }),
+  responseDescription: 'Interventionの一覧',
+  responseSchema: z.object({ interventions: z.array(z.record(z.unknown())) }),
+});
+
+registerGet({
+  operationId: 'getInterventionPolicySettings',
+  path: '/intervention-policy-settings',
+  summary: '介入ポリシー設定（quiet hours・除外ウィンドウ・1日あたりの通知上限等）を取得する',
+  query: z.object({}),
+  responseDescription: '介入ポリシー設定',
+  responseSchema: z.record(z.unknown()),
+});
+
+registerGet({
+  operationId: 'getDailyBehaviorScore',
+  path: '/daily-behavior-score',
+  summary: '指定日の合成行動スコア（Reflectionスコア＋チェックイン実施率－介入減点）を取得する',
+  query: z.object({ date: z.string() }),
+  responseDescription: '日次合成行動スコア',
+  responseSchema: z.record(z.unknown()),
+});
+
+registerGet({
+  operationId: 'getInterventionEffectiveness',
+  path: '/intervention-effectiveness',
+  summary: '指定期間のIntervention応答結果（却下率・平均再開時間等）を集計する',
+  query: z.object({ from: z.string(), to: z.string() }),
+  responseDescription: 'Intervention効果測定の集計',
+  responseSchema: z.record(z.unknown()),
 });
 
 export function generateOpenApiDocument() {

@@ -33,6 +33,10 @@ import type { MealLog } from '../domain/entities/MealLog.js';
 import type { NutritionLog } from '../domain/entities/NutritionLog.js';
 import type { WeightLog } from '../domain/entities/WeightLog.js';
 import type { FinanceLog } from '../domain/entities/FinanceLog.js';
+import type { CheckIn } from '../domain/entities/CheckIn.js';
+import type { DistractionSignal } from '../domain/entities/DistractionSignal.js';
+import type { Intervention } from '../domain/entities/Intervention.js';
+import type { InterventionPolicySettings } from '../domain/entities/InterventionPolicySettings.js';
 
 export function serializeReflection(reflection: Reflection) {
   return {
@@ -254,6 +258,43 @@ export function serializeFinanceLog(log: FinanceLog) {
     id: log.id,
     record: log.record,
     createdAt: log.createdAt.toISOString(),
+  };
+}
+
+export function serializeCheckIn(checkIn: CheckIn) {
+  return {
+    id: checkIn.id,
+    record: checkIn.record,
+    createdAt: checkIn.createdAt.toISOString(),
+  };
+}
+
+export function serializeDistractionSignal(signal: DistractionSignal) {
+  return {
+    id: signal.id,
+    record: signal.record,
+    createdAt: signal.createdAt.toISOString(),
+  };
+}
+
+export function serializeIntervention(intervention: Intervention) {
+  return {
+    id: intervention.id,
+    record: intervention.record,
+    createdAt: intervention.createdAt.toISOString(),
+    status: intervention.status,
+    respondedAt: intervention.respondedAt?.toISOString(),
+    responseNote: intervention.responseNote,
+    snoozedUntil: intervention.snoozedUntil,
+    resumedActivityAt: intervention.resumedActivityAt,
+  };
+}
+
+export function serializeInterventionPolicySettings(settings: InterventionPolicySettings) {
+  return {
+    id: settings.id,
+    record: settings.record,
+    createdAt: settings.createdAt.toISOString(),
   };
 }
 

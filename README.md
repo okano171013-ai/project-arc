@@ -15,13 +15,41 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/ai-roles.md`](./docs/ai-roles.md) — 人間・ARC・Gemini・Claude Code・
   システム自体の責務分担
 - [`docs/architecture.md`](./docs/architecture.md) — 技術設計
-- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜22のロードマップ・
+- [`docs/roadmap.md`](./docs/roadmap.md) — Version1〜20のロードマップ・
   長期ロードマップ2.0
 - [`docs/dod.md`](./docs/dod.md) — Definition of Done（完成の定義）
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version25のスコープ（現在地）
+## Version26のスコープ（現在地）
+
+テーマ：「行動介入レイヤー」— 先延ばし・重要課題からの逃避・過剰な
+スマホ利用を早期検知し行動修正を促す仕組みを求めた、Owner本人発信の
+正式指示（AgentMessage `31dcb191-...`）。詳細はADR 0053・
+[`docs/reports/Version26_Report.md`](./docs/reports/Version26_Report.md)参照。
+
+- **4つの新規Entity**（`CheckIn`・`DistractionSignal`・
+  `Intervention`・`InterventionPolicySettings`）— 2時間ごとの行動
+  確認、逃避候補シグナル（`confidence`/`basis`常時必須）、
+  Pending/Acknowledged/Dismissed/Snoozedの状態機械、quiet hours等の
+  ポリシー設定
+- **決定的ルールエンジン**（`GenerateInterventionsUseCase`）— 5ルール
+  を構造化フィールドへの閾値・日時比較のみで評価。quiet hours・
+  dedup・却下クールダウン・1日上限を遵守
+- **セキュリティ判断**：Interventionの生成をMCP Tool化・HTTP Route化
+  しない設計とした——Version22の脅威モデルが指摘した「Proposal Layer
+  非経由の直接書き込み」の穴を新規に増やさないため。Owner本人の
+  マシン上のスクリプト（`checkInPrompter.ts`）が直接呼ぶ
+- **`AgentDelegationGrant`のscope拡張**（8型：CheckIn・
+  DistractionSignal追加）
+- **`daily_behavior_score_get`** — 既存`Reflection.score()`は変更せず、
+  チェックイン実施率・介入減点を組み合わせた合成スコアを別途計算。
+  80点基準・前日比・7日/30日比較（データ不足時は`available: false`）
+- Screen Time/Opal等の実連携はiOS制約上直接取得不能と判明し、調査
+  （`docs/operations/screen-time-integration-feasibility.md`）のみに
+  留めた。実タスク登録・実効果測定はOwner確認後
+
+### 旧Version25のスコープ：「Life Log Phase 2」
 
 テーマ：「Life Log Phase 2」— Version24で実装した`AgentDelegationGrant`
 （Owner決定に基づく生活記録の自動保存）のscopeを、食事・栄養・体重・

@@ -1,16 +1,23 @@
-# Authority Table（Version22、Version24・Version25で更新）
+# Authority Table（Version22、Version24・Version25・Version26で更新）
 
 Approval Policy Engine（Version21、ADR 0048）が定義したLevel0/1/2の、
 実行主体・許可操作・禁止操作・エスカレーション条件を単一の表に
 まとめたもの（AgentMessage `e5728efb-...`要件1）。判断に迷ったら、
 まずこの表を確認する。詳細な設計根拠はADR 0048・ADR 0049・ADR 0051・
-ADR 0052、脅威モデルは[`docs/security/remote-mcp-threat-model.md`](./security/remote-mcp-threat-model.md)参照。
+ADR 0052・ADR 0053、脅威モデルは[`docs/security/remote-mcp-threat-model.md`](./security/remote-mcp-threat-model.md)参照。
 
 | Level | 実行主体 | 許可操作 | 禁止操作 | エスカレーション条件 |
 |---|---|---|---|---|
 | **Level0** | Claude Code | 可逆的・局所的・仕様内の通常実装、読取、テスト、文書更新、ローカルのコード変更・commit | 本番認証の有効化、外部公開範囲の変更、有料契約、秘密情報の設定・外部送信、破壊的操作、Constitution/Principles変更 | `ApprovalSignals`のいずれかがtrue、または未申告 → Level1へ |
-| **Level1** | ARC（一般的なProposal承認代行は未実装、[委譲案](./proposals/level1-arc-approval-delegation.md)参照）。**ただし有効な`AgentDelegationGrant`（Constitution第4条限定改定、Version24、ADR 0051、Version25でscope拡張、ADR 0052）の範囲内でのみ、Reflection・ChallengeLog・MealLog・NutritionLog・WeightLog・FinanceLogの保存は個別`do`なしで実行できる** | 複数モジュールに跨る設計判断の提案、通常Proposalの内容レビュー・起案、有効なGrant範囲内の生活記録保存 | **`proposal_approve`の実行**（`AgentDelegationGrant`型自身を除き現状維持、Owner`do`必須）、Level2に該当する操作全般 | 委譲`scope`外の操作、委譲の`expiresAt`超過・`usageLimit`到達・`revokedAt`設定後 → Level2へ |
-| **Level2** | Owner本人のみ | 有料サービス契約、外部公開範囲の変更、認証方式の本番有効化、秘密情報の登録、破壊的操作、Constitution/Principles変更、不可逆または高影響な判断、**`AgentDelegationGrant`の作成・変更（型固定ルール、常にLevel2）** | ARC単独・Claude Code単独・クライアント入力単独では実行不可（後述の認可境界） | — |
+| **Level1** | ARC（一般的なProposal承認代行は未実装、[委譲案](./proposals/level1-arc-approval-delegation.md)参照）。**ただし有効な`AgentDelegationGrant`（Constitution第4条限定改定、Version24、ADR 0051、Version25/26でscope拡張、ADR 0052/0053）の範囲内でのみ、Reflection・ChallengeLog・MealLog・NutritionLog・WeightLog・FinanceLog・CheckIn・DistractionSignalの保存は個別`do`なしで実行できる** | 複数モジュールに跨る設計判断の提案、通常Proposalの内容レビュー・起案、有効なGrant範囲内の生活記録保存 | **`proposal_approve`の実行**（`AgentDelegationGrant`型自身を除き現状維持、Owner`do`必須）、`InterventionResponse`（却下・スヌーズ等）・`InterventionPolicySettings`の自動承認、Level2に該当する操作全般 | 委譲`scope`外の操作、委譲の`expiresAt`超過・`usageLimit`到達・`revokedAt`設定後 → Level2へ |
+| **Level2** | Owner本人のみ | 有料サービス契約、外部公開範囲の変更、認証方式の本番有効化、秘密情報の登録、破壊的操作、Constitution/Principles変更、不可逆または高影響な判断、**`AgentDelegationGrant`の作成・変更（型固定ルール、常にLevel2）**、**`InterventionPolicySettings`の作成・変更（型固定ルール、常にLevel2、ADR 0053）** | ARC単独・Claude Code単独・クライアント入力単独では実行不可（後述の認可境界） | — |
+
+**Intervention自体はProposalTypeではない**（Version26）——決定的
+ルールエンジン（`GenerateInterventionsUseCase`）がCheckIn/
+DistractionSignalから機械的に生成する監査派生物であり、Owner・ARC・
+Claude Codeいずれの「承認」も経由しない。ネットワーク経由（Remote
+MCP/HTTP）では呼び出せない設計とし、Owner本人のマシン上のローカル
+スケジューラのみが直接呼ぶ（ADR 0053）。
 
 ## Level2操作の認可境界
 
