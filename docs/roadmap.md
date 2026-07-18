@@ -3,6 +3,41 @@
 Principle 9（段階的拡張）に基づき、一度に全てを作らない。
 各Versionは前段の土台の上にのみ積み上げる。
 
+## Version28以降｜優先開発候補（2026-07-18 Owner指示、Version27完了により繰り下げ）
+
+Version1〜26で完成した記録基盤、External Brain、Decision Support、
+ARC Connector、Remote MCP、Approval Policy、限定自動保存、Life Log、
+行動介入レイヤーを前提に、既存の長期バックログと各Version Reportの
+持ち越し事項を統合した。以下は一括実装せず、上から最小縦切りで進める。
+
+**Version27は完了済み**：下表の優先2「Study Session Gateway」
+（Bearer token・CORS制限・sessionId冪等化を備えた学習セッション
+受信専用API）は、Version27「Study Session Ingestion」として実装・
+コミット済み（`docs/reports/Version27_Report.md`・ADR 0054参照）。
+既存の`StudyLog`Entity自体の配線（Version1から未着手のまま）は
+今回のスコープ外で、下表では優先2を「StudyLog配線」のみに絞って
+引き続き候補として残す。
+
+| 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
+|---:|---|---|---|
+| 1 | Remote MCP Capability Registry | チャットや長寿命プロセスごとのツール定義差異をなくす。Version16〜18のMCP基盤を、schemaVersion/buildCommit/toolCountを返す単一レジストリへ発展させる | 新規ChatGPTチャット・ローカルMCP・公開URLで同一ツール名とProposal型を取得し、差異を自動検出できる |
+| 2 | StudyLog配線（Study Session Gatewayは**Version27で完了済み**） | Version1から存在するStudyLog未配線を解消する。Version27で追加した`StudySession`（外部タイマーからの1セッション単位のログ）との関係整理（統合するか別Entityとして併存させるか）をOwnerに確認した上で配線する | 既存StudyLog Repository/UseCase/Routeが配線される、または廃止判断がされる。`StudySession`との二重管理境界が文書化される |
+| 3 | Runner Control Plane | Version20のCollaboration RunnerとVersion26のCheck-in Runnerのlock/state/logを共通化し、起動順・再起動・版確認・kill switchを一元管理する | PC再起動後も単一インスタンスで復旧し、古いプロセスと古いビルドを検出できる |
+| 4 | AgentEvent・未読管理・AgentTask最小実装 | Version17〜20のAgentMessage運用と100項目バックログの最優先事項を実装へ進める。指示・Feedback・承認待ちを処理状態付きで追跡する | 未読見落としと二重処理を防ぎ、Version・受入条件・commit・test結果をTaskへ紐付けられる |
+| 5 | Calendar・Study Timer連携 | Version3から延期され、Version26でも次段階とされた予定・学習実績連携を実装する。外部データは最小権限・ローカル優先で取得する | 予定タスク未開始と学習タイマー状態を、根拠付きCheckIn/DistractionSignal候補として扱える |
+| 6 | Screen Time安全インポート | Version26の調査結果を踏まえ、iOS直接取得を前提にせずShortcuts/CSV/手動共有の順で最小縦切りを作る | source/confidence/basisを保持し、YouTube/SNS利用を推測ではなく由来が明確な外部指標として取り込める |
+| 7 | Intervention実運用・効果改善ループ | Version26で実装済みの介入・日次スコア・効果測定を、実データで1〜2週間検証する。Systemは決定的集計に留め、文面・閾値変更はProposalとして提示する | 通知疲れ、再開時間、完了率を比較し、変更前後の効果と比較不能を明示できる |
+| 8 | Life Log訂正・削除・監査UI | Version25で訂正履歴は整備したが、削除UseCaseは安全上未実装。原記録を保護しつつOwnerが誤記を発見・訂正・削除要求できる入口を作る | 変更履歴、理由、承認レベル、復元可否が一画面または一APIで確認でき、不可逆削除はOwner承認を迂回できない |
+| 9 | Cross-Entity Life Query・Dashboard | Version8 Timeline、Version11 Retrieval、Version25 Life Log、Version26 Behavior Scoreを読み取り専用で統合する | 学習・食事・体重・家計・行動介入の期間比較を、原データと推定を区別して表示できる |
+| 10 | Backup・Migration・Data Portability | Principle 4と8に基づき、増えたJSON Repositoryの整合性検査、schema migration、暗号化バックアップ、復元演習を標準化する | 自動バックアップ、dry-run移行、チェックサム検証、復元テスト、全Entityのエクスポートが再現可能になる |
+
+推奨するVersion分割は、Version28をCapability Registry、Version29を
+Runner Control Plane、Version30をAgentEvent/AgentTaskとする
+（Version27は完了済みのため、当初案から1つ繰り下げた）。その後は
+実運用データの蓄積状況に応じて2（StudyLog配線）・5〜10を選ぶ。
+外部公開・認証変更・秘密情報・不可逆削除・有料サービスを伴う段階
+では、既存のLevel2境界に従いOwner確認前に停止する。
+
 ---
 
 ## Version1｜土台（完了）
