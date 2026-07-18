@@ -1,5 +1,7 @@
 # Version28 Report: Remote MCP Capability Registry
 
+**コミットハッシュ**：`b72b2ff`（`feature/v4-v6-smart-capture`ブランチ）
+
 ## Outcome
 
 ローカルstdio・Remote MCP・ChatGPTでMCP構成の差異を検出するため、読み取り専用Tool `capability_registry_get` を実装した。
