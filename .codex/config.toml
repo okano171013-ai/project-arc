@@ -4,3 +4,6 @@ args = [
     "tsx",
     "src/infrastructure/mcp/server.ts",
 ]
+
+[mcp_servers.project-arc.tools.management_feedback_resolve]
+approval_mode = "approve"
