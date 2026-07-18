@@ -25,6 +25,8 @@ export interface NutritionLogRecord {
   readonly confidence?: 'low' | 'medium' | 'high';
   readonly uncertaintyNote?: string;
   readonly idempotencyKey?: string;
+  readonly correctionOfId?: string;
+  readonly correctionReason?: string;
 }
 
 export class NutritionLog {
@@ -34,7 +36,11 @@ export class NutritionLog {
     private readonly _createdAt: Date,
   ) {}
 
-  static create(params: { id: string; record: NutritionLogRecord; createdAt?: Date }): NutritionLog {
+  static create(params: {
+    id: string;
+    record: NutritionLogRecord;
+    createdAt?: Date;
+  }): NutritionLog {
     if (params.record.mealLogId.trim().length === 0) {
       throw new Error('mealLogId must not be empty');
     }
@@ -44,10 +50,15 @@ export class NutritionLog {
     if (!params.record.confidence && !params.record.uncertaintyNote) {
       throw new Error('either confidence or uncertaintyNote must be provided');
     }
+    validateCorrectionMetadata(params.record);
     return new NutritionLog(params.id, params.record, params.createdAt ?? new Date());
   }
 
-  static restore(params: { id: string; record: NutritionLogRecord; createdAt: Date }): NutritionLog {
+  static restore(params: {
+    id: string;
+    record: NutritionLogRecord;
+    createdAt: Date;
+  }): NutritionLog {
     return new NutritionLog(params.id, params.record, params.createdAt);
   }
 
@@ -61,5 +72,17 @@ export class NutritionLog {
 
   get createdAt(): Date {
     return this._createdAt;
+  }
+}
+
+function validateCorrectionMetadata(record: NutritionLogRecord): void {
+  if ((record.correctionOfId === undefined) !== (record.correctionReason === undefined)) {
+    throw new Error('correctionOfId and correctionReason must be provided together');
+  }
+  if (
+    record.correctionOfId !== undefined &&
+    (!record.correctionOfId.trim() || !record.correctionReason?.trim())
+  ) {
+    throw new Error('correction metadata must not be empty');
   }
 }

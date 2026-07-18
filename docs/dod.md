@@ -460,7 +460,7 @@ Version21のDoDは全項目達成済み。
 - [x] `pnpm lint` がエラーゼロ
 - [x] 単一の権限表（`docs/authority-table.md`）を作成済み
 - [x] 無認証Remote MCPの脅威モデル（`docs/security/
-      remote-mcp-threat-model.md`）を作成済み——
+    remote-mcp-threat-model.md`）を作成済み——
       `management_feedback_resolve`がWrite Proposal Layerを経由しない
       直接書き込みであるという具体的な穴を発見・記録
 - [x] 認証方式3案（Bearer静的トークン／自前OAuth 2.1／Cloudflare
@@ -472,7 +472,7 @@ Version21のDoDは全項目達成済み。
       （回帰確認済み）
 - [x] フラグON時、DCR→passcode認可→PKCE token交換→bearer保護された
       `/mcp`呼び出しの一連を実HTTPリクエスト（`remoteServer.oauth.
-      test.ts`）で確認済み。無token・誤passcodeでの拒否も確認済み
+    test.ts`）で確認済み。無token・誤passcodeでの拒否も確認済み
 - [x] Level1委譲案（`docs/proposals/level1-arc-approval-delegation.md`、
       `AgentDelegationGrant`設計・Constitution第4条改定文言案）を
       現行維持案と比較可能な形で提示——**実装はしていない**
@@ -502,7 +502,7 @@ Version22のDoDは全項目達成済み。
 - [x] Constitution整合性の結論（改定不要）をADR 0050（ステータス
       「提案中」、Owner・ARC確認待ち）として記録
 - [x] Level1委譲（Version22、未決定）との違いを`docs/proposals/
-      level1-arc-approval-delegation.md`に相互参照として明記
+    level1-arc-approval-delegation.md`に相互参照として明記
 - [x] Phase分割した次Version実装計画（`LifeLogAutoSaveGrant`設計、
       Phase 1: Reflection既存フィールド+ChallengeLog配線、Phase 2:
       食事/体重/収入の新フィールド）を提示
@@ -550,13 +550,13 @@ Version23のDoDは「設計・次Version計画の提示」という本Versionの
       AgentDelegationGrant設計、OAuth本番有効化の記録）を作成済み
 - [x] ADR 0050のステータスを「却下・ADR 0051に置き換え」へ更新
 - [x] `docs/authority-table.md`・`docs/ai-roles.md`・`docs/security/
-      remote-mcp-threat-model.md`・両`docs/proposals/*.md`を
+    remote-mcp-threat-model.md`・両`docs/proposals/*.md`を
       Version24の内容に合わせて更新済み
 - [ ] **OAuth本番有効化**（`.env`への`MCP_OAUTH_ENABLED=true`・
       Passcode設定、本番サービス再起動）——Claude Codeの実行環境の
       安全機構によりブロックされ、**Owner自身の手作業として未実施**。
       設定内容・Passcodeはチャットで直接伝達済み、`docs/setup/
-      remote-mcp-oauth-migration.md`に手順あり
+    remote-mcp-oauth-migration.md`に手順あり
 - [ ] ChatGPT Connectorの再作成（OAuthモード）——上記完了後にOwner
       自身が実施
 - [x] `docs/handoff/archive/Version24_ARC_Brief.md`を作成済み
@@ -572,7 +572,7 @@ Connector再作成（F）はOwner自身の操作待ち。
 
 ## Version25完了チェックリスト
 
-- [x] `pnpm test` が全て緑（369件、`MealLog`/`NutritionLog`/
+- [x] `pnpm test` が全て緑（372件、`MealLog`/`NutritionLog`/
       `WeightLog`/`FinanceLog`の単体テスト18件・
       `WriteProposalGateway`への追加テスト（承認時保存4件・
       自動承認4件・scope外拒否4件）を含む）
@@ -605,7 +605,7 @@ Connector再作成（F）はOwner自身の操作待ち。
 - [x] ADR 0052（4 Entity設計、scope拡張、二重管理境界、
       idempotencyKey設計思想、Timeline統合を見送った理由）を作成済み
 - [x] `docs/authority-table.md`・`docs/proposals/
-      life-log-auto-save-delegation.md`をVersion25の内容に合わせて
+    life-log-auto-save-delegation.md`をVersion25の内容に合わせて
       更新済み
 - [x] `README.md`をVersion22時点から現在（Version25）まで更新
       （Version23・24の未反映分を含む）
@@ -615,13 +615,13 @@ Connector再作成（F）はOwner自身の操作待ち。
 - [x] `docs/reports/Version25_ARC_Feedback.md`
       （tags: `mf:fb9ee72f-a144-4d65-88a5-f78a113c536c`・
       `version25`を含む）を生成済み
-- [ ] **訂正・削除UseCase**（Reflection/ChallengeLog同様、今回追加した
-      4 EntityもUseCaseが存在しない）——指示書のスコープ外、次Version
-      課題として明示的に持ち越し
+- [x] **訂正UseCase**——4 Entityすべてで元記録を上書きせず、
+      `correctionOfId`と`correctionReason`を持つ新記録を追加する。
+      訂正履歴・元記録保持・不完全な訂正情報の拒否をテスト済み
+- [ ] **削除UseCase**——不可逆操作のため未実装。Ownerの明示承認後に扱う
 - [ ] **OAuth本番有効化・Timeline横断統合・日次代表値（体重）**——
       指示書が明示的に対象外・条件付き要件としたため未実装
 
-Version25のDoDは、指示書が明示的に要求した範囲（4 Entity・Repository・
-UseCase・MCP・HTTP・自動保存境界拡張・重複防止・推定値区別・テスト・
-ADR・Report）で全項目達成済み。訂正・削除UseCase、OAuth関連作業は
-指示書の明示的なスコープ外として次Version以降へ持ち越し。
+Version25のDoDは、4 Entity・Repository・UseCase・訂正履歴・MCP・HTTP・
+自動保存境界拡張・重複防止・推定値区別・テスト・ADR・Reportで達成済み。
+削除UseCaseとOAuth関連作業は、承認境界を越えないよう未実装。

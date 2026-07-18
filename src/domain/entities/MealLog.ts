@@ -20,6 +20,8 @@ export interface MealLogRecord {
   readonly notes?: string;
   readonly photoPath?: string;
   readonly idempotencyKey?: string;
+  readonly correctionOfId?: string;
+  readonly correctionReason?: string;
   /** Owner本人の発言と推定を区別する（Reflection/ChallengeLogと同じ設計、Version24）。 */
   readonly estimated?: boolean;
   readonly estimationBasis?: string;
@@ -40,6 +42,7 @@ export class MealLog {
     if (params.record.items.length === 0) {
       throw new Error('items must not be empty');
     }
+    validateCorrectionMetadata(params.record);
     return new MealLog(params.id, params.record, params.createdAt ?? new Date());
   }
 
@@ -57,5 +60,17 @@ export class MealLog {
 
   get createdAt(): Date {
     return this._createdAt;
+  }
+}
+
+function validateCorrectionMetadata(record: MealLogRecord): void {
+  if ((record.correctionOfId === undefined) !== (record.correctionReason === undefined)) {
+    throw new Error('correctionOfId and correctionReason must be provided together');
+  }
+  if (
+    record.correctionOfId !== undefined &&
+    (!record.correctionOfId.trim() || !record.correctionReason?.trim())
+  ) {
+    throw new Error('correction metadata must not be empty');
   }
 }

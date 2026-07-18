@@ -14,6 +14,8 @@ export interface WeightLogRecord {
   readonly source?: string;
   readonly notes?: string;
   readonly idempotencyKey?: string;
+  readonly correctionOfId?: string;
+  readonly correctionReason?: string;
 }
 
 export class WeightLog {
@@ -30,6 +32,7 @@ export class WeightLog {
     if (!(params.record.weightKg > 0)) {
       throw new Error('weightKg must be positive');
     }
+    validateCorrectionMetadata(params.record);
     return new WeightLog(params.id, params.record, params.createdAt ?? new Date());
   }
 
@@ -47,5 +50,17 @@ export class WeightLog {
 
   get createdAt(): Date {
     return this._createdAt;
+  }
+}
+
+function validateCorrectionMetadata(record: WeightLogRecord): void {
+  if ((record.correctionOfId === undefined) !== (record.correctionReason === undefined)) {
+    throw new Error('correctionOfId and correctionReason must be provided together');
+  }
+  if (
+    record.correctionOfId !== undefined &&
+    (!record.correctionOfId.trim() || !record.correctionReason?.trim())
+  ) {
+    throw new Error('correction metadata must not be empty');
   }
 }

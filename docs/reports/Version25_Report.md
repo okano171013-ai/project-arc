@@ -66,9 +66,8 @@ statusの再評価、重複防止）がそのまま適用された——**型固
 
 ## 3. 実装しなかった機能（延期理由も記載）
 
-1. **訂正・削除UseCase**：Reflection/ChallengeLog同様、指示書の
-   完了条件に含まれておらず、今回追加した4 Entityにもそもそも
-   `update`/`delete`UseCaseが存在しない。次Versionへ持ち越し。
+1. **削除UseCase**：不可逆操作であるため未実装。Ownerの明示承認後に扱う。
+   訂正は元記録を保持する追記型UseCaseとして4 Entityすべてに実装した。
 2. **Timeline横断統合**：指示書が「追加する場合は」という条件付き
    要件としており、既存Timeline順序への影響リスクを避けるため今回は
    見送った。
@@ -80,6 +79,7 @@ statusの再評価、重複防止）がそのまま適用された——**型固
 ## 4. Architecture Review
 
 **新規**
+
 - Entity: `MealLog`・`NutritionLog`・`WeightLog`・`FinanceLog`
 - UseCase: `AddMealLogUseCase`・`ListMealLogsUseCase`・
   `AddNutritionLogUseCase`・`ListNutritionLogsUseCase`・
@@ -94,6 +94,7 @@ statusの再評価、重複防止）がそのまま適用された——**型固
   `nutrition_summary_by_date`・`weight_log_list`・`finance_log_list`
 
 **変更**
+
 - `Proposal`型：4型を`ProposalType`へ追加
 - `AgentDelegationGrantScope`：6型に拡張
 - `WriteProposalGatewayUseCase`：コンストラクタが14引数に、
@@ -115,7 +116,7 @@ statusの再評価、重複防止）がそのまま適用された——**型固
 
 ## 6. テスト（件数、カバレッジ、typecheck、lint、実機確認）
 
-- `pnpm test`：369件全て緑（Version24時点321件から+48件）
+- `pnpm test`：372件全て緑（Version24時点321件から+51件）
 - `pnpm typecheck`：エラーゼロ
 - `pnpm lint`：エラーゼロ
 - **実機確認（実HTTPリクエスト、隔離した一時データディレクトリで
@@ -160,8 +161,8 @@ statusの再評価、重複防止）がそのまま適用された——**型固
   漏れを検出しない。tsconfigで`noImplicitReturns`を有効化することを
   次Version以降で検討する価値がある（本Versionでは既存の全ファイルへ
   の影響範囲調査が必要になるため見送った）。
-- Reflection/ChallengeLog（Version24）に続き、今回追加した4 Entity
-  にも訂正・削除UseCaseがない（3章参照）。
+- 削除UseCaseは未実装（3章参照）。訂正UseCaseは追記型で実装済みだが、
+  Grant/HTTP/MCPには公開せず、既存の承認境界を維持している。
 - `WriteProposalGatewayUseCase`のコンストラクタが14引数になった——
   Version24のReportで指摘した技術的負債（10引数の時点で既に懸念
   表明）がさらに悪化した。パラメータオブジェクト化のリファクタリング

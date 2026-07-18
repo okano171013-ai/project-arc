@@ -28,7 +28,7 @@ Version25_Report.md`・ADR 0052参照。この内容はAgentMessage
   保存→重複拒否→一覧取得→idempotencyKey dedup→usageCount増加の
   一連を実際のHTTPリクエストで確認済みです。
 
-テスト369件全緑（+48件）、typecheck/lintともにエラーゼロ。
+テスト372件全緑（+51件）、typecheck/lintともにエラーゼロ。
 
 ## 2. ARCが実際に呼び出すMCP Tool（秘密情報なし）
 
@@ -65,9 +65,9 @@ Version25_Report.md`・ADR 0052参照。この内容はAgentMessage
 
 ## 3. 実装しなかったもの（重要）
 
-- **訂正・削除UseCase**：Reflection/ChallengeLog同様、今回の4 Entity
-  にも`update`/`delete`はありません。誤った記録を直す手段は、次
-  Versionまでは「新規の正しい記録を追加する」形でのみ対応可能です。
+- **削除UseCase**：不可逆操作のため未実装です。Ownerの明示承認後に扱います。
+  訂正は、元記録を保持したまま訂正理由付きの新記録を追加するUseCaseを
+  4 Entityすべてに実装済みです（Grant/HTTP/MCPには未公開）。
 - **OAuth本番有効化**：今回の指示書で明示的に対象外とされたため、
   未着手です。Version24から引き続き、Owner自身の手作業（`.env`編集・
   サービス再起動）待ちの状態です。

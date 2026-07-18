@@ -22,6 +22,8 @@ export interface FinanceLogRecord {
   readonly merchantOrSource?: string;
   readonly notes?: string;
   readonly idempotencyKey?: string;
+  readonly correctionOfId?: string;
+  readonly correctionReason?: string;
 }
 
 export class FinanceLog {
@@ -38,6 +40,7 @@ export class FinanceLog {
     if (!(params.record.amount > 0)) {
       throw new Error('amount must be positive');
     }
+    validateCorrectionMetadata(params.record);
     const record: FinanceLogRecord = {
       ...params.record,
       currency: params.record.currency ?? 'JPY',
@@ -59,5 +62,17 @@ export class FinanceLog {
 
   get createdAt(): Date {
     return this._createdAt;
+  }
+}
+
+function validateCorrectionMetadata(record: FinanceLogRecord): void {
+  if ((record.correctionOfId === undefined) !== (record.correctionReason === undefined)) {
+    throw new Error('correctionOfId and correctionReason must be provided together');
+  }
+  if (
+    record.correctionOfId !== undefined &&
+    (!record.correctionOfId.trim() || !record.correctionReason?.trim())
+  ) {
+    throw new Error('correction metadata must not be empty');
   }
 }
