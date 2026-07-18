@@ -9,6 +9,8 @@ import {
   MIN_DAYS_FOR_30D_COMPARISON,
 } from '../../../domain/value-objects/BehaviorScoreConstants.js';
 import type { InterventionPolicySettingsRecord } from '../../../domain/entities/InterventionPolicySettings.js';
+import type { CheckIn } from '../../../domain/entities/CheckIn.js';
+import type { Intervention } from '../../../domain/entities/Intervention.js';
 import type { ReflectionRepository } from '../../ports/ReflectionRepository.js';
 import type { CheckInRepository } from '../../ports/CheckInRepository.js';
 import type { InterventionRepository } from '../../ports/InterventionRepository.js';
@@ -64,30 +66,42 @@ export class GetDailyBehaviorScoreUseCase {
   ) {}
 
   async execute(input: GetDailyBehaviorScoreInput): Promise<GetDailyBehaviorScoreOutput> {
-    const settingsEntity = await this.interventionPolicySettingsRepository.find();
+    const [settingsEntity, allCheckIns, allInterventions] = await Promise.all([
+      this.interventionPolicySettingsRepository.find(),
+      this.checkInRepository.findAll(),
+      this.interventionRepository.findAll(),
+    ]);
     const settings = settingsEntity?.record ?? DEFAULT_INTERVENTION_POLICY_SETTINGS;
 
-    const today = await this.computeForDate(input.date, settings);
-    const previousDayScore = (await this.computeForDate(previousDate(input.date), settings)).compositeScore;
+    const today = await this.computeForDate(input.date, settings, allCheckIns, allInterventions);
+    const previousDayScore = (
+      await this.computeForDate(previousDate(input.date), settings, allCheckIns, allInterventions)
+    ).compositeScore;
     const previousDayDelta =
       today.compositeScore !== undefined && previousDayScore !== undefined
         ? today.compositeScore - previousDayScore
         : undefined;
 
-    const sevenDayComparison = await this.buildTrendComparison(
-      input.date,
-      7,
-      MIN_DAYS_FOR_7D_COMPARISON,
-      settings,
-      today.compositeScore,
-    );
-    const thirtyDayComparison = await this.buildTrendComparison(
-      input.date,
-      30,
-      MIN_DAYS_FOR_30D_COMPARISON,
-      settings,
-      today.compositeScore,
-    );
+    const [sevenDayComparison, thirtyDayComparison] = await Promise.all([
+      this.buildTrendComparison(
+        input.date,
+        7,
+        MIN_DAYS_FOR_7D_COMPARISON,
+        settings,
+        today.compositeScore,
+        allCheckIns,
+        allInterventions,
+      ),
+      this.buildTrendComparison(
+        input.date,
+        30,
+        MIN_DAYS_FOR_30D_COMPARISON,
+        settings,
+        today.compositeScore,
+        allCheckIns,
+        allInterventions,
+      ),
+    ]);
 
     return {
       date: input.date,
@@ -103,16 +117,21 @@ export class GetDailyBehaviorScoreUseCase {
     };
   }
 
-  private async computeForDate(date: string, settings: InterventionPolicySettingsRecord): Promise<DayComputation> {
+  private async computeForDate(
+    date: string,
+    settings: InterventionPolicySettingsRecord,
+    allCheckIns: readonly CheckIn[],
+    allInterventions: readonly Intervention[],
+  ): Promise<DayComputation> {
     const reflection = await this.reflectionRepository.findByDate(date);
     const reflectionScore = reflection?.score();
 
-    const checkIns = (await this.checkInRepository.findAll()).filter((c) => c.record.occurredAt.startsWith(date));
+    const checkIns = allCheckIns.filter((c) => c.record.occurredAt.startsWith(date));
     const activeMinutes = this.activeMinutes(settings);
     const expectedCheckIns = Math.floor(activeMinutes / settings.checkInIntervalMinutes);
     const checkInCompletionRate = expectedCheckIns > 0 ? Math.min(1, checkIns.length / expectedCheckIns) : undefined;
 
-    const acknowledgedToday = (await this.interventionRepository.findAll()).filter(
+    const acknowledgedToday = allInterventions.filter(
       (i) => i.record.generatedAt.startsWith(date) && i.status === 'Acknowledged',
     );
     let interventionPenalty = 0;
@@ -151,12 +170,14 @@ export class GetDailyBehaviorScoreUseCase {
     minDays: number,
     settings: InterventionPolicySettingsRecord,
     todayScore: number | undefined,
+    allCheckIns: readonly CheckIn[],
+    allInterventions: readonly Intervention[],
   ): Promise<TrendComparison> {
     const scores: number[] = [];
     let cursor = date;
     for (let i = 0; i < windowDays; i++) {
       cursor = previousDate(cursor);
-      const { compositeScore } = await this.computeForDate(cursor, settings);
+      const { compositeScore } = await this.computeForDate(cursor, settings, allCheckIns, allInterventions);
       if (compositeScore !== undefined) scores.push(compositeScore);
     }
     if (scores.length < minDays || todayScore === undefined) {

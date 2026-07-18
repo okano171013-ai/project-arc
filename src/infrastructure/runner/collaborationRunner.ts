@@ -19,15 +19,12 @@
  * 起動済みであること。
  */
 import { randomUUID } from 'node:crypto';
-import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { Connector } from '../connector/Connector.js';
 import { loadConnectorConfig } from '../connector/connectorConfig.js';
-
-/** このロックより古いものは、前回実行がクラッシュしたとみなし無視する。 */
-const STALE_LOCK_MS = 30 * 60 * 1000;
+import { appendLog, acquireLock, releaseLock, isMainModule } from './runnerLock.js';
 
 interface RunnerState {
   lastSeenAgentMessageAt?: string;
@@ -59,42 +56,6 @@ async function readState(p: RunnerPaths): Promise<RunnerState> {
 async function writeState(p: RunnerPaths, state: RunnerState): Promise<void> {
   await mkdir(path.dirname(p.statePath), { recursive: true });
   await writeFile(p.statePath, JSON.stringify(state, null, 2), 'utf-8');
-}
-
-async function appendLog(p: RunnerPaths, line: string): Promise<void> {
-  await mkdir(path.dirname(p.logPath), { recursive: true });
-  const stamped = `[${new Date().toISOString()}] ${line}\n`;
-  const existing = existsSync(p.logPath) ? await readFile(p.logPath, 'utf-8') : '';
-  await writeFile(p.logPath, existing + stamped, 'utf-8');
-}
-
-interface LockInfo {
-  pid: number;
-  startedAt: string;
-}
-
-/**
- * タスクスケジューラの「既に実行中なら開始しない」設定を主たる防止策とし、
- * このロックファイルは保険（同時に手動実行された場合等に備える）。
- */
-async function acquireLock(p: RunnerPaths): Promise<boolean> {
-  await mkdir(path.dirname(p.lockPath), { recursive: true });
-  if (existsSync(p.lockPath)) {
-    const raw = await readFile(p.lockPath, 'utf-8');
-    const lock = JSON.parse(raw) as LockInfo;
-    const age = Date.now() - new Date(lock.startedAt).getTime();
-    if (age < STALE_LOCK_MS) {
-      return false;
-    }
-    await appendLog(p, `stale lock (pid ${lock.pid}, age ${Math.round(age / 1000)}s) ignored`);
-  }
-  const info: LockInfo = { pid: process.pid, startedAt: new Date().toISOString() };
-  await writeFile(p.lockPath, JSON.stringify(info, null, 2), 'utf-8');
-  return true;
-}
-
-async function releaseLock(p: RunnerPaths): Promise<void> {
-  if (existsSync(p.lockPath)) await rm(p.lockPath);
 }
 
 interface DetectedItem {
@@ -175,12 +136,12 @@ export async function runOnce(
   });
 
   if (detected.length === 0) {
-    await appendLog(p, 'no new AgentMessage/ManagementFeedback detected');
+    await appendLog(p.logPath, 'no new AgentMessage/ManagementFeedback detected');
     return { detected };
   }
 
   const notificationPath = await writeNotification(p, detected);
-  await appendLog(p, `detected ${detected.length} new item(s), wrote ${notificationPath}`);
+  await appendLog(p.logPath, `detected ${detected.length} new item(s), wrote ${notificationPath}`);
   return { detected, notificationPath };
 }
 
@@ -190,24 +151,20 @@ export async function runOnceWithLock(
 ): Promise<{ skipped: true } | { skipped: false; detected: DetectedItem[]; notificationPath?: string }> {
   const p = paths(dataDir);
   const runId = randomUUID();
-  const got = await acquireLock(p);
+  const got = await acquireLock(p.lockPath, p.logPath);
   if (!got) {
-    await appendLog(p, `run ${runId} skipped: another run appears to be in progress`);
+    await appendLog(p.logPath, `run ${runId} skipped: another run appears to be in progress`);
     return { skipped: true };
   }
   try {
     const result = await runOnce(connector, dataDir);
     return { skipped: false, ...result };
   } catch (error) {
-    await appendLog(p, `run ${runId} failed: ${error instanceof Error ? error.message : String(error)}`);
+    await appendLog(p.logPath, `run ${runId} failed: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
   } finally {
-    await releaseLock(p);
+    await releaseLock(p.lockPath);
   }
-}
-
-function isMainModule(): boolean {
-  return Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]!).href;
 }
 
 if (isMainModule()) {

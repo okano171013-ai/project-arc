@@ -16,20 +16,16 @@
  * 上限を内部で判定するため、このスクリプトは「独自のlast-seen状態」を
  * 持たない——`collaborationRunner.ts`とはこの点で異なる。
  */
-import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { pathToFileURL } from 'node:url';
 import { GenerateInterventionsUseCase } from '../../application/use-cases/intervention/GenerateInterventions.js';
 import { JsonFileCheckInRepository } from '../../adapters/repositories/JsonFileCheckInRepository.js';
 import { JsonFileDistractionSignalRepository } from '../../adapters/repositories/JsonFileDistractionSignalRepository.js';
 import { JsonFileInterventionRepository } from '../../adapters/repositories/JsonFileInterventionRepository.js';
 import { JsonFileInterventionPolicySettingsRepository } from '../../adapters/repositories/JsonFileInterventionPolicySettingsRepository.js';
 import type { Intervention } from '../../domain/entities/Intervention.js';
-
-/** このロックより古いものは、前回実行がクラッシュしたとみなし無視する。 */
-const STALE_LOCK_MS = 30 * 60 * 1000;
+import { appendLog, acquireLock, releaseLock, isMainModule } from './runnerLock.js';
 
 interface RunnerPaths {
   lockPath: string;
@@ -45,38 +41,6 @@ function paths(dataDir: string): RunnerPaths {
     // 検知結果の集約先という役割が同じため）。
     notificationsDir: path.join(dataDir, 'runner-notifications'),
   };
-}
-
-async function appendLog(p: RunnerPaths, line: string): Promise<void> {
-  await mkdir(path.dirname(p.logPath), { recursive: true });
-  const stamped = `[${new Date().toISOString()}] ${line}\n`;
-  const existing = existsSync(p.logPath) ? await readFile(p.logPath, 'utf-8') : '';
-  await writeFile(p.logPath, existing + stamped, 'utf-8');
-}
-
-interface LockInfo {
-  pid: number;
-  startedAt: string;
-}
-
-async function acquireLock(p: RunnerPaths): Promise<boolean> {
-  await mkdir(path.dirname(p.lockPath), { recursive: true });
-  if (existsSync(p.lockPath)) {
-    const raw = await readFile(p.lockPath, 'utf-8');
-    const lock = JSON.parse(raw) as LockInfo;
-    const age = Date.now() - new Date(lock.startedAt).getTime();
-    if (age < STALE_LOCK_MS) {
-      return false;
-    }
-    await appendLog(p, `stale lock (pid ${lock.pid}, age ${Math.round(age / 1000)}s) ignored`);
-  }
-  const info: LockInfo = { pid: process.pid, startedAt: new Date().toISOString() };
-  await writeFile(p.lockPath, JSON.stringify(info, null, 2), 'utf-8');
-  return true;
-}
-
-async function releaseLock(p: RunnerPaths): Promise<void> {
-  if (existsSync(p.lockPath)) await rm(p.lockPath);
 }
 
 async function writeNotification(p: RunnerPaths, generated: Intervention[]): Promise<string> {
@@ -114,12 +78,12 @@ export async function runOnce(
   const { generated } = await useCase.execute({ now: new Date() });
 
   if (generated.length === 0) {
-    await appendLog(p, 'no new interventions generated');
+    await appendLog(p.logPath, 'no new interventions generated');
     return { generated };
   }
 
   const notificationPath = await writeNotification(p, generated);
-  await appendLog(p, `generated ${generated.length} intervention(s), wrote ${notificationPath}`);
+  await appendLog(p.logPath, `generated ${generated.length} intervention(s), wrote ${notificationPath}`);
   return { generated, notificationPath };
 }
 
@@ -128,24 +92,20 @@ export async function runOnceWithLock(
 ): Promise<{ skipped: true } | { skipped: false; generated: Intervention[]; notificationPath?: string }> {
   const p = paths(dataDir);
   const runId = randomUUID();
-  const got = await acquireLock(p);
+  const got = await acquireLock(p.lockPath, p.logPath);
   if (!got) {
-    await appendLog(p, `run ${runId} skipped: another run appears to be in progress`);
+    await appendLog(p.logPath, `run ${runId} skipped: another run appears to be in progress`);
     return { skipped: true };
   }
   try {
     const result = await runOnce(dataDir);
     return { skipped: false, ...result };
   } catch (error) {
-    await appendLog(p, `run ${runId} failed: ${error instanceof Error ? error.message : String(error)}`);
+    await appendLog(p.logPath, `run ${runId} failed: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
   } finally {
-    await releaseLock(p);
+    await releaseLock(p.lockPath);
   }
-}
-
-function isMainModule(): boolean {
-  return Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]!).href;
 }
 
 if (isMainModule()) {

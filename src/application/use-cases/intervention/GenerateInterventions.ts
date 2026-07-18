@@ -63,6 +63,24 @@ function isSameLocalDate(isoString: string, reference: Date): boolean {
   );
 }
 
+function isWithinWindow(isoString: string, startMs: number, endMs: number): boolean {
+  const t = Date.parse(isoString);
+  return t >= startMs && t <= endMs;
+}
+
+/** signalTime以降にCheckInまたは別のDistractionSignalが記録されていれば、状況は既に更新済みとみなす。 */
+function hasNewerActivitySince(
+  sinceMs: number,
+  excludeSignalId: string,
+  checkIns: CheckIn[],
+  signals: DistractionSignal[],
+): boolean {
+  return (
+    checkIns.some((c) => Date.parse(c.record.occurredAt) > sinceMs) ||
+    signals.some((s) => s.id !== excludeSignalId && Date.parse(s.record.occurredAt) > sinceMs)
+  );
+}
+
 interface RuleCandidate {
   ruleId: string;
   intensity: InterventionIntensity;
@@ -101,10 +119,12 @@ export class GenerateInterventionsUseCase {
 
   async execute(input: GenerateInterventionsInput = {}): Promise<GenerateInterventionsOutput> {
     const now = input.now ?? new Date();
-    const settingsEntity = await this.interventionPolicySettingsRepository.find();
+    const [settingsEntity, allInterventions] = await Promise.all([
+      this.interventionPolicySettingsRepository.find(),
+      this.interventionRepository.findAll(),
+    ]);
     const settings = settingsEntity?.record ?? DEFAULT_INTERVENTION_POLICY_SETTINGS;
 
-    const allInterventions = await this.interventionRepository.findAll();
     for (const intervention of allInterventions) {
       if (intervention.status === 'Snoozed') {
         intervention.wakeIfDue(now);
@@ -121,8 +141,10 @@ export class GenerateInterventionsUseCase {
       return { generated: [] };
     }
 
-    const checkIns = await this.checkInRepository.findAll();
-    const signals = await this.distractionSignalRepository.findAll();
+    const [checkIns, signals] = await Promise.all([
+      this.checkInRepository.findAll(),
+      this.distractionSignalRepository.findAll(),
+    ]);
 
     const candidates = [
       this.evaluateOverdueCheckIn(now, settings, checkIns),
@@ -220,13 +242,10 @@ export class GenerateInterventionsUseCase {
     const windowStart = now.getTime() - 60 * 60 * 1000;
     const windowSignals = signals.filter(
       (s) =>
-        Date.parse(s.record.occurredAt) >= windowStart &&
-        Date.parse(s.record.occurredAt) <= now.getTime() &&
+        isWithinWindow(s.record.occurredAt, windowStart, now.getTime()) &&
         confidenceAtLeast(s.record.confidence, settings.minDistractionConfidenceForWarning),
     );
-    const windowCheckIns = checkIns.filter(
-      (c) => Date.parse(c.record.occurredAt) >= windowStart && Date.parse(c.record.occurredAt) <= now.getTime(),
-    );
+    const windowCheckIns = checkIns.filter((c) => isWithinWindow(c.record.occurredAt, windowStart, now.getTime()));
     if (windowSignals.length < 3 || windowCheckIns.length > 0) return undefined;
     const hasHigh = windowSignals.some((s) => s.record.confidence === 'high');
     const intensity: InterventionIntensity = windowSignals.length >= 5 && hasHigh ? 'Critical' : 'Warning';
@@ -264,16 +283,12 @@ export class GenerateInterventionsUseCase {
       (s) =>
         s.record.kind === 'NoTimerAtLibrary' &&
         confidenceAtLeast(s.record.confidence, 'medium') &&
-        Date.parse(s.record.occurredAt) >= windowStart &&
-        Date.parse(s.record.occurredAt) <= now.getTime(),
+        isWithinWindow(s.record.occurredAt, windowStart, now.getTime()),
     );
     const signal = mostRecent(candidates);
     if (!signal) return undefined;
     const signalTime = Date.parse(signal.record.occurredAt);
-    const resolved =
-      checkIns.some((c) => Date.parse(c.record.occurredAt) > signalTime) ||
-      signals.some((s) => s.id !== signal.id && Date.parse(s.record.occurredAt) > signalTime);
-    if (resolved) return undefined;
+    if (hasNewerActivitySince(signalTime, signal.id, checkIns, signals)) return undefined;
     const sinceMinutes = Math.floor((now.getTime() - signalTime) / 60000);
     return {
       ruleId: 'library-no-timer',
@@ -296,10 +311,7 @@ export class GenerateInterventionsUseCase {
     const signalTime = Date.parse(signal.record.occurredAt);
     const gracePassedMinutes = Math.floor((now.getTime() - signalTime) / 60000);
     if (gracePassedMinutes < 15) return undefined;
-    const resolved =
-      checkIns.some((c) => Date.parse(c.record.occurredAt) > signalTime) ||
-      signals.some((s) => s.id !== signal.id && Date.parse(s.record.occurredAt) > signalTime);
-    if (resolved) return undefined;
+    if (hasNewerActivitySince(signalTime, signal.id, checkIns, signals)) return undefined;
     const intensity: InterventionIntensity = gracePassedMinutes >= 60 ? 'Warning' : 'Notice';
     return {
       ruleId: 'scheduled-task-not-started',
