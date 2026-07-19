@@ -244,4 +244,16 @@ handoff/archive/Version35_ARC_Brief.md`に保管）。
 （またはARCが直接AgentMessageとして送ってくることもあります
 ——`agent_message_list`も必ず確認すること）。
 
+## 未処理：Version37 Program B Activation準備（2026-07-20）
+
+Version35・36を受領した。Owner判断は以下で確定する。
+
+1. Ownerの最優先要件は「PC停止中でもスマホからアークの日常ログを参照・保存できること」。したがってローカルMVPで止めずCloud Activation Gateへ進む。初期月額上限は0円。契約・アカウント作成・deployはまだ行わない。Cloudflare Workers + D1/KVを暫定第一候補としつつ、provider固有処理はAdapterへ隔離して移行可能性を保つ。
+2. 認証なしの`MOBILE_INGRESS_HOST=0.0.0.0`有効化は承認しない。LAN公開・クラウド公開より先に、Mobile Ingress専用のfail-closed認証、rate limit、入力上限、監査、secret非表示を設計・実装・否定テストする。実際の`.env`変更・秘密情報発行・LAN公開はOwner確認まで保留する。
+3. 退避中16件は存在する。公開GitHubへ個人データを置かない方針で、OwnerのCodex workspaceに`project-arc-pending-life-logs-2026-07-20.jsonl`として保管済み。各行は`sequence`、`type`、`occurredAt:null`、`content`、`provenance:"chat_summary_queue"`。型はMealLog、FinanceLog、Reflection、RewardSystem、BudgetRule、Wishlist、Preference、SkincareRoutine、AppearanceAssessment、PersonalCareInventory、AppearanceLogを含む。実データをGitへcommitしないこと。まずこの形式を安全に検証・dry-run importできるImporterと重複防止ID生成規則を実装し、実取り込みは安全なローカル受け渡しまたは認証済み接続後に行う。
+
+Version37では、(a) Quick CaptureをReflectionだけでなく現行の安全な正式型（MealLog、NutritionLog、WeightLog、FinanceLog、Reflection）へ拡張、(b) JSONL importerのschema validation・dry-run・部分失敗報告・idempotency、(c) Mobile Ingress専用認証と否定テスト、(d) provider-neutralなCloud Adapter境界とCloudflareローカル開発用構成、(e) スマホからのread契約、(f) cloud activationに必要な手作業・無料枠・データ保管・rollbackを1ページのDecision Packetへ整理する。
+
+全テストが603/603成功、失敗・skip・pendingなしであることは確認済み。設計・ローカル実装・mock/emulator・無料かつ可逆な検証は返答待ちで停止せず進める。費用、アカウント作成、秘密情報発行、本番/LAN公開、不可逆操作、Constitution/Principles変更のみOwnerへ確認する。完了時はReport、Developer Feedback、STATUS、Roadmap、ADR、脅威モデルを更新する。
+
 <!-- ここにARCの指示書を貼り付け -->
