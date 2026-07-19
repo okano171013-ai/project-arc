@@ -228,4 +228,14 @@ archive/Version28_ARC_Brief.md`に保管）。
 
 ---
 
+## 未処理：Version35–36 日常ログ優先指示（2026-07-20）
+
+Ownerは優先順位を明確化した。最優先は、スマホからアーク（Project ARC）の日常ログを参照・保存でき、PC停止中でも動作すること。完全自動開発は第2優先とする。
+
+Version34完了後、技術的負債の細部ではなくProgram Bを進めること。まずVersion34の「576件中573件green（新規3件）」が全576件成功を意味するか確認し、失敗・skip・未実行があれば解消または明記する。ただし確認だけで停止しない。
+
+Version35では、Program B Architecture Gate、無料枠優先のcloud候補比較、月額上限0円を初期既定とした構成案、Mobile IngressのローカルMVP、read/write/idempotency/待機/失敗のデータ契約、退避中16件を将来取り込むimport形式、脅威モデル・ADR・テスト・Report・Developer Feedback・STATUS・Roadmapを整備する。
+
+クラウド契約・課金・本番公開・秘密情報設定は行わず、Owner判断事項を短いDecision Packetに集約する。設計・調査・文書化・ローカル実装・無料かつ可逆な検証は返答待ちで停止せず進める。Version35完了後は同条件でVersion36のローカルMVP完成まで続行してよい。DevelopmentGrant本番発行とOAuth本番有効化はOwner確認事項として保留する。
+
 <!-- ここにARCの指示書を貼り付け -->
