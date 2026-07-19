@@ -1,5 +1,7 @@
 # Version33 Report: Program A基盤（DevelopmentGrant・AgentTask Entity）
 
+commit: `aa7e004`
+
 ## 1. Version概要
 
 Owner指示「ADR完了後はProgram Aの安全な基盤工程から着手」に基づき、
