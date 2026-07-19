@@ -50,11 +50,18 @@ Version31_Report.md`・ADR 0058参照）。ADR 0059
 （Mobile Ingress as Transport vs Canonical Store）はProposed状態で
 設計を先行させたが、実装（Program B）はArchitecture Gate
 （cloud候補・cost上限のOwner確認）待ち。Version31 Briefは
-`docs/handoff/Version31_Brief.md`参照。次はOwner Priority Programsの
-統合Roadmap案に従い、Program A/Bの着手前ADR（残り4本）の設計を
-進める。
-AgentEvent/AgentTask（下表優先4）はStability Gate完了後まで
-引き続き候補として残る。
+`docs/handoff/Version31_Brief.md`参照。
+
+**Version32は完了済み**：Program A/B着手前ADRの残り4本
+（ADR 0060 DevelopmentGrant、ADR 0061 AgentTask State Machine、
+ADR 0062 Cloud Provider比較、ADR 0063 Mobile Sync/Idempotency）を
+設計した（`docs/reports/Version32_Report.md`参照）。コード変更なし。
+これで着手前ADR6本が出揃った。
+
+**Version33以降**：Owner指示に従い、Program Aの安全な基盤工程
+（DevelopmentGrant・AgentTask Entityの実装）に着手する。
+AgentEvent/AgentTask（下表優先4）は、ADR 0061によって正式にProgram
+Aの一部として実装されるため、下表の独立候補としては解消済みとする。
 
 | 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
 |---:|---|---|---|

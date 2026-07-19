@@ -1,28 +1,27 @@
 # Project ARC — PM Status
 
-最終監査日: 2026-07-19（Version31時点に更新）  
-基準HEAD: `8ef0588`（Version31）  
+最終監査日: 2026-07-19（Version32時点に更新）  
+基準HEAD: Version32コミット（`docs/reports/Version32_Report.md`参照）  
 作業ツリー: `.claude/settings.local.json`のみ未追跡（ローカル設定、対象外）。
 
 ## 5分サマリー
 
-Version1〜31まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durabilityまで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
+Version1〜32まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durabilityまで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
 
-Version30でRemote MCP OAuthの本番移行準備を完了（**本番`.env`反映はOwner Action待ち**）。Version31でdata foundation（atomic書き込み・汎用backup/restore・retention・restore drill）を完了し、ARC-PM-002を解決した。
+Version30でRemote MCP OAuthの本番移行準備を完了（**本番`.env`反映はOwner Action待ち**）。Version31でdata foundation（atomic書き込み・汎用backup/restore・retention・restore drill）を完了し、ARC-PM-002を解決した。Version32でProgram A/B着手前ADR6本すべて（0058〜0063）が出揃った。
 
-**Version32以降はOwner Priority Programs（2026-07-19、
-`docs/project-management/OWNER_PRIORITY_PROGRAMS_2026-07-19.md`）に
-従う**：Program A（Owner非介在の自律共同開発環境）・Program B
-（PC停止中でもスマホから記録可能なMobile Daily Capture）が最優先。
-ADR 0059（Mobile Ingress設計）はProposed状態で存在するが、実装は
-Architecture Gate（cloud候補・cost上限のOwner確認）を経てから。
+**Version33以降はProgram A（Owner非介在の自律共同開発環境）の
+基盤工程に着手する**（Owner指示、2026-07-19）：ADR 0060・0061に
+基づきDevelopmentGrant・AgentTask Entityを実装する。Program B
+（Mobile Daily Capture）はADR 0062のArchitecture Gate
+（cloud候補・cost上限のOwner確認）待ちのまま。
 
 ## 現在の進捗
 
 | 項目 | 状態 |
 |---|---|
-| Version1〜30 | 完了 |
-| Version31 | 完了（Data Durability：atomic書き込み・backup/restore CLI・retention・restore drill） |
+| Version1〜31 | 完了 |
+| Version32 | 完了（Program A/B着手前ADR4本：0060〜0063、設計のみ・コード変更なし） |
 | Typecheck / Lint | 2026-07-19合格（Version31時点で再確認） |
 | Build | 不合格。TS2742と`dist`書込競合（Version31スコープ外、ARC-PM-005として継続。Version31起因ではないことを確認済み） |
 | Test | Version31時点527件合格 |
