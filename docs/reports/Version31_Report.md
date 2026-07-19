@@ -1,5 +1,7 @@
 # Version31 Report: Data Durability
 
+commit: `8ef0588`
+
 ## 1. Version概要
 
 `docs/project-management/OWNER_PRIORITY_PROGRAMS_2026-07-19.md`
