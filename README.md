@@ -49,33 +49,74 @@ pnpm db:reset
 
 ## クラウドSupabaseへの移行（ADR 0003）
 
-ローカルの動作確認ができたら、以下の手順でクラウドプロジェクトに
-切り替える。このセクションはOwner本人がSupabaseアカウントを使って
-行う手動操作（Claude Codeからは実行できない）。
+ローカルでの動作確認ができたら、クラウドのSupabaseプロジェクトに
+切り替える。ここはOwner本人のSupabaseアカウントが必要な手動作業で、
+Claude Codeの側からは実行できない（アカウントを持っていないため）。
+5つのステップに分けて説明する。
+
+### Step 1. Supabase CLIでログインする
+
+ターミナルで以下を実行すると、ブラウザが開いてSupabaseへの
+ログイン画面が出る。普段Supabaseにログインするのと同じ操作でOK。
 
 ```bash
-# 1. Supabaseアカウントでログイン（ブラウザ認証）
 pnpm exec supabase login
-
-# 2. https://supabase.com/dashboard でプロジェクトを新規作成した後、
-#    ローカルリポジトリとリンクする（project-refはダッシュボードのURLから取得）
-pnpm exec supabase link --project-ref <project-ref>
-
-# 3. マイグレーションをクラウドDBに適用
-pnpm exec supabase db push
-
-# 4. Supabase Studio（Authentication > Users > Add user）で
-#    Owner本人のユーザーを1人作成する（サインアップ機能は無い）
-
-# 5. .env をクラウド向けに更新
-#    SUPABASE_URL      = プロジェクトのAPI URL
-#    SUPABASE_ANON_KEY = プロジェクトのanon key
-#    SUPABASE_OWNER_EMAIL / SUPABASE_OWNER_PASSWORD = 手順4で作成した認証情報
 ```
 
-RLSにより、`SUPABASE_OWNER_EMAIL` / `SUPABASE_OWNER_PASSWORD` での
-サインインなしには読み書きできない（`pnpm reflect --db=supabase`が
-自動でサインインする）。
+### Step 2. クラウド上にプロジェクトを新規作成する
+
+1. ブラウザで https://supabase.com/dashboard を開く
+2. 「New project」からプロジェクトを1つ作成する（名前は任意、例：`project-arc`）
+3. 作成が終わったら、プロジェクトのURLを見る。
+   `https://supabase.com/dashboard/project/xxxxxxxxxxxx` の
+   `xxxxxxxxxxxx`の部分が **project-ref**（次のStepで使う）
+
+### Step 3. ローカルのリポジトリとクラウドプロジェクトを紐付ける
+
+`<project-ref>`の部分をStep 2で控えた文字列に置き換えて実行する。
+
+```bash
+pnpm exec supabase link --project-ref <project-ref>
+```
+
+### Step 4. テーブルをクラウドDBに反映する
+
+このリポジトリの`supabase/migrations/`に用意してあるテーブル定義
+（reflections / study_logs / tasks、RLS込み）を、クラウド側のDBに
+そのまま適用するコマンド。
+
+```bash
+pnpm exec supabase db push
+```
+
+### Step 5. Owner用のログインユーザーを1人作る
+
+1. Supabaseダッシュボードで、対象プロジェクトを開く
+2. 左メニューの **Authentication** → **Users** → **Add user** をクリック
+3. メールアドレスとパスワードを決めて作成する（これがあなた自身の
+   ログイン情報になる。サインアップ画面などは無いので、この画面から
+   手動で1人だけ作る）
+
+### Step 6. `.env` を書き換える
+
+`.env`を開いて、以下の4つをクラウド側の値に書き換える。
+
+| 変数名 | どこで見つかる値か |
+|---|---|
+| `SUPABASE_URL` | ダッシュボードの Project Settings → API → Project URL |
+| `SUPABASE_ANON_KEY` | 同じ画面の Project API keys → `anon` `public` |
+| `SUPABASE_OWNER_EMAIL` | Step 5で作成したメールアドレス |
+| `SUPABASE_OWNER_PASSWORD` | Step 5で作成したパスワード |
+
+### 動作確認
+
+```bash
+pnpm reflect --db=supabase
+```
+
+いくつか質問に答えて「記録しました。」と表示されれば成功。RLSに
+よってこの4つの認証情報が揃っていないと読み書きできない仕組みに
+なっているので、途中でエラーが出た場合はまず`.env`の値を見直すこと。
 
 ## よく使うコマンド
 
