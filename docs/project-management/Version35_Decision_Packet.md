@@ -1,10 +1,12 @@
 # Version35 Decision Packet — Owner確認事項
 
-Version35（Program B Mobile Ingressローカルモデル）の中で、
-Claude Codeが自律的に判断できず、Ownerの決定が必要な事項のみを
-短くまとめたもの。詳細な設計根拠は`docs/reports/Version35_Report.md`・
-`docs/developer-feedback/Version35_Developer_Feedback.md`・
-ADR 0064・0065を参照。
+Version35（Program B Mobile Ingressローカルモデル）・Version36
+（ローカルMVPの完成度向上）の中で、Claude Codeが自律的に判断できず、
+Ownerの決定が必要な事項のみを短くまとめたもの（確認事項3が
+Version36追記分）。詳細な設計根拠は`docs/reports/Version35_Report.md`・
+`docs/reports/Version36_Report.md`・`docs/developer-feedback/
+Version35_Developer_Feedback.md`・`docs/developer-feedback/
+Version36_Developer_Feedback.md`・ADR 0064・0065を参照。
 
 **このPacketに書かれていないことは、すべてClaude Codeが判断済み・
 実施済みで、Ownerの確認を待たずに進めてよい範囲**（設計・調査・
@@ -47,6 +49,26 @@ ADR 0064で無料枠優先のcloud比較を行ったが、**vendorは確定さ�
 - **急ぎ度**：低い。クラウド未使用のまま、ローカルMVPの完成度向上
   だけでもProgram Bの価値は積み上げられる（Version36の方針）。
 
+## 確認事項3（Version36追記）：スマホからの実送信にはLAN公開が必要
+
+Version36で、PCのブラウザから開けるQuick Capture送信フォーム
+（`GET /`）を追加し、実際にヘッドレスブラウザからの送信を確認した。
+ただし現状は`127.0.0.1`限定のままのため、**スマートフォン実機からは
+まだ送信できない**——スマホから届かせるには`MOBILE_INGRESS_HOST`を
+`0.0.0.0`等へ変更し、同一Wi-Fi（LAN）内から到達可能にする必要がある。
+
+- **今回の対応**：この変更は環境変数のopt-in（既定値は無変更）として
+  実装のみ済ませた。実際に有効化する判断はしていない。
+- **Ownerに必要な確認**：`MOBILE_INGRESS_HOST=0.0.0.0`（または
+  実機のLAN IP）へ変更してよいか。認証なしのままLAN内の他デバイス
+  （同じWi-Fiに接続していれば家族・来客のデバイスも含む）から
+  `POST /ingress`等へ到達可能になる点を踏まえた上での判断をお願い
+  したい。設定手順は`.env.example`のコメント・`docs/security/
+  remote-mcp-threat-model.md`9.2参照。
+- **急ぎ度**：中。スマホからの実送信を試すには必須だが、PCの
+  ブラウザからの送信・`pnpm mobile-sync`の定期実行によるlocal反映
+  自体はこの確認を待たずに機能する。
+
 ---
 
 ## 実施していないこと（明示的な禁止事項、確認）
@@ -58,4 +80,6 @@ ADR 0064で無料枠優先のcloud比較を行ったが、**vendorは確定さ�
 - DevelopmentGrant本番発行・OAuth本番有効化（Program Bとは別件、
   従来通りOwner確認事項として保留中）
 
-以上、いずれも今回のVersion35では一切実施していない。
+以上、いずれもVersion35〜36では一切実施していない
+（`MOBILE_INGRESS_HOST`のLAN公開opt-inもコード上可能にしただけで、
+実際に`.env`へ設定・有効化してはいない）。

@@ -92,4 +92,13 @@ describe('ARC Mobile Ingress (local MVP)', () => {
     const res = await fetch(`${baseUrl}/unknown`);
     expect(res.status).toBe(404);
   });
+
+  it('GET / serves the Quick Capture HTML form (Version36)', async () => {
+    const res = await fetch(`${baseUrl}/`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    const html = await res.text();
+    expect(html).toContain('<form id="f">');
+    expect(html).toContain("fetch('/ingress'");
+  });
 });

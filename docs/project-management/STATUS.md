@@ -1,12 +1,12 @@
 # Project ARC — PM Status
 
-最終監査日: 2026-07-19（Version35時点に更新）  
-基準HEAD: `0b7db63`（Version35、`docs/reports/Version35_Report.md`参照）  
+最終監査日: 2026-07-19（Version36時点に更新）  
+基準HEAD: Version36コミット（`docs/reports/Version36_Report.md`参照）  
 作業ツリー: `.claude/settings.local.json`のみ未追跡（ローカル設定、対象外）。
 
 ## 5分サマリー
 
-Version1〜35まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durability、Program A（読み取り専用公開）、**Program B Mobile Ingressローカルモデル**まで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
+Version1〜36まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durability、Program A（読み取り専用公開）、**Program B Mobile Ingressローカルモデル（受信UI・自動sync込み）**まで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
 
 Owner優先順位（2026-07-19）により、Version35からProgram B
 （Mobile Daily Capture）を最優先で進めた。Architecture Gate論点
@@ -15,11 +15,17 @@ Ingress（受信・idempotency・競合検出・待機/失敗状態）のデー�
 （ADR 0065）を確定、**完全ローカルのMVPとして実装**した
 （`pnpm mobile-ingress` + `pnpm mobile-sync`）。実機で
 受信→再送無視→sync→競合検出→Owner確認による解決、の一連を確認
-済み。**クラウド契約・課金・本番公開・秘密情報設定は一切実施して
-いない**（Owner指示通り）。
+済み。Version36では、ブラウザから送信できるQuick Capture UI（`GET
+/`）とPC起動中の自動sync（15分間隔、`ProjectARC-MobileSync`タスク）
+を追加し、「送る側がない」「手動syncのみ」という2つの空白を埋めた。
+スマホからの実送信に必要なLAN公開は`MOBILE_INGRESS_HOST`のopt-in
+として実装のみ済ませ、**有効化はOwner確認事項として保留**した。
+**クラウド契約・課金・本番公開・秘密情報設定は一切実施していない**
+（Owner指示通り）。
 
 Owner向け判断事項は`docs/project-management/
-Version35_Decision_Packet.md`に集約した。
+Version35_Decision_Packet.md`に集約した（Version36で確認事項3を
+追記）。
 
 ## 現在の進捗
 
@@ -27,12 +33,13 @@ Version35_Decision_Packet.md`に集約した。
 |---|---|
 | Version1〜34 | 完了 |
 | Version35 | 完了（Program B Architecture Gate整理、Mobile Ingressデータ契約確定、ローカルMVP実装・実機確認） |
-| Typecheck / Lint | 2026-07-19合格（Version35時点で再確認） |
+| Version36 | 完了（Quick Capture UI、`MOBILE_INGRESS_HOST` opt-in、sync自動化スクリプト） |
+| Typecheck / Lint | 2026-07-19合格（Version36時点で再確認） |
 | Build | 不合格。TS2742と`dist`書込競合（Version31以降スコープ外、ARC-PM-005として継続） |
-| Test | Version35時点602件合格 |
+| Test | Version36時点603件合格 |
 | Remote MCP | 認証の実装・テストは完備（Version22）。**本番は今なお無認証**（ADR 0051の「有効化した」という記録は誤りだったとVersion30で判明、訂正済み）。MCP Tool数26（Version34から変化なし——Mobile IngressはRemote MCPの一部ではない） |
 | Program A | DevelopmentGrant・AgentTaskが読み取り専用でARCから確認可能。write操作は未公開（変化なし） |
-| Program B | Mobile Ingress・Sync Workerのローカルモデル完成（`pnpm mobile-ingress`・`pnpm mobile-sync`）。クラウドデプロイ・本番URL公開はActivation Gate待ち |
+| Program B | Mobile Ingress・Sync Workerのローカルモデル完成（`pnpm mobile-ingress`・`pnpm mobile-sync`）、Quick Capture UI・sync自動化スクリプト追加（Version36）。クラウドデプロイ・本番URL公開はActivation Gate待ち。スマホからの実送信はLAN公開のOwner確認待ち |
 | Data Durability | `pnpm backup create/list/restore`が動作。`data/ingress-records.json`も自動的にbackup対象に含まれることを実機で確認済み |
 | Bridge Layer | MealLog/NutritionLog/WeightLog/FinanceLog/StudySessionのImport/Export対応を追加（Version9〜27間のギャップ解消） |
 
@@ -59,7 +66,7 @@ Version35_Decision_Packet.md`に集約した。
 
 ## 現在の目標・次のマイルストーン
 
-**Program B**: Architecture Gate論点整理（ADR 0064）とMobile Ingressデータ契約（ADR 0065）は完了。ローカルMVP（`pnpm mobile-ingress` / `pnpm mobile-sync`）を実装・実機確認済み。次はVersion36として同じローカルMVPの完成度を上げる（Owner指示により継続可）。クラウドへのActivation Gate（vendor選定・実デプロイ・本番URL公開）はOwner確認事項（`Version35_Decision_Packet.md`）待ちで、契約・課金・秘密情報設定は未実施のまま凍結する。
+**Program B**: Architecture Gate論点整理（ADR 0064）とMobile Ingressデータ契約（ADR 0065）、ローカルMVP（`pnpm mobile-ingress` / `pnpm mobile-sync`）、Quick Capture UI・sync自動化（Version36）まで完了。次はOwner確認事項3（`MOBILE_INGRESS_HOST`のLAN公開可否）の回答を受けての実地確認。クラウドへのActivation Gate（vendor選定・実デプロイ・本番URL公開）はOwner確認事項（`Version35_Decision_Packet.md`）待ちで、契約・課金・秘密情報設定は未実施のまま凍結する。
 
 **Stability Gate**: 残りARC-PM-005〜010を閉じる。ARC-PM-001は本番反映（Owner Action）のみ残存、ARC-PM-002〜004は解消済み。外部公開、認証、秘密情報、データ削除はOwner承認が必要。
 
@@ -72,7 +79,8 @@ Version35_Decision_Packet.md`に集約した。
 ## 停止中タスク
 
 - OAuth本番有効化: 準備完了（Version30）。Owner承認と接続再設定待ち——`docs/setup/remote-mcp-oauth-migration.md`のチェックリストで一度で実行できる
-- Program B（Mobile Ingress）クラウドActivation Gate: ローカルMVPは完成済み（Version35）。vendor選定（ADR 0064はCloudflare Workersを暫定候補と仮置きのみ）・実デプロイ・cost上限確定はOwner確認事項（`Version35_Decision_Packet.md`）待ち
+- Program B（Mobile Ingress）クラウドActivation Gate: ローカルMVPは完成済み（Version35〜36）。vendor選定（ADR 0064はCloudflare Workersを暫定候補と仮置きのみ）・実デプロイ・cost上限確定はOwner確認事項（`Version35_Decision_Packet.md`）待ち
+- `MOBILE_INGRESS_HOST`のLAN公開有効化: Owner確認事項（確認事項3、`Version35_Decision_Packet.md`）——スマホからの実送信に必要
 - 「現在退避中の16件」の実体確認: Owner確認事項（ARC-PM-014、`Version35_Decision_Packet.md`）
 - `STUDY_TIMER_API_TOKEN`と実timer疎通: Owner作業
 - StudyLog配線: StudySessionとのmodel判断待ち

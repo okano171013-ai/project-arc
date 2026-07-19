@@ -852,3 +852,33 @@ DoD基準そのものの定義を保持する。
 - [x] クラウド契約・課金・本番公開・秘密情報設定は一切実施していない
 
 Version35のDoDは全項目達成済み。
+
+## Version36完了チェックリスト
+
+- [x] `pnpm test` が全て緑（603件、`GET /`のHTMLレスポンステスト1件を含む）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] Quick Capture HTML UI（`GET /`、既存`POST /ingress`を呼ぶ薄い
+      クライアント）を実装・実機確認済み
+- [x] `MOBILE_INGRESS_HOST`/`MOBILE_INGRESS_PORT`をzodスキーマ化し
+      `loadEnv()`経由に統一（`.env`未読み込みの実装漏れを実装中に
+      発見・修正）
+- [x] `scripts/start-all.ps1`・`stop-all.ps1`・
+      `register-scheduled-tasks.ps1`にMobile Ingress起動・
+      `ProjectARC-MobileSync`定期タスク（15分間隔）を追加
+      （Windows機での実行・登録確認はOwner自身が行う）
+- [x] **実機確認**：グローバルインストール済みPlaywright（プロジェクト
+      依存には追加せず）のヘッドレスブラウザで実際にQuick Capture
+      フォームを送信し、`GET /ingress`での反映を確認。検証用
+      スクリプト・データは確認後に削除済み
+- [x] LAN公開（`MOBILE_INGRESS_HOST`変更）は既定値のまま維持し、
+      有効化はOwner確認事項として`Version35_Decision_Packet.md`へ
+      集約（実施していない）
+- [x] `docs/security/remote-mcp-threat-model.md`9章を追加、8.1の
+      不正確な記述を訂正済み
+- [x] README / docsに実装との乖離がない
+- [x] `docs/reports/Version36_Report.md`を生成済み（14章構成）
+- [x] `docs/developer-feedback/Version36_Developer_Feedback.md`を生成済み
+- [x] クラウド契約・課金・本番公開・秘密情報設定は一切実施していない
+
+Version36のDoDは全項目達成済み。

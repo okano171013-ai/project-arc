@@ -94,11 +94,25 @@ WeightLog/FinanceLog/StudySessionへ拡張し（Version9〜27間の
 Version35_Decision_Packet.md`に集約した。詳細は`docs/reports/
 Version35_Report.md`・ADR 0064・0065参照。
 
-**Version36以降**：Owner指示により、Version35の安全な範囲完了を
-受けて同じ条件（設計・調査・文書化・ローカル実装・無料で可逆な
-テストはOwner返信を待たず継続）でMobile Ingressローカル
-MVPの完成度を高める。クラウドへのActivation Gate（vendor実デプロイ・
-本番URL公開）はOwner確認事項が解決してから着手する。
+**Version36は完了済み**：Owner指示（「同じ条件でVersion36の
+ローカルMVP完成まで進めてよい」）に従い、Version35の2つの空白を
+埋めた。(1) ブラウザから開けるQuick Capture UI（`GET /`、既存
+`POST /ingress`を呼ぶ薄いクライアント、新規書き込み経路は追加せず）
+を実装、実機（グローバルインストール済みPlaywrightのヘッドレス
+ブラウザ）で送信→反映を確認。(2) PC起動中の自動sync
+（`ProjectARC-MobileSync`、15分間隔、`scripts/register-scheduled-
+tasks.ps1`）を追加。スマホからの実送信に必要なLAN公開は
+`MOBILE_INGRESS_HOST`環境変数のopt-in（既定`127.0.0.1`、変更なし）
+として実装のみ済ませ、**有効化はOwner確認事項として
+`Version35_Decision_Packet.md`へ集約**した（既存の`ARC_API_KEY`・
+`MCP_OAUTH_ENABLED`と同じopt-in設計規約）。クラウド契約・課金・
+本番公開・秘密情報設定は一切実施していない。詳細は`docs/reports/
+Version36_Report.md`参照。
+
+**Version37以降**：Owner確認事項3（LAN公開の可否）への回答を受けて
+実地確認（実際のスマホからの送信）を行う。クラウドActivation Gate
+（vendor実デプロイ・本番URL公開）はOwner確認事項が解決してから
+着手する。
 
 | 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
 |---:|---|---|---|

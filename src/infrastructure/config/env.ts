@@ -40,6 +40,12 @@ const envSchema = z.object({
   // カンマ区切りの許可オリジン一覧。未設定ならブラウザからのクロス
   // オリジンリクエストは常に拒否される（CORSヘッダーを一切付与しない）。
   STUDY_TIMER_ALLOWED_ORIGINS: z.string().optional(),
+  // Mobile Ingress（Version35〜36、ADR 0064・0065）。既定は127.0.0.1
+  // 限定——LAN公開はOwnerが明示的にMOBILE_INGRESS_HOSTを変更した場合の
+  // opt-inとする（`STUDY_TIMER_API_TOKEN`未設定時のfail-closedとは逆で、
+  // こちらは「変更しない限り最も閉じた既定値のまま」というopt-in設計）。
+  MOBILE_INGRESS_PORT: z.coerce.number().int().positive().default(3941),
+  MOBILE_INGRESS_HOST: z.string().default('127.0.0.1'),
 });
 
 export type Env = z.infer<typeof envSchema>;

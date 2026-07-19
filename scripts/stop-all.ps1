@@ -1,12 +1,14 @@
 <#
 .SYNOPSIS
   Stops the local services started by start-all.ps1. Version20, ADR 0047.
+  Mobile Ingress added Version36.
 
 .DESCRIPTION
   Identifies the process listening on each relevant port (3939 = ARC
-  Connector HTTP API, 3940 = Remote MCP, 4040 = ngrok web interface)
-  and stops only that specific PID — never a broad kill-by-name sweep,
-  to avoid terminating unrelated node.exe processes.
+  Connector HTTP API, 3940 = Remote MCP, 3941 = Mobile Ingress,
+  4040 = ngrok web interface) and stops only that specific PID — never
+  a broad kill-by-name sweep, to avoid terminating unrelated node.exe
+  processes.
 #>
 
 $ErrorActionPreference = 'Continue'
@@ -29,6 +31,7 @@ function Stop-ByPort {
     }
 }
 
+Stop-ByPort -Port 3941 -Label 'Mobile Ingress'
 Stop-ByPort -Port 3940 -Label 'Remote MCP'
 Stop-ByPort -Port 3939 -Label 'ARC Connector HTTP API'
 Stop-ByPort -Port 4040 -Label 'ngrok web interface'

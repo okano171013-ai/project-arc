@@ -1,7 +1,8 @@
 <#
 .SYNOPSIS
   Starts Project ARC's local services (ARC Connector HTTP API, Remote
-  MCP, ngrok tunnel). Version20, ADR 0047.
+  MCP, ngrok tunnel, Mobile Ingress). Version20, ADR 0047. Mobile
+  Ingress added Version36, ADR 0064/0065.
 
 .DESCRIPTION
   Intended to run from Windows Task Scheduler at logon (see
@@ -11,6 +12,12 @@
   prevention). After ngrok starts, writes the current public URL to
   data/current-tunnel-url.txt (the free plan's URL changes on every
   restart, so this makes it easy to check — see ADR 0047).
+
+  Mobile Ingress (port 3941既定) is started unconditionally alongside
+  the other services — it binds to 127.0.0.1 only unless
+  MOBILE_INGRESS_HOST is explicitly set in .env (opt-in LAN exposure,
+  Version36). Unlike ngrok, it is never tunneled to the internet by
+  this script.
 
   To stop everything, use stop-all.ps1, or end the node.exe / ngrok.exe
   processes via Task Manager.
@@ -88,7 +95,19 @@ if ($ngrokRunning) {
     Start-Sleep -Seconds 5
 }
 
-# --- 4. Record the current public URL to data/current-tunnel-url.txt ---
+# --- 4. Mobile Ingress (default port 3941, Version36) ---
+if (Test-PortOpen -Port 3941) {
+    Write-Output "[start-all] port 3941 already listening, skipping pnpm mobile-ingress"
+} else {
+    Write-Output "[start-all] starting pnpm mobile-ingress"
+    Start-Process -FilePath 'pnpm.cmd' -ArgumentList 'mobile-ingress' `
+        -WindowStyle Hidden `
+        -RedirectStandardOutput (Join-Path $logDir 'mobile-ingress.out.log') `
+        -RedirectStandardError (Join-Path $logDir 'mobile-ingress.err.log')
+    Wait-ForPort -Port 3941 | Out-Null
+}
+
+# --- 5. Record the current public URL to data/current-tunnel-url.txt ---
 try {
     $tunnels = Invoke-RestMethod -Uri 'http://127.0.0.1:4040/api/tunnels' -TimeoutSec 5
     $publicUrl = $tunnels.tunnels | Select-Object -First 1 -ExpandProperty public_url
