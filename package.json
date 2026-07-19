@@ -32,6 +32,7 @@
     "openapi:generate": "tsx src/infrastructure/openapi/generateOpenApi.ts",
     "runner": "tsx src/infrastructure/runner/collaborationRunner.ts",
     "checkin-runner": "tsx src/infrastructure/runner/checkInPrompter.ts",
+    "runner-control": "tsx src/infrastructure/runner/runnerControlCli.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",
     "test:watch": "vitest",

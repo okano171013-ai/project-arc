@@ -21,7 +21,19 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
 - [`docs/adr/`](./docs/adr) — 個別の設計判断とその根拠
 - [`docs/HISTORY.md`](./docs/HISTORY.md) — Version1〜9の全履歴まとめ
 
-## Version28のスコープ（現在地）
+## Version29のスコープ（現在地）
+
+テーマ：「Runner Control Plane」— Collaboration RunnerとCheck-In Runnerの
+実行状態、build、ロック、kill switchを共通管理する。詳細はADR 0056・
+[`docs/reports/Version29_Report.md`](./docs/reports/Version29_Report.md)参照。
+
+- `pnpm runner-control status|disable|enable`
+- Runner別の成功・失敗・重複スキップ・停止状態
+- Version28 Registry由来のbuild commit記録
+- WindowsでRunnerが無処理終了していた既存エントリ判定不具合を修正
+- 自動再起動・強制終了・本番設定変更は行わない
+
+### 旧Version28のスコープ：「Remote MCP Capability Registry」
 
 テーマ：「Remote MCP Capability Registry」— ChatGPTの既存チャットや
 長寿命MCPプロセスが古いTool定義を保持した場合に、接続先の版と機能を

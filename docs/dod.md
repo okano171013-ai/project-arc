@@ -796,3 +796,19 @@ Codex隔離環境ではesbuildがリポジトリ親ディレクトリを読め�
 件から+1件）であることを確認済み。
 
 Version28のDoDは全項目達成済み。
+
+## Version29完了チェックリスト
+
+- [x] 両Runnerを共通`executeControlledRun()`へ接続
+- [x] 成功・失敗・ロックスキップ・kill switch停止を状態記録
+- [x] projectVersion・buildCommitをRunner状態へ保存
+- [x] Runner別状態ファイルで同時実行の上書き競合を回避
+- [x] 既存Runner別lock/logパスを維持
+- [x] `pnpm runner-control status|disable|enable`を実装
+- [x] Windowsで既存Runnerが無処理終了していた`isMainModule`を修正
+- [x] Control Plane・CLI・kill switchのテストを追加
+- [x] typecheck・ESLint合格、実CLI status確認済み
+- [x] ADR 0056、運用手順、Report、ARC向けFeedbackを作成
+- [x] `.claude/`、認証、外部公開、本番タスク、秘密情報を変更していない
+- [ ] 全Vitest——当該Codex隔離環境では設定ロード前に停止。コミット可能な
+      別セッションで全件合格を確認してから完了報告を保存する

@@ -18,13 +18,13 @@
  * 前提：`pnpm run api`（ARC Connector HTTP API）が別プロセスとして
  * 起動済みであること。
  */
-import { randomUUID } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { Connector } from '../connector/Connector.js';
 import { loadConnectorConfig } from '../connector/connectorConfig.js';
-import { appendLog, acquireLock, releaseLock, isMainModule } from './runnerLock.js';
+import { appendLog, isMainModule } from './runnerLock.js';
+import { executeControlledRun } from './runnerControlPlane.js';
 
 interface RunnerState {
   lastSeenAgentMessageAt?: string;
@@ -150,24 +150,17 @@ export async function runOnceWithLock(
   dataDir = 'data',
 ): Promise<{ skipped: true } | { skipped: false; detected: DetectedItem[]; notificationPath?: string }> {
   const p = paths(dataDir);
-  const runId = randomUUID();
-  const got = await acquireLock(p.lockPath, p.logPath);
-  if (!got) {
-    await appendLog(p.logPath, `run ${runId} skipped: another run appears to be in progress`);
-    return { skipped: true };
-  }
-  try {
-    const result = await runOnce(connector, dataDir);
-    return { skipped: false, ...result };
-  } catch (error) {
-    await appendLog(p.logPath, `run ${runId} failed: ${error instanceof Error ? error.message : String(error)}`);
-    throw error;
-  } finally {
-    await releaseLock(p.lockPath);
-  }
+  const controlled = await executeControlledRun({
+    runner: 'collaboration',
+    dataDir,
+    lockPath: p.lockPath,
+    logPath: p.logPath,
+    execute: () => runOnce(connector, dataDir),
+  });
+  return controlled.skipped ? { skipped: true } : { skipped: false, ...controlled.value };
 }
 
-if (isMainModule()) {
+if (isMainModule(import.meta.url)) {
   const connector = new Connector(loadConnectorConfig());
   runOnceWithLock(connector).catch((error: unknown) => {
     console.error('Fatal error:', error);

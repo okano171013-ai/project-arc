@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { PROPOSAL_TYPES } from './tools/proposalSchema.js';
 
 export const CAPABILITY_SCHEMA_VERSION = '1.0.0';
-export const PROJECT_ARC_VERSION = 28;
+export const PROJECT_ARC_VERSION = 29;
 
 export const MCP_TOOL_NAMES = [
   'read_reflection',

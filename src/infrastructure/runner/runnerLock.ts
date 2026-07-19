@@ -10,7 +10,7 @@
 import { mkdir, readFile, writeFile, appendFile, rm } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 /** このロックより古いものは、前回実行がクラッシュしたとみなし無視する。 */
 export const STALE_LOCK_MS = 30 * 60 * 1000;
@@ -50,6 +50,11 @@ export async function releaseLock(lockPath: string): Promise<void> {
   if (existsSync(lockPath)) await rm(lockPath);
 }
 
-export function isMainModule(): boolean {
-  return Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]!).href;
+export function isMainModule(moduleUrl: string): boolean {
+  if (!process.argv[1]) return false;
+  const modulePath = path.resolve(fileURLToPath(moduleUrl));
+  const entryPath = path.resolve(process.argv[1]);
+  return process.platform === 'win32'
+    ? modulePath.toLowerCase() === entryPath.toLowerCase()
+    : modulePath === entryPath;
 }

@@ -23,11 +23,15 @@ ARC Connector、Remote MCP、Approval Policy、限定自動保存、Life Log、
 Registryから取得可能にした（`docs/reports/Version28_Report.md`・ADR 0055参照）。
 次の推奨VersionはVersion29「Runner Control Plane」とする。
 
+**Version29は実装済み**：Runner Control Plane、build-aware状態記録、
+共通kill switch、状態CLI、Windowsエントリ判定修正を追加した。詳細は
+`docs/reports/Version29_Report.md`・ADR 0056参照。
+
 | 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
 |---:|---|---|---|
 | 1 | Remote MCP Capability Registry（**Version28で完了済み**） | チャットや長寿命プロセスごとのツール定義差異をなくす。Version16〜18のMCP基盤を、schemaVersion/buildCommit/toolCountを返す単一レジストリへ発展させる | 新規ChatGPTチャット・ローカルMCP・公開URLで同一ツール名とProposal型を取得し、差異を自動検出できる |
 | 2 | StudyLog配線（Study Session Gatewayは**Version27で完了済み**） | Version1から存在するStudyLog未配線を解消する。Version27で追加した`StudySession`（外部タイマーからの1セッション単位のログ）との関係整理（統合するか別Entityとして併存させるか）をOwnerに確認した上で配線する | 既存StudyLog Repository/UseCase/Routeが配線される、または廃止判断がされる。`StudySession`との二重管理境界が文書化される |
-| 3 | Runner Control Plane | Version20のCollaboration RunnerとVersion26のCheck-in Runnerのlock/state/logを共通化し、起動順・再起動・版確認・kill switchを一元管理する | PC再起動後も単一インスタンスで復旧し、古いプロセスと古いビルドを検出できる |
+| 3 | Runner Control Plane（**Version29で実装済み**） | Version20のCollaboration RunnerとVersion26のCheck-in Runnerのlock/state/logを共通化し、版確認・kill switchを一元管理する | 単一インスタンス制御、状態記録、古いbuild検出、手動kill switchが動作する。自動再起動は別Versionで検討 |
 | 4 | AgentEvent・未読管理・AgentTask最小実装 | Version17〜20のAgentMessage運用と100項目バックログの最優先事項を実装へ進める。指示・Feedback・承認待ちを処理状態付きで追跡する | 未読見落としと二重処理を防ぎ、Version・受入条件・commit・test結果をTaskへ紐付けられる |
 | 5 | Calendar・Study Timer連携 | Version3から延期され、Version26でも次段階とされた予定・学習実績連携を実装する。外部データは最小権限・ローカル優先で取得する | 予定タスク未開始と学習タイマー状態を、根拠付きCheckIn/DistractionSignal候補として扱える |
 | 6 | Screen Time安全インポート | Version26の調査結果を踏まえ、iOS直接取得を前提にせずShortcuts/CSV/手動共有の順で最小縦切りを作る | source/confidence/basisを保持し、YouTube/SNS利用を推測ではなく由来が明確な外部指標として取り込める |
@@ -590,6 +594,14 @@ Version9完了を受け、ARCから中長期ロードマップの組み替え提
   Read/Proposal/ManagementFeedbackを扱えるようになったが、書き込みは
   常にOwnerの明示的な承認（`proposal_approve`の呼び出し）を経由する
   設計のため、MCPサーバー自体は自動Approveの手段を持たない。
+- **Phase 2.5（最優先）Cloud Residency** — PCを起動していなくても
+  Project ARCを利用可能にし、スマホのみでChatGPT・Project ARCを
+  連携させる。無料サービス優先（Railway→Render順で検討）、
+  API・Remote MCP・DBをクラウドへ移行、ChatGPTから直接接続。
+  自動レビュー・自動同期をクラウド上で実行。完了条件：(1)PC不要、
+  (2)スマホのみで読み書き可能、(3)22時レビューなどの自動処理が
+  常時動作、(4)Claude Codeとの自律ループがクラウドで動作。
+  既存のデータ永続性・セキュリティ・Owner最終決定の原則は維持。
 - **Phase 3（Version16〜25）Life Management** — 毎日Reflection・
   睡眠・勉強・食事・筋トレ等をチェックし、ARCが未達を指摘する
   （「今週筋トレありません」等）、より踏み込んだ管理機能。

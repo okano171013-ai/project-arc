@@ -18,14 +18,14 @@
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
 import { GenerateInterventionsUseCase } from '../../application/use-cases/intervention/GenerateInterventions.js';
 import { JsonFileCheckInRepository } from '../../adapters/repositories/JsonFileCheckInRepository.js';
 import { JsonFileDistractionSignalRepository } from '../../adapters/repositories/JsonFileDistractionSignalRepository.js';
 import { JsonFileInterventionRepository } from '../../adapters/repositories/JsonFileInterventionRepository.js';
 import { JsonFileInterventionPolicySettingsRepository } from '../../adapters/repositories/JsonFileInterventionPolicySettingsRepository.js';
 import type { Intervention } from '../../domain/entities/Intervention.js';
-import { appendLog, acquireLock, releaseLock, isMainModule } from './runnerLock.js';
+import { appendLog, isMainModule } from './runnerLock.js';
+import { executeControlledRun } from './runnerControlPlane.js';
 
 interface RunnerPaths {
   lockPath: string;
@@ -91,24 +91,17 @@ export async function runOnceWithLock(
   dataDir = 'data',
 ): Promise<{ skipped: true } | { skipped: false; generated: Intervention[]; notificationPath?: string }> {
   const p = paths(dataDir);
-  const runId = randomUUID();
-  const got = await acquireLock(p.lockPath, p.logPath);
-  if (!got) {
-    await appendLog(p.logPath, `run ${runId} skipped: another run appears to be in progress`);
-    return { skipped: true };
-  }
-  try {
-    const result = await runOnce(dataDir);
-    return { skipped: false, ...result };
-  } catch (error) {
-    await appendLog(p.logPath, `run ${runId} failed: ${error instanceof Error ? error.message : String(error)}`);
-    throw error;
-  } finally {
-    await releaseLock(p.lockPath);
-  }
+  const controlled = await executeControlledRun({
+    runner: 'check-in',
+    dataDir,
+    lockPath: p.lockPath,
+    logPath: p.logPath,
+    execute: () => runOnce(dataDir),
+  });
+  return controlled.skipped ? { skipped: true } : { skipped: false, ...controlled.value };
 }
 
-if (isMainModule()) {
+if (isMainModule(import.meta.url)) {
   runOnceWithLock().catch((error: unknown) => {
     console.error('Fatal error:', error);
     process.exitCode = 1;
