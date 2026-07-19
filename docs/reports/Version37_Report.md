@@ -1,5 +1,7 @@
 # Version37 Report: Mobile Ingressセキュリティ強化・退避ログImporter・Cloud Adapter境界
 
+commit: `2aed924`
+
 ## 1. Version概要
 
 ARCからGit経由で届いた指示書（2026-07-20、`docs/handoff/archive/
