@@ -27,6 +27,16 @@ Registryから取得可能にした（`docs/reports/Version28_Report.md`・ADR 0
 共通kill switch、状態CLI、Windowsエントリ判定修正を追加した。詳細は
 `docs/reports/Version29_Report.md`・ADR 0056参照。
 
+**Version30の内容は、下表の優先度リストではなくPM Review
+（2026-07-19、`docs/reviews/Project_ARC_PM_Review_2026-07-19.md`）の
+Stability Gate優先度に従い変更した**：当初案の「AgentEvent/AgentTask」
+ではなく「Remote MCP OAuth本番移行準備」（ARC-PM-001対応）を実施した
+（`docs/reports/Version30_Report.md`・ADR 0057参照）。PM Reviewが
+提案したVersion30〜34（Security/Data Durability/Release/API
+Contract/Domain Consolidation）を、下表より優先する現行の方針とする。
+AgentEvent/AgentTask（下表優先4）はStability Gate完了後まで
+引き続き候補として残る。
+
 | 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
 |---:|---|---|---|
 | 1 | Remote MCP Capability Registry（**Version28で完了済み**） | チャットや長寿命プロセスごとのツール定義差異をなくす。Version16〜18のMCP基盤を、schemaVersion/buildCommit/toolCountを返す単一レジストリへ発展させる | 新規ChatGPTチャット・ローカルMCP・公開URLで同一ツール名とProposal型を取得し、差異を自動検出できる |

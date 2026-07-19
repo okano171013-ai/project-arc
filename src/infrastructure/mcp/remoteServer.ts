@@ -53,7 +53,14 @@ import { loadConnectorConfig } from '../connector/connectorConfig.js';
 import { loadEnv } from '../config/env.js';
 import { buildMcpServer } from './server.js';
 import { LocalOAuthProvider } from '../security/oauth/LocalOAuthProvider.js';
+import { createFixedWindowRateLimiter } from '../security/rateLimiter.js';
 import { matchesStudySessionPath, handleStudySessionRequest, type StudySessionRouteOptions } from '../http/studySessionRoute.js';
+
+// Passcode総当たり対策（Version30 security review）。SDKの`authorizationHandler`
+// が課すレート制限は`/authorize`（GET）のみを対象とし、Passcodeを実際に
+// 検証する`/authorize/confirm`（POST、SDK非経由の自前ルート）には及ばない
+// ため、ここで個別に制限する。
+export const AUTHORIZE_CONFIRM_RATE_LIMIT = { max: 10, windowMs: 15 * 60 * 1000 };
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   const chunks: Buffer[] = [];
@@ -99,6 +106,7 @@ export function createRemoteMcpApp(
   }
 
   const provider = new LocalOAuthProvider(oauth.ownerPasscode);
+  const confirmRateLimiter = createFixedWindowRateLimiter(AUTHORIZE_CONFIRM_RATE_LIMIT);
   const app = express();
 
   app.use((req, res, next) => {
@@ -116,6 +124,11 @@ export function createRemoteMcpApp(
   // 処理が壊れるため。
   app.use(mcpAuthRouter({ provider, issuerUrl: oauth.issuerUrl, scopesSupported: ['mcp:tools'] }));
   app.post('/authorize/confirm', express.urlencoded({ extended: false }), (req, res) => {
+    const key = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+    if (!confirmRateLimiter.attempt(key)) {
+      res.status(429).type('text/plain').send('Too many attempts. Please wait before trying again.');
+      return;
+    }
     void provider.handleConfirm(req, res);
   });
 

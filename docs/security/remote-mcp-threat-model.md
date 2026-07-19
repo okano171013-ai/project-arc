@@ -85,11 +85,68 @@ Version21のサーバー側再計算保証（`signals`から`approveProposal`が
   詳細はADR 0049）。
 - 認証方式の比較・推奨・ローカル試作はADR 0049・
   [`docs/setup/remote-mcp-oauth-migration.md`](../setup/remote-mcp-oauth-migration.md)参照。
-- **Version24でOAuth 2.1を本番有効化した**（ADR 0051）。上記の
-  `management_feedback_resolve`を含む全MCP Tool呼び出しは、現在
-  `/mcp`エンドポイント全体を保護する`requireBearerAuth`の内側にある
-  ——3章で発見した「無認証で直接書き込める」というギャップは実質的に
-  閉じた。ただし4章で述べた「クライアントがOwner本人かARC/Claude
-  Codeか」を暗号学的に区別できない、という限界は変わらない——
-  OAuthはトンネル公開URLへの到達可能性を狭めるが、認証済み
-  セッション内での主体の区別はできない。
+- **Version24でOAuth 2.1を本番有効化した（ADR 0051）と記録されていたが、
+  Version30の監査で実態と食い違うことが判明した**——6章参照。実際には
+  本番`.env`・稼働中プロセスは今なお無認証（ADR 0044）のままである。
+  ただしOwner本人がOAuthはトンネル公開URLへの到達可能性を狭めるが、
+  認証済みセッション内での主体の区別はできない、という限界自体は
+  変わらない。
+
+## 6. Version30監査：ADR 0051の記録齟齬とOAuth実装のsecurity review
+
+PM Review（2026-07-19）でARC-PM-001（Remote MCP無認証）がP0として
+再指摘されたことを受け、Version30で`LocalOAuthProvider`
+（Version22、ADR 0049）・`remoteServer.ts`の配線・関連テストを
+再監査した。
+
+### 6.1 ADR 0051の記録齟齬
+
+ADR 0051は「実際の`.env`（`MCP_OAUTH_ENABLED=true`・
+`MCP_OAUTH_OWNER_PASSCODE`）で有効化した」と記録していたが、
+その直後の`docs/reports/Version25_Report.md`13章は「OAuth本番
+有効化というOwner自身の手作業が未完了。Version24からこの障壁が
+2Version続けて残っている」と明記しており、Version26〜29のReportにも
+「完了した」という記述は見当たらない。`.env`は秘密情報のため
+Claude Codeからは内容を確認できないが、複数Versionにまたがる
+Report側の一貫した記述を優先し、**本番有効化は実施されていない**
+という前提でVersion30を進めた。ADR 0051自体への訂正はADR 0051の
+末尾に追記した（本項から相互参照する）。
+
+### 6.2 コードレビュー結果
+
+- `LocalOAuthProvider`：PKCE必須、Passcode比較は`timingSafeEqual`
+  でタイミング攻撃を回避、`InvalidTokenError`/`InvalidGrantError`を
+  正しく使い分け（`requireBearerAuth`が401を返せる）、リフレッシュ
+  トークン交換時のscope拡大を拒否——設計・実装ともに健全と判断した。
+- **発見した欠落**：`/authorize/confirm`（Passcode検証を行う、SDK非
+  経由の自前POSTルート）にレート制限が一切なかった。ADR 0049は
+  「SDKの`authorizationHandler`がIPベースのレート制限をデフォルトで
+  適用する」としていたが、これは`/authorize`（GET、SDK配下）のみを
+  保護しており、Passcodeを実際に照合する`/authorize/confirm`には
+  及ばない。Passcodeが移行手順書の推奨（16文字以上のランダム文字列）
+  通りであれば総当たりは現実的に不可能だが、Owner運用の実際の強度に
+  依存させないため、固定窓レート制限（`src/infrastructure/security/
+  rateLimiter.ts`、既定15分あたり10回まで）を追加した
+  （`remoteServer.oauth.test.ts`に否定テストを追加、実際に429を
+  返すことを確認済み）。
+- `apiKeyAuth.ts`（ARC Connector HTTP API、Version15、別の認証境界）
+  は文字列の単純比較（`===`）でありタイミング攻撃に対して
+  `LocalOAuthProvider`ほど厳密ではない。ローカル専用APIであり
+  実害は限定的なため、Version30のスコープ（Remote MCP OAuth）外の
+  観察としてP2で記録するに留め、今回は変更しない。
+
+### 6.3 rate limit・token失効・rollback・復旧手順の確認
+
+| 項目 | 内容 |
+|---|---|
+| access token失効 | 発行から1時間（`ACCESS_TOKEN_TTL_MS`） |
+| refresh token失効 | 発行から30日（`REFRESH_TOKEN_TTL_MS`）。期限切れは使用時に遅延評価 |
+| authorization code失効 | 発行から5分（`AUTHORIZATION_CODE_TTL_MS`） |
+| `/authorize/confirm`レート制限 | 同一IPから15分あたり10回まで（Version30で追加） |
+| 永続化 | なし（インメモリのみ）。プロセス再起動で全クライアント・トークンが失効し、ChatGPT側は`/register`から自動的にやり直す |
+| ロールバック | `.env`の`MCP_OAUTH_ENABLED`を`false`に戻し再起動するだけで、ADR 0044の無認証挙動に即座に戻る。データの巻き戻しは不要（`docs/setup/remote-mcp-oauth-migration.md`に既存記載、Version30で再確認・維持） |
+| Passcode紛失時の復旧 | `.env`の`MCP_OAUTH_OWNER_PASSCODE`を新しい値に書き換えて再起動するだけでよい——アカウント復旧の概念自体が無い（Owner自身が唯一の認可者のため） |
+| 接続不能時（OAuth有効化後にChatGPT接続が壊れた場合） | 上記ロールバック手順で無認証運用に戻し、`docs/setup/chatgpt-mcp-connection.md`の手順でChatGPT Connectorを「認証なし」で作り直す |
+
+以上を`docs/setup/remote-mcp-oauth-migration.md`
+（Version30でチェックリスト形式に全面改訂）にまとめた。

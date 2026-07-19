@@ -145,3 +145,24 @@ Version24_Report.md`6章参照。
 - `docs/proposals/level1-arc-approval-delegation.md`（一般的な
   Proposal承認代行）は、本ADRの対象外のまま未決定——今回の改定は
   あくまで`AgentDelegationGrant`という限定scopeにのみ及ぶ。
+
+## 訂正（Version30、2026-07-19）
+
+上記「OAuth本番有効化」節は「実際の`.env`で有効化した」と記録して
+いたが、これは実態と食い違っていたことがVersion30の監査で判明した。
+`docs/reports/Version25_Report.md`13章は「OAuth本番有効化という
+Owner自身の手作業が未完了。Version24からこの障壁が2Version続けて
+残っている」と明記しており、Version26〜29のいずれのReportにも
+「完了した」という記述がない。`.env`は秘密情報のためClaude Codeは
+内容を直接確認できないが、複数Versionにまたがる一貫したReportの
+記述を優先し、**本番の`.env`・稼働中プロセスは現在も無認証
+（ADR 0044）のまま**という前提でVersion30以降を進める。
+
+Constitution第4条改定・`AgentDelegationGrant`Entity・型ベースの
+二重安全装置・監査（`approver`フィールド）等、本ADRのそれ以外の
+決定・実装はコードとテストで検証済みであり、この訂正の対象外。
+誤っていたのは「本番`.env`への反映」という運用上の1事実のみである。
+
+詳細な経緯・security reviewは`docs/security/
+remote-mcp-threat-model.md`6章、本番有効化の手順は`docs/setup/
+remote-mcp-oauth-migration.md`（Version30改訂）を参照。

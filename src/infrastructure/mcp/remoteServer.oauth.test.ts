@@ -5,7 +5,7 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createApp } from '../http/server.js';
 import { Connector } from '../connector/Connector.js';
-import { createRemoteMcpApp } from './remoteServer.js';
+import { createRemoteMcpApp, AUTHORIZE_CONFIRM_RATE_LIMIT } from './remoteServer.js';
 
 /**
  * Version22（Authority Boundary and Secure Approval、ADR 0049）の
@@ -175,5 +175,74 @@ describe('Remote MCP Server — OAuth 2.1 prototype (flag on, Version22)', () =>
       body: JSON.stringify({ jsonrpc: '2.0', method: 'initialize', id: 2, params: {} }),
     });
     expect(rejected.status).toBe(401);
+  });
+});
+
+/**
+ * `/authorize/confirm`のレート制限（Version30 security review）を検証する。
+ * 独立したサーバーインスタンス（＝独立したrate limiter状態）を使うため、
+ * 上のdescribeブロックの既存テストが消費した試行回数と干渉しない。
+ */
+describe('Remote MCP Server — /authorize/confirm rate limiting (Version30)', () => {
+  const DATA_DIR = 'data/_test-remote-mcp-oauth-ratelimit';
+  const API_KEY = 'remote-mcp-oauth-ratelimit-test-key';
+  const OWNER_PASSCODE = 'correct-horse-battery-staple';
+  const MCP_PORT = 39877;
+
+  let httpApiServer: Server;
+  let remoteMcpServer: Server;
+  let issuerUrl: URL;
+  let clientId: string;
+  let codeChallenge: string;
+
+  beforeAll(async () => {
+    await rm(DATA_DIR, { recursive: true, force: true });
+    httpApiServer = createApp({ dataDir: DATA_DIR, apiKey: API_KEY });
+    await new Promise<void>((resolve) => httpApiServer.listen(0, '127.0.0.1', resolve));
+    const apiAddress = httpApiServer.address() as AddressInfo;
+
+    const connector = new Connector({ baseUrl: `http://127.0.0.1:${apiAddress.port}`, apiKey: API_KEY });
+    issuerUrl = new URL(`http://127.0.0.1:${MCP_PORT}`);
+    remoteMcpServer = createRemoteMcpApp(connector, { issuerUrl, ownerPasscode: OWNER_PASSCODE });
+    await new Promise<void>((resolve) => remoteMcpServer.listen(MCP_PORT, '127.0.0.1', resolve));
+
+    const register = await fetch(new URL('/register', issuerUrl), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ redirect_uris: ['http://127.0.0.1:1/callback'] }),
+    });
+    const client = (await register.json()) as { client_id: string };
+    clientId = client.client_id;
+    codeChallenge = createHash('sha256').update(randomBytes(32).toString('base64url')).digest('base64url');
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((resolve) => remoteMcpServer.close(() => resolve()));
+    await new Promise<void>((resolve) => httpApiServer.close(() => resolve()));
+    await rm(DATA_DIR, { recursive: true, force: true });
+  });
+
+  function confirmWithWrongPasscode(): Promise<Response> {
+    return fetch(new URL('/authorize/confirm', issuerUrl), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      redirect: 'manual',
+      body: new URLSearchParams({
+        client_id: clientId,
+        redirect_uri: 'http://127.0.0.1:1/callback',
+        code_challenge: codeChallenge,
+        passcode: 'wrong-passcode',
+      }),
+    });
+  }
+
+  it('returns 429 once the same source exceeds the attempt limit (総当たり試行の頭打ち)', async () => {
+    for (let i = 0; i < AUTHORIZE_CONFIRM_RATE_LIMIT.max; i += 1) {
+      const res = await confirmWithWrongPasscode();
+      expect(res.status).toBe(401);
+    }
+
+    const limited = await confirmWithWrongPasscode();
+    expect(limited.status).toBe(429);
   });
 });
