@@ -1,5 +1,7 @@
 # Version35 Report: Program B Mobile Ingressローカルモデル
 
+commit: `0b7db63`
+
 ## 1. Version概要
 
 Owner優先順位（2026-07-19）に従い、技術的負債の細部ではなく
