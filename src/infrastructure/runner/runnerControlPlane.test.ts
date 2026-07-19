@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { executeControlledRun, readRunnerStatus, setRunnersDisabled } from './runnerControlPlane.js';
+import { PROJECT_ARC_VERSION } from '../mcp/capabilityRegistry.js';
 
 describe('Runner Control Plane', () => {
   const DATA_DIR = 'data/_test-runner-control-plane';
@@ -23,7 +24,7 @@ describe('Runner Control Plane', () => {
     expect(result).toEqual({ skipped: false, value: 'ok' });
     const status = await readRunnerStatus(DATA_DIR, 'collaboration');
     expect(status?.outcome).toBe('succeeded');
-    expect(status?.projectVersion).toBe(29);
+    expect(status?.projectVersion).toBe(PROJECT_ARC_VERSION);
     expect(status?.buildCommit).toMatch(/^(unknown|[0-9a-f]{40})$/);
   });
 

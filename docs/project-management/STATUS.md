@@ -1,17 +1,17 @@
 # Project ARC — PM Status
 
-最終監査日: 2026-07-19（Version33時点に更新）  
-基準HEAD: `aa7e004`（Version33）  
+最終監査日: 2026-07-19（Version34時点に更新）  
+基準HEAD: Version34コミット（`docs/reports/Version34_Report.md`参照）  
 作業ツリー: `.claude/settings.local.json`のみ未追跡（ローカル設定、対象外）。
 
 ## 5分サマリー
 
-Version1〜33まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durability、Program A基盤（DevelopmentGrant・AgentTask）まで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
+Version1〜34まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durability、Program A（DevelopmentGrant・AgentTask、読み取り専用公開済み）まで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
 
-Version30でRemote MCP OAuthの本番移行準備を完了（**本番`.env`反映はOwner Action待ち**）。Version31でdata foundation（atomic書き込み・汎用backup/restore・retention・restore drill）を完了し、ARC-PM-002を解決した。Version32でProgram A/B着手前ADR6本すべて（0058〜0063）が出揃った。Version33でDevelopmentGrant・AgentTask EntityをDomain〜Adapters層まで実装（**MCP Tool・HTTP Route未配線、Owner向けの実発行もまだ**）。
+Version30でRemote MCP OAuthの本番移行準備を完了（**本番`.env`反映はOwner Action待ち**）。Version31でdata foundation（atomic書き込み・汎用backup/restore・retention・restore drill）を完了し、ARC-PM-002を解決した。Version32でProgram A/B着手前ADR6本すべて（0058〜0063）が出揃った。Version33でDevelopmentGrant・AgentTask Entityを実装。Version34で`agent_task_list`・`development_grant_list`を**読み取り専用**でMCP Tool・HTTP Route公開した（**write操作はOAuth本番有効化＝ARC-PM-001完了後の別Versionへ**、脅威モデル7章参照）。
 
-**Version34は`agent_task_list`・`development_grant_list`のMCP
-Tool・HTTP Route配線から着手する**。Program B（Mobile Daily
+**次はWrite操作の権限境界設計（ARC-PM-001完了が前提）、または
+DevelopmentGrantの初回発行（Owner確認）**。Program B（Mobile Daily
 Capture）はADR 0062のArchitecture Gate（cloud候補・cost上限のOwner
 確認）待ちのまま。
 
@@ -19,13 +19,13 @@ Capture）はADR 0062のArchitecture Gate（cloud候補・cost上限のOwner
 
 | 項目 | 状態 |
 |---|---|
-| Version1〜32 | 完了 |
-| Version33 | 完了（Program A基盤：DevelopmentGrant・AgentTask Entity/UseCase/Repository。MCP Tool未配線） |
-| Typecheck / Lint | 2026-07-19合格（Version33時点で再確認） |
+| Version1〜33 | 完了 |
+| Version34 | 完了（`agent_task_list`・`development_grant_list`を読み取り専用でMCP Tool・HTTP Route公開） |
+| Typecheck / Lint | 2026-07-19合格（Version34時点で再確認） |
 | Build | 不合格。TS2742と`dist`書込競合（Version31以降スコープ外、ARC-PM-005として継続） |
-| Test | Version33時点570件合格 |
-| Remote MCP | 認証の実装・テストは完備（Version22）。**本番は今なお無認証**（ADR 0051の「有効化した」という記録は誤りだったとVersion30で判明、訂正済み） |
-| Program A基盤 | DevelopmentGrant・AgentTaskの状態機械・lease機構・「1 branch 1 writer」強制が43件のテストで検証済み。外部（ARC・Owner）からはまだ触れない |
+| Test | Version34時点573件合格 |
+| Remote MCP | 認証の実装・テストは完備（Version22）。**本番は今なお無認証**（ADR 0051の「有効化した」という記録は誤りだったとVersion30で判明、訂正済み）。MCP Tool数24→26（Version34） |
+| Program A | DevelopmentGrant・AgentTaskが`agent_task_list`・`development_grant_list`経由でARCから読み取り可能。write操作（claim/heartbeat/状態遷移等）は未公開——OAuth本番有効化後の別Versionへ |
 | Data Durability | `pnpm backup create/list/restore`が動作。実機で復元演習（backup→データ削除→restore→内容一致）を確認済み |
 
 ## Open Issues

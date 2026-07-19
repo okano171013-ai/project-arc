@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { PROPOSAL_TYPES } from './tools/proposalSchema.js';
 
 export const CAPABILITY_SCHEMA_VERSION = '1.0.0';
-export const PROJECT_ARC_VERSION = 29;
+export const PROJECT_ARC_VERSION = 34;
 
 export const MCP_TOOL_NAMES = [
   'read_reflection',
@@ -19,6 +19,8 @@ export const MCP_TOOL_NAMES = [
   'agent_message_list',
   'approval_decision_list',
   'agent_delegation_grant_list',
+  'development_grant_list',
+  'agent_task_list',
   'meal_log_list',
   'nutrition_log_list',
   'nutrition_summary_by_date',

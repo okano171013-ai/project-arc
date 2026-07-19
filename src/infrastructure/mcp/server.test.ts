@@ -14,8 +14,8 @@ import { PROPOSAL_TYPES } from './tools/proposalSchema.js';
  * MCP Tool層のend-to-endテスト。指示書15章の精神
  * （実物を起動して駆動する）に従い、実際のHTTP APIサーバーを起動し、
  * SDKが提供する`InMemoryTransport`でClient/McpServerを接続して、
- * 実際のMCPプロトコル（JSON Schema検証を含む）越しに24ツールを
- * 検証する。
+ * 実際のMCPプロトコル（JSON Schema検証を含む）越しにMCP_TOOL_NAMES
+ * （`capabilityRegistry.ts`が単一の正本）の全ツールを検証する。
  */
 describe('Project ARC MCP Server', () => {
   const DATA_DIR = 'data/_test-mcp-server';

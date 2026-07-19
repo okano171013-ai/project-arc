@@ -3,6 +3,10 @@ import { rm } from 'node:fs/promises';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createApp } from './server.js';
+import { JsonFileDevelopmentGrantRepository } from '../../adapters/repositories/JsonFileDevelopmentGrantRepository.js';
+import { JsonFileAgentTaskRepository } from '../../adapters/repositories/JsonFileAgentTaskRepository.js';
+import { DevelopmentGrant } from '../../domain/entities/DevelopmentGrant.js';
+import { AgentTask } from '../../domain/entities/AgentTask.js';
 
 const DATA_DIR = 'data/_test-http-server';
 let server: Server;
@@ -710,6 +714,66 @@ describe('ARC Connector HTTP API', () => {
   it('GET /api/study-sessions/summary requires from and to', async () => {
     const result = await call('GET', '/api/study-sessions/summary');
     expect(result.status).toBe(400);
+  });
+
+  // --- DevelopmentGrant / AgentTask（Version34、ADR 0060・0061） ---
+  // 読み取り専用のみを公開しているため、write用HTTP経路が無い。
+  // Repositoryへ直接データを書き込んでからGETで読めることを確認する。
+  it('GET /development-grants lists grants seeded via the repository, filterable by status', async () => {
+    const repo = new JsonFileDevelopmentGrantRepository(`${DATA_DIR}/development-grants.json`);
+    const grant = DevelopmentGrant.create({
+      id: 'grant-http-1',
+      record: {
+        scope: { repositories: ['project-arc'], branchPrefix: 'auto/' },
+        maxVersionCount: 3,
+        costCeiling: 0,
+        reason: 'HTTPルートのテスト',
+      },
+    });
+    grant.pause();
+    await repo.save(grant);
+
+    const all = await call('GET', '/development-grants');
+    expect(all.status).toBe(200);
+    const allGrants = (all.json.data as { grants: Array<{ id: string; status: string }> }).grants;
+    expect(allGrants.some((g) => g.id === 'grant-http-1')).toBe(true);
+
+    const filtered = await call('GET', '/development-grants?status=Paused');
+    const filteredGrants = (filtered.json.data as { grants: Array<{ id: string }> }).grants;
+    expect(filteredGrants.map((g) => g.id)).toContain('grant-http-1');
+
+    const activeOnly = await call('GET', '/development-grants?status=Active');
+    const activeGrants = (activeOnly.json.data as { grants: Array<{ id: string }> }).grants;
+    expect(activeGrants.map((g) => g.id)).not.toContain('grant-http-1');
+  });
+
+  it('GET /agent-tasks lists tasks seeded via the repository, filterable by status and relatedVersion', async () => {
+    const repo = new JsonFileAgentTaskRepository(`${DATA_DIR}/agent-tasks.json`);
+    const task = AgentTask.create({
+      id: 'task-http-1',
+      record: {
+        relatedVersion: 'Version34',
+        title: 'HTTPルートのテスト',
+        acceptanceCriteria: ['GET /agent-tasksで一覧取得できる'],
+        relatedAdrIds: ['0061'],
+        allowedScope: { repository: 'project-arc', branch: 'auto/version34-http-test' },
+        developmentGrantId: 'grant-http-1',
+      },
+    });
+    await repo.save(task);
+
+    const all = await call('GET', '/agent-tasks');
+    expect(all.status).toBe(200);
+    const allTasks = (all.json.data as { tasks: Array<{ id: string; status: string }> }).tasks;
+    expect(allTasks.some((t) => t.id === 'task-http-1')).toBe(true);
+
+    const filtered = await call('GET', '/agent-tasks?status=Proposed&relatedVersion=Version34');
+    const filteredTasks = (filtered.json.data as { tasks: Array<{ id: string }> }).tasks;
+    expect(filteredTasks.map((t) => t.id)).toContain('task-http-1');
+
+    const wrongVersion = await call('GET', '/agent-tasks?relatedVersion=Version99');
+    const wrongVersionTasks = (wrongVersion.json.data as { tasks: Array<{ id: string }> }).tasks;
+    expect(wrongVersionTasks.map((t) => t.id)).not.toContain('task-http-1');
   });
 });
 

@@ -57,6 +57,8 @@ import { AddAgentMessageUseCase } from '../../application/use-cases/agent-messag
 import { ListAgentMessagesUseCase } from '../../application/use-cases/agent-message/ListAgentMessages.js';
 import { ListApprovalDecisionsUseCase } from '../../application/use-cases/approval-policy/ListApprovalDecisions.js';
 import { ListAgentDelegationGrantsUseCase } from '../../application/use-cases/agent-delegation-grant/ListAgentDelegationGrants.js';
+import { ListDevelopmentGrantsUseCase } from '../../application/use-cases/development-grant/ListDevelopmentGrants.js';
+import { ListAgentTasksUseCase } from '../../application/use-cases/agent-task/ListAgentTasks.js';
 import { ListMealLogsUseCase } from '../../application/use-cases/meal/ListMealLogs.js';
 import { ListNutritionLogsUseCase } from '../../application/use-cases/nutrition/ListNutritionLogs.js';
 import { SummarizeNutritionByDateUseCase } from '../../application/use-cases/nutrition/SummarizeNutritionByDate.js';
@@ -72,6 +74,8 @@ import { RecordStudySessionUseCase } from '../../application/use-cases/study-ses
 import { SummarizeStudySessionsUseCase } from '../../application/use-cases/study-session/SummarizeStudySessions.js';
 import type { ExternalKnowledgeStatus } from '../../domain/entities/ExternalKnowledge.js';
 import type { AgentDelegationGrantStatus } from '../../domain/entities/AgentDelegationGrant.js';
+import type { DevelopmentGrantStatus } from '../../domain/entities/DevelopmentGrant.js';
+import type { AgentTaskStatus } from '../../domain/entities/AgentTask.js';
 import type { MealType } from '../../domain/entities/MealLog.js';
 import type { FinanceLogType } from '../../domain/entities/FinanceLog.js';
 import type { DistractionSignalKind } from '../../domain/entities/DistractionSignal.js';
@@ -94,6 +98,8 @@ import { JsonFileManagementFeedbackRepository } from '../../adapters/repositorie
 import { JsonFileAgentMessageRepository } from '../../adapters/repositories/JsonFileAgentMessageRepository.js';
 import { JsonFileApprovalDecisionRepository } from '../../adapters/repositories/JsonFileApprovalDecisionRepository.js';
 import { JsonFileAgentDelegationGrantRepository } from '../../adapters/repositories/JsonFileAgentDelegationGrantRepository.js';
+import { JsonFileDevelopmentGrantRepository } from '../../adapters/repositories/JsonFileDevelopmentGrantRepository.js';
+import { JsonFileAgentTaskRepository } from '../../adapters/repositories/JsonFileAgentTaskRepository.js';
 import { JsonFileMealLogRepository } from '../../adapters/repositories/JsonFileMealLogRepository.js';
 import { JsonFileNutritionLogRepository } from '../../adapters/repositories/JsonFileNutritionLogRepository.js';
 import { JsonFileWeightLogRepository } from '../../adapters/repositories/JsonFileWeightLogRepository.js';
@@ -124,6 +130,8 @@ import {
   serializeAgentMessage,
   serializeApprovalDecision,
   serializeAgentDelegationGrant,
+  serializeDevelopmentGrant,
+  serializeAgentTask,
   serializeChallengeLog,
   serializeMealLog,
   serializeNutritionLog,
@@ -211,6 +219,10 @@ export function buildUseCases(options: BuildAppOptions = {}) {
   const agentDelegationGrantRepository = new JsonFileAgentDelegationGrantRepository(
     repoPath(dataDir, 'agent-delegation-grants.json'),
   );
+  const developmentGrantRepository = new JsonFileDevelopmentGrantRepository(
+    repoPath(dataDir, 'development-grants.json'),
+  );
+  const agentTaskRepository = new JsonFileAgentTaskRepository(repoPath(dataDir, 'agent-tasks.json'));
   const mealLogRepository = new JsonFileMealLogRepository(repoPath(dataDir, 'meal-log.json'));
   const nutritionLogRepository = new JsonFileNutritionLogRepository(
     repoPath(dataDir, 'nutrition-log.json'),
@@ -316,6 +328,8 @@ export function buildUseCases(options: BuildAppOptions = {}) {
     listAgentMessages: new ListAgentMessagesUseCase(agentMessageRepository),
     listApprovalDecisions: new ListApprovalDecisionsUseCase(approvalDecisionRepository),
     listAgentDelegationGrants: new ListAgentDelegationGrantsUseCase(agentDelegationGrantRepository),
+    listDevelopmentGrants: new ListDevelopmentGrantsUseCase(developmentGrantRepository),
+    listAgentTasks: new ListAgentTasksUseCase(agentTaskRepository),
     listMealLogs: new ListMealLogsUseCase(mealLogRepository),
     listNutritionLogs: new ListNutritionLogsUseCase(nutritionLogRepository),
     summarizeNutritionByDate: new SummarizeNutritionByDateUseCase(mealLogRepository, nutritionLogRepository),
@@ -945,6 +959,27 @@ export function createApp(options: BuildAppOptions = {}) {
       const status = (url.searchParams.get('status') ?? undefined) as AgentDelegationGrantStatus | undefined;
       const result = await useCases.listAgentDelegationGrants.execute({ status });
       return ok({ grants: result.grants.map(serializeAgentDelegationGrant) });
+    }),
+
+    // --- DevelopmentGrant（Version34、ADR 0060） ---
+    // 読み取り専用公開のみ。create/pause/resume/revokeはOwner専権
+    // 事項のため、write route は意図的に追加しない（別工程）。
+    route('GET', '/development-grants', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const status = (url.searchParams.get('status') ?? undefined) as DevelopmentGrantStatus | undefined;
+      const result = await useCases.listDevelopmentGrants.execute({ status });
+      return ok({ grants: result.grants.map(serializeDevelopmentGrant) });
+    }),
+
+    // --- AgentTask（Version34、ADR 0061） ---
+    // 読み取り専用公開のみ。claim/heartbeat/状態遷移等のwrite route
+    // は意図的に追加しない（別工程、脅威モデル再確認後に着手）。
+    route('GET', '/agent-tasks', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const status = (url.searchParams.get('status') ?? undefined) as AgentTaskStatus | undefined;
+      const relatedVersion = url.searchParams.get('relatedVersion') ?? undefined;
+      const result = await useCases.listAgentTasks.execute({ status, relatedVersion });
+      return ok({ tasks: result.tasks.map(serializeAgentTask) });
     }),
 
     // --- Life Log Phase 2（Version25） ---

@@ -59,13 +59,13 @@ describe('Remote MCP Server (Streamable HTTP)', () => {
 
     const { tools } = await client.listTools();
     expect(tools.map((t) => t.name)).toContain('read_reflection');
-    expect(tools).toHaveLength(24);
+    expect(tools).toHaveLength(26);
     expect(tools.map((tool) => tool.name)).toContain('capability_registry_get');
 
     const registryResult = await client.callTool({ name: 'capability_registry_get', arguments: {} });
     expect(registryResult.isError).toBeFalsy();
     const registry = JSON.parse(textOf(registryResult));
-    expect(registry.toolCount).toBe(24);
+    expect(registry.toolCount).toBe(26);
     expect(registry.toolNames).toEqual(tools.map((tool) => tool.name).sort());
 
     const reflections = await client.callTool({ name: 'read_reflection', arguments: { limit: 5 } });

@@ -67,8 +67,19 @@ ADR 0062 Cloud Provider比較、ADR 0063 Mobile Sync/Idempotency）を
 正式にProgram Aの一部として実装されたため、下表の独立候補としては
 解消済みとする。
 
-**Version34以降**：`agent_task_list`・`development_grant_list`の
-MCP Tool・HTTP Route配線から着手する。
+**Version34は完了済み**：`agent_task_list`・`development_grant_list`
+を**読み取り専用**でMCP Tool・HTTP Route公開した
+（`docs/reports/Version34_Report.md`参照）。write操作
+（claim/heartbeat/状態遷移/pause/resume/revoke）は権限境界・脅威
+モデルを再確認した上で意図的に別Versionへ分離した——無認証のまま
+公開すると`management_feedback_resolve`と同種の「無認証で直接
+操作できる書き込み経路」を開発プロセス自体に持ち込むため
+（`docs/security/remote-mcp-threat-model.md`7章）。
+
+**Version35以降**：write操作の権限境界設計はARC-PM-001
+（OAuth本番有効化）の完了が前提条件。それまでは、
+DevelopmentGrantの初回発行（Owner確認）や、Program Bの
+Architecture Gate論点の整理を先行させる。
 
 | 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
 |---:|---|---|---|

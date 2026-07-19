@@ -37,6 +37,8 @@ import type { CheckIn } from '../domain/entities/CheckIn.js';
 import type { DistractionSignal } from '../domain/entities/DistractionSignal.js';
 import type { Intervention } from '../domain/entities/Intervention.js';
 import type { InterventionPolicySettings } from '../domain/entities/InterventionPolicySettings.js';
+import type { DevelopmentGrant } from '../domain/entities/DevelopmentGrant.js';
+import type { AgentTask } from '../domain/entities/AgentTask.js';
 
 export function serializeReflection(reflection: Reflection) {
   return {
@@ -226,6 +228,32 @@ export function serializeAgentDelegationGrant(grant: AgentDelegationGrant) {
     createdAt: grant.createdAt.toISOString(),
     status: grant.status,
     usageCount: grant.usageCount,
+  };
+}
+
+/** Version34、ADR 0060。読み取り専用公開のみ（write操作は別工程）。 */
+export function serializeDevelopmentGrant(grant: DevelopmentGrant) {
+  return {
+    id: grant.id,
+    record: grant.record,
+    createdAt: grant.createdAt.toISOString(),
+    status: grant.status,
+    versionsConsumed: grant.versionsConsumed,
+  };
+}
+
+/** Version34、ADR 0061。読み取り専用公開のみ（write操作は別工程）。 */
+export function serializeAgentTask(task: AgentTask) {
+  return {
+    id: task.id,
+    record: task.record,
+    createdAt: task.createdAt.toISOString(),
+    status: task.status,
+    claimedBy: task.claimedBy,
+    leaseExpiresAt: task.leaseExpiresAt?.toISOString(),
+    retryCount: task.retryCount,
+    commits: task.commits,
+    testResult: task.testResult,
   };
 }
 

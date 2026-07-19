@@ -112,6 +112,40 @@ export interface ConnectorNutritionSummary {
   readonly containsEstimatedValues: boolean;
 }
 
+export type ConnectorDevelopmentGrantStatus = 'Active' | 'Paused' | 'Revoked';
+
+/** Version34、ADR 0060。読み取り専用公開のみ（write操作は別工程）。 */
+export interface ConnectorDevelopmentGrant {
+  readonly id: string;
+  readonly record: Record<string, unknown>;
+  readonly createdAt: string;
+  readonly status: ConnectorDevelopmentGrantStatus;
+  readonly versionsConsumed: number;
+}
+
+export type ConnectorAgentTaskStatus =
+  | 'Proposed'
+  | 'Ready'
+  | 'Claimed'
+  | 'InProgress'
+  | 'Review'
+  | 'ChangesRequested'
+  | 'Accepted'
+  | 'Closed';
+
+/** Version34、ADR 0061。読み取り専用公開のみ（write操作は別工程）。 */
+export interface ConnectorAgentTask {
+  readonly id: string;
+  readonly record: Record<string, unknown>;
+  readonly createdAt: string;
+  readonly status: ConnectorAgentTaskStatus;
+  readonly claimedBy?: string;
+  readonly leaseExpiresAt?: string;
+  readonly retryCount: number;
+  readonly commits: string[];
+  readonly testResult?: { passed: boolean; summary: string };
+}
+
 export interface ListMealLogsInput {
   limit: number;
   date?: string;
@@ -413,6 +447,33 @@ export class Connector {
   ): Promise<{ grants: ConnectorAgentDelegationGrant[] }> {
     const path = status ? `/agent-delegation-grants?status=${encodeURIComponent(status)}` : '/agent-delegation-grants';
     return this.request('GET', path);
+  }
+
+  // --- DevelopmentGrant（Version34、ADR 0060） ---
+  // 読み取り専用公開のみ。create/pause/resume/revokeはOwner専権事項
+  // のため、Version34では意図的にwriteエンドポイントを追加しない
+  // （別工程として扱う、脅威モデル再確認後に着手）。
+
+  async listDevelopmentGrants(
+    status?: ConnectorDevelopmentGrantStatus,
+  ): Promise<{ grants: ConnectorDevelopmentGrant[] }> {
+    const path = status ? `/development-grants?status=${encodeURIComponent(status)}` : '/development-grants';
+    return this.request('GET', path);
+  }
+
+  // --- AgentTask（Version34、ADR 0061） ---
+  // 読み取り専用公開のみ。claim/heartbeat/状態遷移等のwrite操作は
+  // 別工程として扱う（DevelopmentGrantと同じ理由）。
+
+  async listAgentTasks(input: {
+    status?: ConnectorAgentTaskStatus;
+    relatedVersion?: string;
+  } = {}): Promise<{ tasks: ConnectorAgentTask[] }> {
+    const params = new URLSearchParams();
+    if (input.status) params.set('status', input.status);
+    if (input.relatedVersion) params.set('relatedVersion', input.relatedVersion);
+    const query = params.toString();
+    return this.request('GET', query ? `/agent-tasks?${query}` : '/agent-tasks');
   }
 
   // --- Life Log Phase 2（Version25） ---

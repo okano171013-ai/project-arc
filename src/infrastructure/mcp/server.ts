@@ -30,6 +30,8 @@ import { registerManagementFeedbackResolveTool } from './tools/managementFeedbac
 import { registerAgentMessageListTool } from './tools/agentMessageList.js';
 import { registerApprovalDecisionListTool } from './tools/approvalDecisionList.js';
 import { registerAgentDelegationGrantListTool } from './tools/agentDelegationGrantList.js';
+import { registerDevelopmentGrantListTool } from './tools/developmentGrantList.js';
+import { registerAgentTaskListTool } from './tools/agentTaskList.js';
 import { registerMealLogListTool } from './tools/mealLogList.js';
 import { registerNutritionLogListTool } from './tools/nutritionLogList.js';
 import { registerNutritionSummaryByDateTool } from './tools/nutritionSummaryByDate.js';
@@ -58,6 +60,8 @@ export function buildMcpServer(connector: Connector): McpServer {
   registerAgentMessageListTool(server, connector);
   registerApprovalDecisionListTool(server, connector);
   registerAgentDelegationGrantListTool(server, connector);
+  registerDevelopmentGrantListTool(server, connector);
+  registerAgentTaskListTool(server, connector);
   registerMealLogListTool(server, connector);
   registerNutritionLogListTool(server, connector);
   registerNutritionSummaryByDateTool(server, connector);

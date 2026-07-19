@@ -150,3 +150,56 @@ Report側の一貫した記述を優先し、**本番有効化は実施されて
 
 以上を`docs/setup/remote-mcp-oauth-migration.md`
 （Version30でチェックリスト形式に全面改訂）にまとめた。
+
+## 7. Version34監査：Program A読み取り専用公開（`agent_task_list`・`development_grant_list`）
+
+Owner指示に基づき、`agent_task_list`・`development_grant_list`
+（ADR 0060・0061）を**読み取り専用のみ**公開した。着手前に権限境界・
+脅威モデルを以下の通り確認した。
+
+### 7.1 公開する情報の性質
+
+- `AgentTask`：task title、acceptance criteria、関連ADR ID、
+  対象repository/branch名、claimしたAgent識別子、commit hash、
+  test結果summary。**Owner個人の生活データ（Reflection・MealLog等）
+  は一切含まない**——Project ARC自身の開発プロセスに関するメタ
+  データのみ。
+- `DevelopmentGrant`：scope（repositories・branchPrefix）、
+  maxVersionCount、reason（Owner記述の委譲理由）。同じく開発
+  プロセスのメタデータのみ。
+
+1章の「保護対象」表に、この2つを**読み取り専用・低感度**として追加
+する。第三者が無認証Remote MCP経由でこれらを読めた場合の実害は、
+「Project ARCがどんな開発taskを進めているかを知られる」程度に
+限られ、Owner個人を特定する情報や生活データへは到達しない。
+
+### 7.2 Write操作を意図的に含めなかった理由
+
+`agent_task_claim`・`agent_task_heartbeat`等のwrite用MCP Toolは、
+本Versionでは追加していない。理由：
+
+- `AgentTask.claim()`はブランチの所有権を確定させる操作であり、
+  無認証のまま公開すると、トンネル公開URLを知る第三者が
+  Claude Codeより先に任意のtaskをclaimし、Program Aのbranch
+  ownership機構（ADR 0061「1 branch 1 writer」）を悪用して開発を
+  妨害できてしまう——3章で発見した`management_feedback_resolve`
+  （Write Proposal Layerを経由しない直接書き込み）と同種の
+  「無認証で直接操作できる書き込み経路」を、新しい領域
+  （開発プロセス自体）に持ち込むことになる。
+- `DevelopmentGrant`のcreate/pause/resume/revokeはOwner専権事項
+  （ADR 0060）であり、そもそもRemote MCP経由の書き込みに開放する
+  設計にしていない。
+
+Write操作を公開する場合は、ARC-PM-001と同じくOAuth本番有効化
+（本番`.env`反映、Owner Action）が前提条件になる。無認証のまま
+write toolを追加することは、Constitution第1条・第2条の観点からも
+本ADR・脅威モデルの観点からも推奨しない——別途、write操作向けの
+権限境界を再設計した上で、独立したVersionとして扱う。
+
+### 7.3 結論
+
+読み取り専用公開は、感度の低い開発プロセスメタデータに限られるため、
+現状の無認証運用（ADR 0044）のリスク許容範囲内と判断した。ただし
+ARC-PM-001（OAuth本番有効化）が完了すれば、この2 Toolも自動的に
+認証保護下に入る（`/mcp`エンドポイント全体を保護する設計、5章参照）
+——追加の個別対応は不要。

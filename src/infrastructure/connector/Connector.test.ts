@@ -4,6 +4,10 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { createApp } from '../http/server.js';
 import { Connector } from './Connector.js';
+import { JsonFileDevelopmentGrantRepository } from '../../adapters/repositories/JsonFileDevelopmentGrantRepository.js';
+import { JsonFileAgentTaskRepository } from '../../adapters/repositories/JsonFileAgentTaskRepository.js';
+import { DevelopmentGrant } from '../../domain/entities/DevelopmentGrant.js';
+import { AgentTask } from '../../domain/entities/AgentTask.js';
 
 /**
  * Connectorがserver.tsを実際のHTTP経由でのみ呼び出すことを、実サーバーを
@@ -100,5 +104,39 @@ describe('Connector', () => {
 
     const external = await connector.readExternal({ limit: 5, query: '行政法' });
     expect(external.results.length).toBeGreaterThan(0);
+  });
+
+  it('listDevelopmentGrants/listAgentTasks read seeded data over real HTTP (Version34、読み取り専用)', async () => {
+    const grantRepo = new JsonFileDevelopmentGrantRepository(`${DATA_DIR}/development-grants.json`);
+    const grant = DevelopmentGrant.create({
+      id: 'grant-connector-1',
+      record: {
+        scope: { repositories: ['project-arc'], branchPrefix: 'auto/' },
+        maxVersionCount: 3,
+        costCeiling: 0,
+        reason: 'Connectorテスト',
+      },
+    });
+    await grantRepo.save(grant);
+
+    const grants = await connector.listDevelopmentGrants();
+    expect(grants.grants.some((g) => g.id === 'grant-connector-1')).toBe(true);
+
+    const taskRepo = new JsonFileAgentTaskRepository(`${DATA_DIR}/agent-tasks.json`);
+    const task = AgentTask.create({
+      id: 'task-connector-1',
+      record: {
+        relatedVersion: 'Version34',
+        title: 'Connectorテスト',
+        acceptanceCriteria: ['listAgentTasksで取得できる'],
+        relatedAdrIds: ['0061'],
+        allowedScope: { repository: 'project-arc', branch: 'auto/version34-connector-test' },
+        developmentGrantId: 'grant-connector-1',
+      },
+    });
+    await taskRepo.save(task);
+
+    const tasks = await connector.listAgentTasks({ relatedVersion: 'Version34' });
+    expect(tasks.tasks.some((t) => t.id === 'task-connector-1')).toBe(true);
   });
 });
