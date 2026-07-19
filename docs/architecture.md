@@ -96,7 +96,8 @@ project-arc/
 │   ├── ai-roles.md
 │   └── adr/
 │       ├── 0001-local-first-postgres-via-supabase-cli.md
-│       └── 0002-defer-ai-provider-abstraction.md
+│       ├── 0002-defer-ai-provider-abstraction.md
+│       └── 0003-cloud-supabase-and-auth-rls.md
 ├── .github/
 │   └── workflows/
 │       └── ci.yml

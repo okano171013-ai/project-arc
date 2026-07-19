@@ -47,4 +47,5 @@ Supabaseプロジェクトに向き先を変更する。
 
 - Version1ではDockerでSupabase CLIのローカルスタックを起動する
   構成が必要（`docker-compose.yml`に追加）。
-- Version2着手時に、認証・RLS設計をADRとして別途記録する。
+- Version2着手時に、認証・RLS設計をADRとして別途記録する
+  （→ ADR 0003）。

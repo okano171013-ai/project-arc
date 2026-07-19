@@ -5,7 +5,7 @@ Principle 9（段階的拡張）に基づき、一度に全てを作らない。
 
 ---
 
-## Version1｜土台（現在地）
+## Version1｜土台（完了）
 
 **ゴール**：機能を作ることではなく、後続バージョンでDomain層を
 壊さずに機能追加できる骨格と、判断基準となる思想文書を作ること。
@@ -23,11 +23,11 @@ Principle 9（段階的拡張）に基づき、一度に全てを作らない。
 
 ---
 
-## Version2｜外部接続
+## Version2｜外部接続（現在地）
 
-- Google Calendar / Google Tasks / Google Sheets / Notion / Gmail 接続設計
+- 認証・RLS設計（複数クライアント対応の前提づくり） — ADR 0003で確定
 - Supabaseをローカル→クラウドプロジェクトへ切り替え（ADR 0001の想定通り）
-- 認証・RLS設計（複数クライアント対応の前提づくり）
+- Google Calendar / Google Tasks / Google Sheets / Notion / Gmail 接続設計
 
 ## Version3｜企業研究システム
 
