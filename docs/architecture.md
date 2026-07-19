@@ -46,6 +46,47 @@ Version2以降の外部サービス接続やUI追加を、Domain層を壊さず�
 
 ---
 
+## Notion連携
+
+**方針**：ReflectionRepositoryの実装の1つとして
+`NotionReflectionRepository`を提供する（`pnpm reflect --db=notion`）。
+Domain/Application層はSupabase実装と同じインターフェース
+（`ReflectionRepository`）越しにしかNotionを知らない。
+
+Notionにはマイグレーション機構がないため、以下のプロパティを持つ
+データベースを**手動で作成**しておく必要がある（プロパティ名は
+大文字小文字・スペースまで一致させること）。
+
+| プロパティ名 | 型 | 用途 |
+|---|---|---|
+| Name | Title | ページタイトル（日付文字列を格納） |
+| ARC ID | Text | Domain層のReflection.id（UUID） |
+| Date | Date | クエリ・ソートに使う実際の日付 |
+| Sleep Hours | Number | 睡眠時間 |
+| Study Minutes | Number | 勉強時間（分） |
+| Did Martial Arts | Checkbox | 少林寺拳法に行ったか |
+| Did English Lesson | Checkbox | 英会話レッスンを受けたか |
+| Mood | Select | `great`/`good`/`neutral`/`low`/`bad` |
+| Expense Yen | Number | 支出額 |
+| Notes | Text | 今日の出来事（自由記述） |
+| Today's Events | Text | 今日の出来事 |
+| Tomorrow's Goal | Text | 明日の目標 |
+
+作成したNotion integration（Internal Integration）を、この
+データベースに対して「接続」として明示的に共有する必要がある
+（Notion UI上の操作。忘れると`object_not_found`エラーになる）。
+
+`createdAt`はNotionページの`created_time`をそのまま使い、
+専用プロパティは持たない（重複を避けるため）。
+
+**認証**：単一ユーザー・単一ワークスペース運用のため、Notion Auth
+（OAuth）ではなくInternal Integration Secret（`NOTION_API_KEY`）を
+使う。ADR 0003の「複数クライアント対応」はSupabase側の話であり、
+Notion接続の認証方式には影響しない（Notion API自体はintegration
+tokenのみでアクセス制御が完結するため）。
+
+---
+
 ## AIプロバイダーとの関係
 
 Version1では`AIService`のような共通インターフェースは実装しない。
@@ -76,7 +117,8 @@ project-arc/
 │   │       └── ReflectionRepository.ts
 │   ├── adapters/
 │   │   ├── repositories/
-│   │   │   └── SupabaseReflectionRepository.ts
+│   │   │   ├── SupabaseReflectionRepository.ts
+│   │   │   └── NotionReflectionRepository.ts
 │   │   └── presenters/
 │   ├── infrastructure/
 │   │   ├── db/

@@ -5,7 +5,7 @@
  * Version1のゴールは「動く仕組み」の実証であり、UXの作り込みは
  * Version6（毎日の振り返り機能拡張）で行う（docs/roadmap.md）。
  * 現時点ではSupabase接続なしでも試せるよう、InMemory実装を既定とする。
- * 実DBに繋ぐ場合は --db=supabase を指定する。
+ * 実DBに繋ぐ場合は --db=supabase または --db=notion を指定する。
  */
 import { createInterface } from 'node:readline/promises';
 import { stdin, stdout, argv } from 'node:process';
@@ -14,20 +14,31 @@ import { InMemoryReflectionRepository } from '../../adapters/repositories/InMemo
 import type { ReflectionRepository } from '../../application/ports/ReflectionRepository.js';
 
 async function resolveRepository(): Promise<ReflectionRepository> {
-  const useSupabase = argv.includes('--db=supabase');
-  if (!useSupabase) {
-    return new InMemoryReflectionRepository();
+  if (argv.includes('--db=supabase')) {
+    const { createClient } = await import('@supabase/supabase-js');
+    const { loadSupabaseEnv } = await import('../config/env.js');
+    const { SupabaseReflectionRepository } = await import(
+      '../../adapters/repositories/SupabaseReflectionRepository.js'
+    );
+
+    const env = loadSupabaseEnv();
+    const client = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+    return new SupabaseReflectionRepository(client);
   }
 
-  const { createClient } = await import('@supabase/supabase-js');
-  const { loadEnv } = await import('../config/env.js');
-  const { SupabaseReflectionRepository } = await import(
-    '../../adapters/repositories/SupabaseReflectionRepository.js'
-  );
+  if (argv.includes('--db=notion')) {
+    const { Client } = await import('@notionhq/client');
+    const { loadNotionEnv } = await import('../config/env.js');
+    const { NotionReflectionRepository } = await import(
+      '../../adapters/repositories/NotionReflectionRepository.js'
+    );
 
-  const env = loadEnv();
-  const client = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
-  return new SupabaseReflectionRepository(client);
+    const env = loadNotionEnv();
+    const client = new Client({ auth: env.NOTION_API_KEY });
+    return new NotionReflectionRepository(client, env.NOTION_DATABASE_ID);
+  }
+
+  return new InMemoryReflectionRepository();
 }
 
 function today(): string {

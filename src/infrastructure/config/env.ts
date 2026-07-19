@@ -1,34 +1,52 @@
 import { z } from 'zod';
 
 /**
- * 環境変数のスキーマ。起動時に検証し、不正な設定を早期に検出する
- * （Principle 8: 長期保守性 — 実行時エラーより起動時エラーを優先）。
+ * 環境変数のスキーマは接続先ごとに分離する。CLIで選ばれなかった
+ * 接続先の必須キーが未設定でもエラーにならないようにするため
+ * （例：`--db=notion`実行時にSUPABASE_ANON_KEY未設定で落ちない）。
  */
-const envSchema = z.object({
+
+const supabaseEnvSchema = z.object({
   SUPABASE_URL: z.string().url().default('http://localhost:54321'),
   SUPABASE_ANON_KEY: z.string().min(1, 'SUPABASE_ANON_KEY is required'),
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 });
 
-export type Env = z.infer<typeof envSchema>;
+const notionEnvSchema = z.object({
+  NOTION_API_KEY: z.string().min(1, 'NOTION_API_KEY is required'),
+  NOTION_DATABASE_ID: z.string().min(1, 'NOTION_DATABASE_ID is required'),
+});
 
-let cachedEnv: Env | undefined;
+export type SupabaseEnv = z.infer<typeof supabaseEnvSchema>;
+export type NotionEnv = z.infer<typeof notionEnvSchema>;
 
-/**
- * 遅延評価で環境変数を検証する。CLI起動時など、実際にDBアクセスが
- * 必要になったタイミングで初めて呼び出す設計とする。
- */
-export function loadEnv(): Env {
-  if (cachedEnv) return cachedEnv;
+let cachedSupabaseEnv: SupabaseEnv | undefined;
+let cachedNotionEnv: NotionEnv | undefined;
 
-  const parsed = envSchema.safeParse(process.env);
+function parseOrThrow<S extends z.ZodTypeAny>(schema: S, source: unknown): z.infer<S> {
+  const parsed = schema.safeParse(source);
   if (!parsed.success) {
     const issues = parsed.error.issues
       .map((issue) => `  - ${issue.path.join('.')}: ${issue.message}`)
       .join('\n');
     throw new Error(`Invalid environment variables:\n${issues}`);
   }
+  return parsed.data;
+}
 
-  cachedEnv = parsed.data;
-  return cachedEnv;
+/**
+ * 遅延評価で環境変数を検証する。CLI起動時など、実際にDBアクセスが
+ * 必要になったタイミングで初めて呼び出す設計とする（Principle 8）。
+ */
+export function loadSupabaseEnv(): SupabaseEnv {
+  if (!cachedSupabaseEnv) {
+    cachedSupabaseEnv = parseOrThrow(supabaseEnvSchema, process.env);
+  }
+  return cachedSupabaseEnv;
+}
+
+export function loadNotionEnv(): NotionEnv {
+  if (!cachedNotionEnv) {
+    cachedNotionEnv = parseOrThrow(notionEnvSchema, process.env);
+  }
+  return cachedNotionEnv;
 }

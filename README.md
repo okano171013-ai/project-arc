@@ -56,6 +56,7 @@ pnpm typecheck       # 型チェック
 pnpm build           # ビルド
 pnpm reflect         # 今日の振り返りをCLIで記録（InMemory実行、既定）
 pnpm reflect --db=supabase   # Supabase接続で記録
+pnpm reflect --db=notion     # Notion接続で記録（要NOTION_API_KEY / NOTION_DATABASE_ID、docs/architecture.md参照）
 
 pnpm db:start        # ローカルSupabaseスタック起動（要Docker）
 pnpm db:reset        # マイグレーション適用（supabase/migrations/を再適用）

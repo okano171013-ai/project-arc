@@ -23,6 +23,7 @@
     "db:reset": "supabase db reset"
   },
   "dependencies": {
+    "@notionhq/client": "^5.23.2",
     "@supabase/supabase-js": "^2.45.0",
     "zod": "^3.23.8"
   },
