@@ -34,6 +34,25 @@ Stability Gate優先度に従い変更した**：当初案の「AgentEvent/Agent
 （`docs/reports/Version30_Report.md`・ADR 0057参照）。PM Reviewが
 提案したVersion30〜34（Security/Data Durability/Release/API
 Contract/Domain Consolidation）を、下表より優先する現行の方針とする。
+
+**Version31以降は、Owner指示（2026-07-19、`docs/project-management/
+OWNER_PRIORITY_PROGRAMS_2026-07-19.md`）に従い、PM Review提案の
+Version30〜34より優先してProgram A（Autonomous Development）・
+Program B（Mobile Daily Capture）の統合ロードマップに切り替える**。
+既存Roadmapの優先候補と衝突する場合、Owner Priority Programsを
+優先する（Constitution・Principles・Authority Table・Level2境界は
+無変更）。
+
+**Version31は完了済み**：「共通data foundation」として、
+`jsonStore.ts`のatomic書き込み化・汎用backup/restore CLI・世代
+retention・実機restore drillを実装した（`docs/reports/
+Version31_Report.md`・ADR 0058参照）。ADR 0059
+（Mobile Ingress as Transport vs Canonical Store）はProposed状態で
+設計を先行させたが、実装（Program B）はArchitecture Gate
+（cloud候補・cost上限のOwner確認）待ち。Version31 Briefは
+`docs/handoff/Version31_Brief.md`参照。次はOwner Priority Programsの
+統合Roadmap案に従い、Program A/Bの着手前ADR（残り4本）の設計を
+進める。
 AgentEvent/AgentTask（下表優先4）はStability Gate完了後まで
 引き続き候補として残る。
 

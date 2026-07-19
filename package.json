@@ -33,6 +33,7 @@
     "runner": "tsx src/infrastructure/runner/collaborationRunner.ts",
     "checkin-runner": "tsx src/infrastructure/runner/checkInPrompter.ts",
     "runner-control": "tsx src/infrastructure/runner/runnerControlCli.ts",
+    "backup": "tsx src/infrastructure/cli/backup.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",
     "test:watch": "vitest",
