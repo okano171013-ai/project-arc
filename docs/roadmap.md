@@ -58,10 +58,17 @@ ADR 0062 Cloud Provider比較、ADR 0063 Mobile Sync/Idempotency）を
 設計した（`docs/reports/Version32_Report.md`参照）。コード変更なし。
 これで着手前ADR6本が出揃った。
 
-**Version33以降**：Owner指示に従い、Program Aの安全な基盤工程
-（DevelopmentGrant・AgentTask Entityの実装）に着手する。
-AgentEvent/AgentTask（下表優先4）は、ADR 0061によって正式にProgram
-Aの一部として実装されるため、下表の独立候補としては解消済みとする。
+**Version33は完了済み**：Program Aの安全な基盤工程として、
+`DevelopmentGrant`・`AgentTask`EntityをDomain〜Adapters層まで実装
+した（`docs/reports/Version33_Report.md`参照）。状態機械・lease・
+「1 branch 1 writer」・circuit breakerは43件のテストで検証済みだが、
+**MCP Tool・HTTP Route未配線のため、外部（ARC・Owner）からはまだ
+触れない**。AgentEvent/AgentTask（下表優先4）は、ADR 0061によって
+正式にProgram Aの一部として実装されたため、下表の独立候補としては
+解消済みとする。
+
+**Version34以降**：`agent_task_list`・`development_grant_list`の
+MCP Tool・HTTP Route配線から着手する。
 
 | 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
 |---:|---|---|---|

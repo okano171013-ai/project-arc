@@ -1,31 +1,31 @@
 # Project ARC — PM Status
 
-最終監査日: 2026-07-19（Version32時点に更新）  
-基準HEAD: `db0378b`（Version32）  
+最終監査日: 2026-07-19（Version33時点に更新）  
+基準HEAD: Version33コミット（`docs/reports/Version33_Report.md`参照）  
 作業ツリー: `.claude/settings.local.json`のみ未追跡（ローカル設定、対象外）。
 
 ## 5分サマリー
 
-Version1〜32まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durabilityまで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
+Version1〜33まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durability、Program A基盤（DevelopmentGrant・AgentTask）まで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
 
-Version30でRemote MCP OAuthの本番移行準備を完了（**本番`.env`反映はOwner Action待ち**）。Version31でdata foundation（atomic書き込み・汎用backup/restore・retention・restore drill）を完了し、ARC-PM-002を解決した。Version32でProgram A/B着手前ADR6本すべて（0058〜0063）が出揃った。
+Version30でRemote MCP OAuthの本番移行準備を完了（**本番`.env`反映はOwner Action待ち**）。Version31でdata foundation（atomic書き込み・汎用backup/restore・retention・restore drill）を完了し、ARC-PM-002を解決した。Version32でProgram A/B着手前ADR6本すべて（0058〜0063）が出揃った。Version33でDevelopmentGrant・AgentTask EntityをDomain〜Adapters層まで実装（**MCP Tool・HTTP Route未配線、Owner向けの実発行もまだ**）。
 
-**Version33以降はProgram A（Owner非介在の自律共同開発環境）の
-基盤工程に着手する**（Owner指示、2026-07-19）：ADR 0060・0061に
-基づきDevelopmentGrant・AgentTask Entityを実装する。Program B
-（Mobile Daily Capture）はADR 0062のArchitecture Gate
-（cloud候補・cost上限のOwner確認）待ちのまま。
+**Version34は`agent_task_list`・`development_grant_list`のMCP
+Tool・HTTP Route配線から着手する**。Program B（Mobile Daily
+Capture）はADR 0062のArchitecture Gate（cloud候補・cost上限のOwner
+確認）待ちのまま。
 
 ## 現在の進捗
 
 | 項目 | 状態 |
 |---|---|
-| Version1〜31 | 完了 |
-| Version32 | 完了（Program A/B着手前ADR4本：0060〜0063、設計のみ・コード変更なし） |
-| Typecheck / Lint | 2026-07-19合格（Version31時点で再確認） |
-| Build | 不合格。TS2742と`dist`書込競合（Version31スコープ外、ARC-PM-005として継続。Version31起因ではないことを確認済み） |
-| Test | Version31時点527件合格 |
+| Version1〜32 | 完了 |
+| Version33 | 完了（Program A基盤：DevelopmentGrant・AgentTask Entity/UseCase/Repository。MCP Tool未配線） |
+| Typecheck / Lint | 2026-07-19合格（Version33時点で再確認） |
+| Build | 不合格。TS2742と`dist`書込競合（Version31以降スコープ外、ARC-PM-005として継続） |
+| Test | Version33時点570件合格 |
 | Remote MCP | 認証の実装・テストは完備（Version22）。**本番は今なお無認証**（ADR 0051の「有効化した」という記録は誤りだったとVersion30で判明、訂正済み） |
+| Program A基盤 | DevelopmentGrant・AgentTaskの状態機械・lease機構・「1 branch 1 writer」強制が43件のテストで検証済み。外部（ARC・Owner）からはまだ触れない |
 | Data Durability | `pnpm backup create/list/restore`が動作。実機で復元演習（backup→データ削除→restore→内容一致）を確認済み |
 
 ## Open Issues
