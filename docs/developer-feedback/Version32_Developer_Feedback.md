@@ -4,7 +4,7 @@
 
 - Version / 日付: Version32 / 2026-07-19
 - 担当エンジン: Claude Code
-- Git commit / tag: 後続コミットでhashを追記
+- Git commit / tag: `db0378b`
 - 対応Issue / 関連Report: Program A/B着手前ADR / `docs/reports/Version32_Report.md`
 - 状態: Complete
 
@@ -73,7 +73,7 @@ ARC-PM-011（ADR index不在）の負債がやや重くなった。
 ## 完了宣言
 
 - [x] Report、Feedback、Roadmap、PM Status、Open Issuesが同じ事実を示す
-- [ ] commit / tagを記録した（本コミット後、follow-upコミットでhashを追記）
+- [x] commit / tagを記録した
 - [x] 未実行テストを成功扱いしていない（該当テストなし）
 - [x] Owner確認事項を通常タスクへ埋没させていない（9章で「なし」と明記）
 - [x] 次担当者がこの文書だけで再開できる（8章参照）

@@ -1,5 +1,7 @@
 # Version32 Report: Program A/B 着手前ADR（4本）
 
+commit: `db0378b`
+
 ## 1. Version概要
 
 `docs/project-management/OWNER_PRIORITY_PROGRAMS_2026-07-19.md`
