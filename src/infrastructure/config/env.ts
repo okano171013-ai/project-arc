@@ -9,6 +9,10 @@ import { z } from 'zod';
 const supabaseEnvSchema = z.object({
   SUPABASE_URL: z.string().url().default('http://localhost:54321'),
   SUPABASE_ANON_KEY: z.string().min(1, 'SUPABASE_ANON_KEY is required'),
+  // ADR 0003: RLSにより認証済みセッションが必須になったため、
+  // 単一Ownerの認証情報をCLIから自動サインインに使う。
+  SUPABASE_OWNER_EMAIL: z.string().email('SUPABASE_OWNER_EMAIL must be a valid email'),
+  SUPABASE_OWNER_PASSWORD: z.string().min(1, 'SUPABASE_OWNER_PASSWORD is required'),
 });
 
 const notionEnvSchema = z.object({

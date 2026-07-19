@@ -23,6 +23,17 @@ async function resolveRepository(): Promise<ReflectionRepository> {
 
     const env = loadSupabaseEnv();
     const client = createClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY);
+
+    // ADR 0003: RLSが owner_id = auth.uid() を要求するため、
+    // 匿名キーだけでなく認証済みセッションを確立してから使う。
+    const { error: signInError } = await client.auth.signInWithPassword({
+      email: env.SUPABASE_OWNER_EMAIL,
+      password: env.SUPABASE_OWNER_PASSWORD,
+    });
+    if (signInError) {
+      throw new Error(`Supabaseへのサインインに失敗しました: ${signInError.message}`);
+    }
+
     return new SupabaseReflectionRepository(client);
   }
 

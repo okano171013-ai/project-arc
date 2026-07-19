@@ -31,18 +31,24 @@ Version2以降の外部サービス接続やUI追加を、Domain層を壊さず�
 
 ---
 
-## 永続化層：Supabase CLI（ローカルPostgres）
+## 永続化層：Supabase（ローカルPostgres／クラウド）
 
 **方針**：Version1ではSupabase CLIで起動するローカルPostgres環境を
-使用する。クラウドのSupabaseプロジェクトへの接続はVersion2以降。
+使用した（ADR 0001）。Version2でowner_id列とRLSを追加し（ADR 0003）、
+クラウドSupabaseプロジェクトへの切り替えに対応した。
 
-**根拠**（詳細はADR 0001参照）：
+**認証**：単一Ownerユーザーのemail/passwordでSupabase Authに
+サインインしてから読み書きする（`pnpm reflect --db=supabase`が
+CLI起動時に自動サインイン）。招待・サインアップ機能は無い。
+
+**根拠**（詳細はADR 0001, 0003参照）：
 - SQLiteではなくPostgres方言に最初から寄せることで、将来の
   クラウド移行時に方言差異による書き直しが発生しない。
-- 一方でVersion1の時点では認証・RLS・ネットワーク依存を
-  持ち込まず、オフラインで完結させる（Principle 6, 9）。
+- RLS（`owner_id = auth.uid()`）により、漏洩したanonキーからの
+  読み書きを防ぐ最低限の境界を持つ。
 - Repositoryパターンにより、ローカル→クラウドの切り替えは
-  接続文字列とAuth設定の追加のみで済む設計とする。
+  接続文字列とAuth設定の追加のみで済む設計とした
+  （`SupabaseReflectionRepository`自体は無変更）。
 
 ---
 

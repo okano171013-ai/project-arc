@@ -47,6 +47,36 @@ pnpm db:reset
 スキーマ定義の正は `src/infrastructure/db/schema.sql`。変更する際は
 `supabase/migrations/`にも同内容のマイグレーションを追加すること。
 
+## クラウドSupabaseへの移行（ADR 0003）
+
+ローカルの動作確認ができたら、以下の手順でクラウドプロジェクトに
+切り替える。このセクションはOwner本人がSupabaseアカウントを使って
+行う手動操作（Claude Codeからは実行できない）。
+
+```bash
+# 1. Supabaseアカウントでログイン（ブラウザ認証）
+pnpm exec supabase login
+
+# 2. https://supabase.com/dashboard でプロジェクトを新規作成した後、
+#    ローカルリポジトリとリンクする（project-refはダッシュボードのURLから取得）
+pnpm exec supabase link --project-ref <project-ref>
+
+# 3. マイグレーションをクラウドDBに適用
+pnpm exec supabase db push
+
+# 4. Supabase Studio（Authentication > Users > Add user）で
+#    Owner本人のユーザーを1人作成する（サインアップ機能は無い）
+
+# 5. .env をクラウド向けに更新
+#    SUPABASE_URL      = プロジェクトのAPI URL
+#    SUPABASE_ANON_KEY = プロジェクトのanon key
+#    SUPABASE_OWNER_EMAIL / SUPABASE_OWNER_PASSWORD = 手順4で作成した認証情報
+```
+
+RLSにより、`SUPABASE_OWNER_EMAIL` / `SUPABASE_OWNER_PASSWORD` での
+サインインなしには読み書きできない（`pnpm reflect --db=supabase`が
+自動でサインインする）。
+
 ## よく使うコマンド
 
 ```bash
