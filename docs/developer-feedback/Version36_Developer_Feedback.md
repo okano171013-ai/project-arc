@@ -4,7 +4,7 @@
 
 - Version / 日付: Version36 / 2026-07-19
 - 担当エンジン: Claude Code
-- Git commit / tag: （次コミットで記録）
+- Git commit / tag: `45bcba9`
 - 対応Issue / 関連Report: Mobile Ingressローカルモデルの完成度向上 / `docs/reports/Version36_Report.md`
 - 状態: Complete（ローカル安全範囲。LAN公開の有効化はOwner確認待ち）
 
@@ -109,7 +109,7 @@ opt-in・既定閉じた状態にする設計判断は、既存の`ARC_API_KEY`
 ## 完了宣言
 
 - [x] Report、Feedback、Roadmap、PM Status、Open Issuesが同じ事実を示す
-- [x] commit / tagを記録した（次コミットで反映、フォローアップ済み）
+- [x] commit / tagを記録した（`45bcba9`）
 - [x] 未実行テストを成功扱いしていない（603件全件実行・全件合格を実機で確認）
 - [x] Owner確認事項を通常タスクへ埋没させていない（9章に明記、Decision Packetへも集約）
 - [x] 次担当者がこの文書だけで再開できる（8章に依存関係付きで記載）

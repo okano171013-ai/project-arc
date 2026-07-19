@@ -1,5 +1,7 @@
 # Version36 Report: Mobile Ingressローカルモデルの完成度向上
 
+commit: `45bcba9`
+
 ## 1. Version概要
 
 Version35で実装したMobile Ingressローカルモデル（受信サーバー・
