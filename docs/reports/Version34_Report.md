@@ -1,5 +1,7 @@
 # Version34 Report: Program A読み取り専用公開（agent_task_list・development_grant_list）
 
+commit: `39e446a`
+
 ## 1. Version概要
 
 Version33で実装したDevelopmentGrant・AgentTaskを、ARCが確認できる

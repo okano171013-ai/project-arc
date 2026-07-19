@@ -1,7 +1,7 @@
 # Project ARC — PM Status
 
 最終監査日: 2026-07-19（Version34時点に更新）  
-基準HEAD: Version34コミット（`docs/reports/Version34_Report.md`参照）  
+基準HEAD: `39e446a`（Version34）  
 作業ツリー: `.claude/settings.local.json`のみ未追跡（ローカル設定、対象外）。
 
 ## 5分サマリー
