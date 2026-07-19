@@ -228,7 +228,8 @@ archive/Version28_ARC_Brief.md`に保管）。
 
 ---
 
-## 未処理：Version35–36 日常ログ優先指示（2026-07-20）
+**処理済み（Version35、Version36は同条件で継続中）**：
+Version35–36日常ログ優先指示（`docs/reports/Version35_Report.md`）。
 
 Ownerは優先順位を明確化した。最優先は、スマホからアーク（Project ARC）の日常ログを参照・保存でき、PC停止中でも動作すること。完全自動開発は第2優先とする。
 
@@ -237,5 +238,21 @@ Version34完了後、技術的負債の細部ではなくProgram Bを進める�
 Version35では、Program B Architecture Gate、無料枠優先のcloud候補比較、月額上限0円を初期既定とした構成案、Mobile IngressのローカルMVP、read/write/idempotency/待機/失敗のデータ契約、退避中16件を将来取り込むimport形式、脅威モデル・ADR・テスト・Report・Developer Feedback・STATUS・Roadmapを整備する。
 
 クラウド契約・課金・本番公開・秘密情報設定は行わず、Owner判断事項を短いDecision Packetに集約する。設計・調査・文書化・ローカル実装・無料かつ可逆な検証は返答待ちで停止せず進める。Version35完了後は同条件でVersion36のローカルMVP完成まで続行してよい。DevelopmentGrant本番発行とOAuth本番有効化はOwner確認事項として保留する。
+
+**対応内容**：テスト件数の表現は誤りで実際は573件中573件全合格
+だったことを確認（Version35着手前に解消）。ADR 0064（Architecture
+Gate、cloud比較、$0/月既定）・ADR 0065（Mobile Ingressデータ契約）
+を策定し、`IngressRecord`Entity・`pnpm mobile-ingress`・
+`pnpm mobile-sync`の完全ローカルMVPを実装・実機確認した。「退避中の
+16件」は実体不明のためOwner確認事項として`docs/project-management/
+Version35_Decision_Packet.md`へ集約（取り込み経路自体は設計済み）。
+クラウド契約・課金・本番公開・秘密情報設定は未実施。Version36として
+同条件でローカルMVPの完成度向上を継続中（原文は本セクションに保持、
+`docs/handoff/archive/`への移動はVersion36完了時に行う）。
+
+次の指示書を待っています。新しい指示が来たら、このファイルの
+「ここにARCの指示書を貼り付け」以下を置き換えてください
+（またはARCが直接AgentMessageとして送ってくることもあります
+——`agent_message_list`も必ず確認すること）。
 
 <!-- ここにARCの指示書を貼り付け -->
