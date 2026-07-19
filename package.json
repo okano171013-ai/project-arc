@@ -36,6 +36,7 @@
     "backup": "tsx src/infrastructure/cli/backup.ts",
     "mobile-ingress": "tsx src/infrastructure/http/mobileIngress.ts",
     "mobile-sync": "tsx src/infrastructure/cli/mobileSync.ts",
+    "import-pending-logs": "tsx src/infrastructure/cli/importPendingLifeLogs.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",
     "test:watch": "vitest",

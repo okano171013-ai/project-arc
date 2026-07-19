@@ -1,0 +1,27 @@
+# 参照専用テンプレート — 実行されない（cloudflare/README.md、ADR 0068参照）
+#
+# 実際に着手する際は、このファイルを wrangler.toml へリネームし、
+# account_id 等の実際の値を Owner自身が設定すること。
+# Claude Codeはアカウント作成・デプロイを代行できない。
+
+name = "project-arc-mobile-ingress"
+main = "src/worker.ts"           # 未実装（cloudflare/README.md参照）
+compatibility_date = "2026-07-20"
+
+# account_id = ""                # Owner自身のCloudflareアカウントID
+
+# IngressRecordRepositoryの実装先候補。KV（シンプル、key-value）と
+# D1（SQLite、クエリが必要になった場合）のどちらを使うかは
+# Architecture Gateで確定する（ADR 0064）。
+
+# [[kv_namespaces]]
+# binding = "INGRESS_RECORDS_KV"
+# id = ""                        # wrangler kv:namespace create で発行
+
+# [[d1_databases]]
+# binding = "INGRESS_RECORDS_DB"
+# database_name = "project-arc-ingress"
+# database_id = ""
+
+# MOBILE_INGRESS_API_TOKEN相当のsecretは `wrangler secret put` で
+# 設定する（wrangler.tomlへ平文で書かない）。

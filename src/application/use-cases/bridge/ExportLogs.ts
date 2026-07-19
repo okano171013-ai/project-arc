@@ -1,4 +1,4 @@
-import type { BridgeLogType } from '../../../domain/value-objects/BridgeLogType.js';
+import { ALL_BRIDGE_LOG_TYPES, type BridgeLogType } from '../../../domain/value-objects/BridgeLogType.js';
 import type { ReflectionRepository } from '../../ports/ReflectionRepository.js';
 import type { MemoryRepository } from '../../ports/MemoryRepository.js';
 import type { InventoryRepository } from '../../ports/InventoryRepository.js';
@@ -70,24 +70,6 @@ export interface ExportLogsOutput {
   /** limitによって切り詰められた場合にtrue。 */
   truncated: boolean;
 }
-
-const ALL_BRIDGE_LOG_TYPES: BridgeLogType[] = [
-  'Reflection',
-  'Memory',
-  'InventoryItem',
-  'AppearanceLog',
-  'SkinLog',
-  'PurchaseLog',
-  'ChallengeLog',
-  'ThirdPersonEvaluation',
-  'ExternalSource',
-  'ExternalKnowledge',
-  'MealLog',
-  'NutritionLog',
-  'WeightLog',
-  'FinanceLog',
-  'StudySession',
-];
 
 /**
  * ExportLogsUseCase（Bridge Layer、Version9、Version10で件数上限と

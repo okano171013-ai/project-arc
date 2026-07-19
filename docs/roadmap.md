@@ -109,10 +109,31 @@ tasks.ps1`）を追加。スマホからの実送信に必要なLAN公開は
 本番公開・秘密情報設定は一切実施していない。詳細は`docs/reports/
 Version36_Report.md`参照。
 
-**Version37以降**：Owner確認事項3（LAN公開の可否）への回答を受けて
-実地確認（実際のスマホからの送信）を行う。クラウドActivation Gate
-（vendor実デプロイ・本番URL公開）はOwner確認事項が解決してから
-着手する。
+**Version37は完了済み**：ARCがGit経由で送った指示書（2026-07-20、
+`docs/handoff/archive/Version37_ARC_Brief.md`）に基づき、認証なし
+LAN公開の明示的な却下に応えるセキュリティ強化（fail-closed起動
+ガード・Bearer token認証・rate limit・入力上限・監査ログ、ADR
+0066）を実装した。あわせて、実在が判明した「現在退避中の16件」
+向けのJSONL Importer（`pnpm import-pending-logs`、決定的な重複
+防止規則、未対応typeは自動マッピングせず明示報告、ADR 0067、
+実データはこのリポジトリに含まれない）と、provider-neutralな
+Cloud Adapter境界の整理（新しい抽象は追加せず既存
+`IngressRecordRepository`を再利用、`cloudflare/`配下に参照専用の
+local dev構成テンプレートを追加、ADR 0068）、スマホ側read契約
+（`GET /ingress?idempotencyKey=`）、Quick Capture UIのMealLog/
+WeightLog/FinanceLog対応を実装した。クラウド契約・課金・本番公開・
+秘密情報設定は一切実施していない。Owner向け判断事項（LAN公開＋
+トークン設定の有効化、Cloud Activationの手作業・無料枠・rollback）
+は`docs/project-management/Version35_Decision_Packet.md`・
+`Version37_Decision_Packet.md`に集約した。詳細は`docs/reports/
+Version37_Report.md`・ADR 0066〜0068参照。
+
+**Version38以降**：Owner確認事項3（LAN公開＋トークン設定の可否）
+への回答を受けて実地確認（実際のスマホからの送信）を行う。実際の
+16件を`pnpm import-pending-logs`で取り込み、未対応typeの一覧を
+踏まえた新規Entity設計の要否をOwner/ARCと相談する。クラウド
+Activation Gate（vendor実デプロイ・本番URL公開）はOwner確認事項が
+解決してから着手する。
 
 | 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
 |---:|---|---|---|

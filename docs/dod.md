@@ -882,3 +882,38 @@ Version35のDoDは全項目達成済み。
 - [x] クラウド契約・課金・本番公開・秘密情報設定は一切実施していない
 
 Version36のDoDは全項目達成済み。
+
+## Version37完了チェックリスト
+
+- [x] `pnpm test` が全て緑（626件、Mobile Ingress認証/rate limit/
+      body size/監査ログ/read契約テスト・`validateExposureConfig`
+      単体テスト・`ImportPendingLifeLogsUseCase`テスト・CLIテストを
+      含む）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] fail-closed起動ガード（`validateExposureConfig`）を実装・
+      実機確認済み（`MOBILE_INGRESS_HOST`変更+token未設定で起動時
+      エラー終了を確認）
+- [x] Bearer token認証・rate limit（30req/分/IP）・入力上限
+      （64KB）・監査ログ（token値は記録しない）を実装・実機確認済み
+- [x] `ImportPendingLifeLogsUseCase`・`pnpm import-pending-logs`を
+      実装。未対応typeは`unsupported_type`として明示報告（既存型へ
+      推測マッピングしない）。全テストはプレースホルダーの合成
+      データのみ使用、実データは一切含めていない
+- [x] Cloud Adapter境界を既存`IngressRecordRepository`の再利用として
+      整理（新規抽象なし）。`cloudflare/`参照専用ディレクトリ
+      （ビルド・テスト対象外）を追加
+- [x] `GET /ingress?idempotencyKey=`によるスマホ側read契約、Quick
+      Capture UIのMealLog/WeightLog/FinanceLog対応を実装
+- [x] ADR 0066（セキュリティ強化）・0067（JSONL Import形式）・
+      0068（Cloud Adapter境界）を作成済み
+- [x] `docs/security/remote-mcp-threat-model.md`10章を追加、9.2の
+      記述を訂正済み
+- [x] README / docsに実装との乖離がない
+- [x] `docs/reports/Version37_Report.md`を生成済み（14章構成）
+- [x] `docs/developer-feedback/Version37_Developer_Feedback.md`を生成済み
+- [x] `docs/project-management/Version37_Decision_Packet.md`
+      （Cloud Activation手作業・無料枠・rollback、1枚）を生成済み
+- [x] クラウド契約・課金・本番公開・秘密情報設定は一切実施していない
+
+Version37のDoDは全項目達成済み。

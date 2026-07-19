@@ -1,12 +1,15 @@
 # Version35 Decision Packet — Owner確認事項
 
 Version35（Program B Mobile Ingressローカルモデル）・Version36
-（ローカルMVPの完成度向上）の中で、Claude Codeが自律的に判断できず、
-Ownerの決定が必要な事項のみを短くまとめたもの（確認事項3が
-Version36追記分）。詳細な設計根拠は`docs/reports/Version35_Report.md`・
-`docs/reports/Version36_Report.md`・`docs/developer-feedback/
-Version35_Developer_Feedback.md`・`docs/developer-feedback/
-Version36_Developer_Feedback.md`・ADR 0064・0065を参照。
+（ローカルMVPの完成度向上）・Version37（セキュリティ強化・JSONL
+Importer・Cloud Adapter境界）を通じて、Claude Codeが自律的に判断
+できず、Ownerの決定が必要な事項のみを短くまとめたもの。確認事項1は
+Version37で解決済み、確認事項3はVersion37で前提（認証）が変わった。
+Cloud Activationの手作業・無料枠・rollbackは`docs/project-
+management/Version37_Decision_Packet.md`（1枚、本Packetとは別）
+にまとめた。詳細な設計根拠は`docs/reports/Version35_Report.md`〜
+`Version37_Report.md`・対応する`docs/developer-feedback/`・
+ADR 0064〜0068を参照。
 
 **このPacketに書かれていないことは、すべてClaude Codeが判断済み・
 実施済みで、Ownerの確認を待たずに進めてよい範囲**（設計・調査・
@@ -14,21 +17,23 @@ Version36_Developer_Feedback.md`・ADR 0064・0065を参照。
 
 ---
 
-## 確認事項1：「現在退避中の16件」とは何か
+## 確認事項1：「現在退避中の16件」とは何か【Version37で解決】
 
-Owner指示に「現在退避中の16件を将来取り込めるimport形式の設計」と
-あったが、リポジトリ内（コード・docs・data）を検索しても該当する
-データ本体・件数の根拠・形式仕様を発見できなかった。
+Owner指示書（2026-07-20）で判明した：16件は実在し、Owner本人の
+Codex workspaceに`project-arc-pending-life-logs-2026-07-20.jsonl`
+として保管されている（公開GitHubには置かない方針）。取り込み形式・
+重複防止規則をADR 0067として確定し、汎用Importer
+（`pnpm import-pending-logs`）を実装・合成データでテスト済み。
 
-- **今回の対応**：取り込み経路自体は設計済み（Mobile Ingressの
-  `payloadType`は既存Bridge Layerの型を再利用するため、新形式でも
-  追加設計なしで対応できる）。実体だけが不明。
-- **Ownerに必要な確認**：16件がどこにある・どんな形式の・何の
-  データなのか（例：スマホのメモ、別アプリのエクスポート、紙の
-  メモ等）を教えてもらえれば、Version36以降で具体的な取り込みを
-  設計する。
-- **急ぎ度**：低い。判明するまでMobile Ingressのローカル完成度向上
-  （Version36）は並行して進められる。
+- **残る作業**：実際の16件の取り込みは、Owner自身がファイルパスを
+  指定して`pnpm import-pending-logs -- <path> --dry-run`で内容確認 →
+  問題なければ`--dry-run`を外して本実行、という手順で行う
+  （Claude Codeからは実データが見えないため代行不可）。
+  MealLog/FinanceLog/Reflection/AppearanceLog等は取り込めるが、
+  RewardSystem/BudgetRule/Wishlist等、対応するEntityが存在しない
+  型は`unsupported_type`として報告されるのみで取り込まれない
+  ——新しいEntityを設計するかはOwner/ARCの今後の判断（ADR 0067）。
+- **急ぎ度**：低い。Ownerの都合の良いタイミングで実行してよい。
 
 ## 確認事項2：クラウドvendorの方向性
 
@@ -49,22 +54,29 @@ ADR 0064で無料枠優先のcloud比較を行ったが、**vendorは確定さ�
 - **急ぎ度**：低い。クラウド未使用のまま、ローカルMVPの完成度向上
   だけでもProgram Bの価値は積み上げられる（Version36の方針）。
 
-## 確認事項3（Version36追記）：スマホからの実送信にはLAN公開が必要
+## 確認事項3（Version37で更新）：スマホからの実送信にはLAN公開＋トークン設定が必要
 
 Version36で、PCのブラウザから開けるQuick Capture送信フォーム
-（`GET /`）を追加し、実際にヘッドレスブラウザからの送信を確認した。
-ただし現状は`127.0.0.1`限定のままのため、**スマートフォン実機からは
-まだ送信できない**——スマホから届かせるには`MOBILE_INGRESS_HOST`を
-`0.0.0.0`等へ変更し、同一Wi-Fi（LAN）内から到達可能にする必要がある。
+（`GET /`）を追加した。ただし現状は`127.0.0.1`限定のままのため、
+**スマートフォン実機からはまだ送信できない**——スマホから届かせる
+には`MOBILE_INGRESS_HOST`を`0.0.0.0`等へ変更する必要がある。
 
-- **今回の対応**：この変更は環境変数のopt-in（既定値は無変更）として
-  実装のみ済ませた。実際に有効化する判断はしていない。
-- **Ownerに必要な確認**：`MOBILE_INGRESS_HOST=0.0.0.0`（または
-  実機のLAN IP）へ変更してよいか。認証なしのままLAN内の他デバイス
-  （同じWi-Fiに接続していれば家族・来客のデバイスも含む）から
-  `POST /ingress`等へ到達可能になる点を踏まえた上での判断をお願い
-  したい。設定手順は`.env.example`のコメント・`docs/security/
-  remote-mcp-threat-model.md`9.2参照。
+Owner指示書（2026-07-20）は「認証なしのLAN公開は承認しない」と
+明確に却下した。Version37で、`MOBILE_INGRESS_HOST`を既定値以外へ
+変更する場合`MOBILE_INGRESS_API_TOKEN`の設定を**構造的に必須化**
+した（未設定だと起動時エラーで拒否、fail-closed、ADR 0066）。
+rate limit・入力上限・監査ログも実装済み。
+
+- **今回の対応**：認証機構自体は実装・テスト済み。実際に
+  `MOBILE_INGRESS_HOST`を変更してLAN公開を有効化する判断はまだ
+  していない。
+- **Ownerに必要な確認**：(1) `MOBILE_INGRESS_HOST=0.0.0.0`（または
+  実機のLAN IP）への変更、(2) `MOBILE_INGRESS_API_TOKEN`に設定する
+  トークン文字列の決定（Owner自身が任意の値を選んでよい）。設定後、
+  スマホのブラウザで`http://<PCのLAN IP>:3941/`を開き、Quick
+  Capture UIのトークン欄に同じ値を入力すれば送信できる。手順は
+  `.env.example`のコメント・`docs/security/
+  remote-mcp-threat-model.md`10章参照。
 - **急ぎ度**：中。スマホからの実送信を試すには必須だが、PCの
   ブラウザからの送信・`pnpm mobile-sync`の定期実行によるlocal反映
   自体はこの確認を待たずに機能する。
@@ -80,6 +92,7 @@ Version36で、PCのブラウザから開けるQuick Capture送信フォーム
 - DevelopmentGrant本番発行・OAuth本番有効化（Program Bとは別件、
   従来通りOwner確認事項として保留中）
 
-以上、いずれもVersion35〜36では一切実施していない
-（`MOBILE_INGRESS_HOST`のLAN公開opt-inもコード上可能にしただけで、
-実際に`.env`へ設定・有効化してはいない）。
+以上、いずれもVersion35〜37では一切実施していない
+（`MOBILE_INGRESS_HOST`のLAN公開・`MOBILE_INGRESS_API_TOKEN`の
+設定もコード上可能・必須化しただけで、実際に`.env`へ設定・有効化
+してはいない。「16件」の実データもこのリポジトリには含めていない）。

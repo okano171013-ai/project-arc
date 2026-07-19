@@ -114,6 +114,28 @@ describe('Mobile Ingress (Version35, ADR 0065)', () => {
     expect(all.records).toHaveLength(1);
   });
 
+  it('list can be filtered by idempotencyKey (Version37 read contract)', async () => {
+    await env.receive.execute({
+      idempotencyKey: 'idem-lookup-1',
+      payloadType: 'Reflection',
+      payload: reflectionPayload('2026-07-19', '検索対象'),
+      clientCreatedAt: '2026-07-19T21:00:00.000Z',
+    });
+    await env.receive.execute({
+      idempotencyKey: 'idem-lookup-2',
+      payloadType: 'Reflection',
+      payload: reflectionPayload('2026-07-18', '検索対象外'),
+      clientCreatedAt: '2026-07-18T21:00:00.000Z',
+    });
+
+    const found = await env.list.execute({ idempotencyKey: 'idem-lookup-1' });
+    expect(found.records).toHaveLength(1);
+    expect(found.records[0]?.data.idempotencyKey).toBe('idem-lookup-1');
+
+    const notFound = await env.list.execute({ idempotencyKey: 'no-such-key' });
+    expect(notFound.records).toHaveLength(0);
+  });
+
   it('happy path: receive -> sync -> Canonicalized, and the reflection is actually saved', async () => {
     await env.receive.execute({
       idempotencyKey: 'idem-2',

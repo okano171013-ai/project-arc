@@ -312,3 +312,56 @@ LAN公開のopt-in化は、既定値を変えない限りVersion35時点の脅�
 （8章）から変化しない。実際に有効化する場合は、認証なしでLAN内の
 任意デバイスから到達可能になる点をOwnerが把握した上で判断すること
 （Decision Packet参照）。
+
+**訂正（Version37）**：9.2の「この変更を有効化するかどうかは
+Claude Codeが自律判断せず」という記述は、Version36時点では
+ドキュメント上の合意に留まっていた——コード上は`MOBILE_INGRESS_HOST`
+を変更すれば認証なしでもLAN公開できてしまう状態だった。Owner指示書
+（2026-07-20）はこれを明示的に問題視し、Version37で10章の
+fail-closed起動ガードにより**構造的に**強制する形へ修正した。
+
+## 10. Version37監査：Mobile Ingressセキュリティ強化（ADR 0066）
+
+### 10.1 Fail-closed起動ガード
+
+`validateExposureConfig(host, apiToken)`（`mobileIngress.ts`）が、
+`MOBILE_INGRESS_HOST`を`127.0.0.1`以外へ変更する際に
+`MOBILE_INGRESS_API_TOKEN`が未設定だと例外を投げてプロセスを終了
+させる。9.2で「Owner確認事項として明示」に留まっていた抑止力を、
+「そもそも起動できない」という構造的な強制へ格上げした。実機で
+`MOBILE_INGRESS_HOST=0.0.0.0`・token未設定の組み合わせが実際に
+起動時エラーで終了することを確認済み。
+
+### 10.2 認証・rate limit・入力上限・監査ログ
+
+ADR 0066参照。`Authorization: Bearer <token>`必須化（設定時のみ）、
+1分30リクエスト/IPのrate limit、64KBのbody size上限、
+`data/logs/mobile-ingress-audit.log`への監査ログ記録（token値は
+記録しない）を実装した。否定テスト（401/413/429、起動ガード）を
+`mobileIngress.test.ts`に追加、全て合格。
+
+### 10.3 JSONL Importer（退避中ログ）のセキュリティ姿勢
+
+`ImportPendingLifeLogsUseCase`・`pnpm import-pending-logs`（ADR
+0067）は、実データをこのリポジトリ・コミット履歴に一切含めない
+設計とした——ファイルパスは実行時にOwnerが指定し、テストは全て
+プレースホルダーの合成データのみを使う。未対応type
+（RewardSystem等）は自動マッピングせず明示的に報告するため、
+誤った推測によるデータ汚染のリスクもない。
+
+### 10.4 Cloud Adapter境界の追加コードなし
+
+ADR 0068の決定により、Cloud Adapter境界は既存の
+`IngressRecordRepository`ポートの再利用として整理し、新しい
+コード・新しい公開面は追加していない。`cloudflare/`配下は参照専用
+ファイルのみで、ビルド・テスト・デプロイのいずれのパイプラインにも
+含まれない。
+
+### 10.5 結論
+
+Version37の変更により、LAN公開（`MOBILE_INGRESS_HOST`変更）は
+「認証なしで到達可能になる」というリスクから、「認証トークンの
+設定が構造的に必須」というリスクへ縮小した。ただし認証方式自体は
+単一の共有シークレット（Bearer固定文字列）であり、本番クラウド
+デプロイ時にはADR 0064のActivation Gateでより堅牢な認証
+（OAuth・TLS等）へ置き換える前提は変わらない。

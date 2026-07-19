@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { rm } from 'node:fs/promises';
+import { rm, readFile } from 'node:fs/promises';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { createMobileIngressApp } from './mobileIngress.js';
+import { createMobileIngressApp, validateExposureConfig, MAX_BODY_BYTES } from './mobileIngress.js';
 
 /**
  * Mobile Ingress（ローカルMVP、Version35）のend-to-endテスト。実際に
@@ -100,5 +100,148 @@ describe('ARC Mobile Ingress (local MVP)', () => {
     const html = await res.text();
     expect(html).toContain('<form id="f">');
     expect(html).toContain("fetch('/ingress'");
+  });
+
+  it('GET /ingress?idempotencyKey= returns only the matching record (Version37 read contract)', async () => {
+    await fetch(`${baseUrl}/ingress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        idempotencyKey: 'lookup-test-1',
+        payloadType: 'Reflection',
+        payload: { date: '2026-07-19', record: { proudOf: '状態確認テスト' } },
+        clientCreatedAt: '2026-07-19T21:00:00.000Z',
+      }),
+    });
+
+    const res = await fetch(`${baseUrl}/ingress?idempotencyKey=lookup-test-1`);
+    const body = (await res.json()) as { records: Array<{ idempotencyKey: string }> };
+    expect(body.records).toHaveLength(1);
+    expect(body.records[0]?.idempotencyKey).toBe('lookup-test-1');
+
+    const empty = await fetch(`${baseUrl}/ingress?idempotencyKey=no-such-key`);
+    const emptyBody = (await empty.json()) as { records: unknown[] };
+    expect(emptyBody.records).toHaveLength(0);
+  });
+
+  it('rejects an oversized request body with 413 (Version37)', async () => {
+    const res = await fetch(`${baseUrl}/ingress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        idempotencyKey: 'too-big',
+        payloadType: 'Reflection',
+        payload: { date: '2026-07-19', record: { notes: 'x'.repeat(MAX_BODY_BYTES + 1) } },
+        clientCreatedAt: '2026-07-19T21:00:00.000Z',
+      }),
+    });
+    expect(res.status).toBe(413);
+  });
+
+  it('appends an audit log entry for accepted and rejected requests (Version37)', async () => {
+    await fetch(`${baseUrl}/ingress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ idempotencyKey: 'incomplete-for-audit' }),
+    });
+    const log = await readFile(`${DATA_DIR}/logs/mobile-ingress-audit.log`, 'utf-8');
+    const lines = log.trim().split('\n').map((l) => JSON.parse(l) as { outcome: string; status: number });
+    expect(lines.some((l) => l.outcome === 'accepted')).toBe(true);
+    expect(lines.some((l) => l.outcome === 'rejected' && l.status === 400)).toBe(true);
+    // Authorizationヘッダーの値そのものはログに含めない
+    expect(log).not.toContain('Bearer');
+  });
+});
+
+describe('ARC Mobile Ingress — auth, rate limit (Version37)', () => {
+  const DATA_DIR = 'data/_test-mobile-ingress-auth';
+  let server: Server;
+  let baseUrl: string;
+
+  beforeAll(async () => {
+    await rm(DATA_DIR, { recursive: true, force: true });
+    server = createMobileIngressApp(DATA_DIR, { apiToken: 'secret-token', rateLimitMax: 2 });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address() as AddressInfo;
+    baseUrl = `http://127.0.0.1:${address.port}`;
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await rm(DATA_DIR, { recursive: true, force: true });
+  });
+
+  const validBody = () =>
+    JSON.stringify({
+      idempotencyKey: `auth-test-${Math.random()}`,
+      payloadType: 'Reflection',
+      payload: { date: '2026-07-19', record: { proudOf: '認証テスト' } },
+      clientCreatedAt: '2026-07-19T21:00:00.000Z',
+    });
+
+  it('rejects POST /ingress with no Authorization header (401)', async () => {
+    const res = await fetch(`${baseUrl}/ingress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: validBody(),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects POST /ingress with the wrong token (401)', async () => {
+    const res = await fetch(`${baseUrl}/ingress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer wrong-token' },
+      body: validBody(),
+    });
+    expect(res.status).toBe(401);
+  });
+
+  it('rejects GET /ingress with no Authorization header (401)', async () => {
+    const res = await fetch(`${baseUrl}/ingress`);
+    expect(res.status).toBe(401);
+  });
+
+  it('accepts requests with the correct token', async () => {
+    const res = await fetch(`${baseUrl}/ingress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer secret-token' },
+      body: validBody(),
+    });
+    expect(res.status).toBe(201);
+  });
+
+  it('GET / and GET /health stay open without a token (unauthenticated routes are unaffected)', async () => {
+    expect((await fetch(`${baseUrl}/health`)).status).toBe(200);
+    expect((await fetch(`${baseUrl}/`)).status).toBe(200);
+  });
+
+  it('rate-limits after rateLimitMax requests within the window (429)', async () => {
+    const authed = () =>
+      fetch(`${baseUrl}/ingress`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer secret-token' },
+        body: validBody(),
+      });
+    // rateLimitMax=2、上のテストで既に何回か消費済みの可能性があるため、
+    // 十分な回数送って429が含まれることだけを確認する（送信順は仮定しない）
+    const results = await Promise.all([authed(), authed(), authed(), authed(), authed()]);
+    const statuses = results.map((r) => r.status);
+    expect(statuses).toContain(429);
+  });
+});
+
+describe('validateExposureConfig (Version37)', () => {
+  it('does not throw for the default 127.0.0.1 host, with or without a token', () => {
+    expect(() => validateExposureConfig('127.0.0.1', undefined)).not.toThrow();
+    expect(() => validateExposureConfig('127.0.0.1', 'some-token')).not.toThrow();
+  });
+
+  it('throws when the host is changed from 127.0.0.1 without an API token (fail-closed)', () => {
+    expect(() => validateExposureConfig('0.0.0.0', undefined)).toThrow(/MOBILE_INGRESS_API_TOKEN/);
+  });
+
+  it('does not throw when the host is changed and an API token is set', () => {
+    expect(() => validateExposureConfig('0.0.0.0', 'some-token')).not.toThrow();
   });
 });

@@ -36,3 +36,28 @@ export type BridgeLogType =
   | 'WeightLog'
   | 'FinanceLog'
   | 'StudySession';
+
+/**
+ * `BridgeLogType`の実行時の一覧（Version37）。型だけでは実行時の
+ * 判定（未知の`type`文字列を弾く等）ができないため、Union定義と
+ * 常に同期させる単一の正本として追加した——`ExportLogs.ts`の
+ * private配列と、Version37の`ImportPendingLifeLogsUseCase`の型
+ * 判定の両方がこれを参照する。
+ */
+export const ALL_BRIDGE_LOG_TYPES: readonly BridgeLogType[] = [
+  'Reflection',
+  'Memory',
+  'InventoryItem',
+  'AppearanceLog',
+  'SkinLog',
+  'PurchaseLog',
+  'ChallengeLog',
+  'ThirdPersonEvaluation',
+  'ExternalSource',
+  'ExternalKnowledge',
+  'MealLog',
+  'NutritionLog',
+  'WeightLog',
+  'FinanceLog',
+  'StudySession',
+];

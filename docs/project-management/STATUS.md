@@ -1,31 +1,33 @@
 # Project ARC — PM Status
 
-最終監査日: 2026-07-19（Version36時点に更新）  
-基準HEAD: `45bcba9`（Version36、`docs/reports/Version36_Report.md`参照）  
+最終監査日: 2026-07-19（Version37時点に更新）  
+基準HEAD: Version37コミット（`docs/reports/Version37_Report.md`参照）  
 作業ツリー: `.claude/settings.local.json`のみ未追跡（ローカル設定、対象外）。
 
 ## 5分サマリー
 
-Version1〜36まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durability、Program A（読み取り専用公開）、**Program B Mobile Ingressローカルモデル（受信UI・自動sync込み）**まで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
+Version1〜37まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durability、Program A（読み取り専用公開）、**Program B Mobile Ingressローカルモデル（受信UI・自動sync・認証・退避ログImporter込み）**まで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
 
 Owner優先順位（2026-07-19）により、Version35からProgram B
-（Mobile Daily Capture）を最優先で進めた。Architecture Gate論点
-（無料枠優先・月額上限0円を初期既定、ADR 0064）を整理し、Mobile
-Ingress（受信・idempotency・競合検出・待機/失敗状態）のデータ契約
-（ADR 0065）を確定、**完全ローカルのMVPとして実装**した
-（`pnpm mobile-ingress` + `pnpm mobile-sync`）。実機で
-受信→再送無視→sync→競合検出→Owner確認による解決、の一連を確認
-済み。Version36では、ブラウザから送信できるQuick Capture UI（`GET
-/`）とPC起動中の自動sync（15分間隔、`ProjectARC-MobileSync`タスク）
-を追加し、「送る側がない」「手動syncのみ」という2つの空白を埋めた。
-スマホからの実送信に必要なLAN公開は`MOBILE_INGRESS_HOST`のopt-in
-として実装のみ済ませ、**有効化はOwner確認事項として保留**した。
-**クラウド契約・課金・本番公開・秘密情報設定は一切実施していない**
-（Owner指示通り）。
+（Mobile Daily Capture）を最優先で進めた。Version35でArchitecture
+Gate論点整理（ADR 0064）・Mobile Ingressデータ契約（ADR 0065）・
+完全ローカルMVPを実装、Version36でQuick Capture UI・sync自動化を
+追加した。**Version37は、ARCがGit経由で送った指示書
+（2026-07-20、`docs/handoff/archive/Version37_ARC_Brief.md`）**を
+受け、(1) 認証なしLAN公開を明示的に却下されたことへのセキュリティ
+強化（fail-closed起動ガード・Bearer token認証・rate limit・監査
+ログ、ADR 0066）、(2) 実在が判明した「退避中の16件」向けJSONL
+Importer（ADR 0067、実データはこのリポジトリに含まれない）、
+(3) provider-neutralなCloud Adapter境界の整理（既存
+`IngressRecordRepository`の再利用、新規抽象は追加せず、ADR 0068）
+を実装した。**クラウド契約・課金・本番公開・秘密情報設定は一切
+実施していない**（Owner指示通り）。
 
 Owner向け判断事項は`docs/project-management/
-Version35_Decision_Packet.md`に集約した（Version36で確認事項3を
-追記）。
+Version35_Decision_Packet.md`（確認事項1はVersion37で解決、確認事項
+3は前提が変化）と、新設の`docs/project-management/
+Version37_Decision_Packet.md`（Cloud Activationの手作業・無料枠・
+rollback）に集約した。
 
 ## 現在の進捗
 
@@ -34,12 +36,13 @@ Version35_Decision_Packet.md`に集約した（Version36で確認事項3を
 | Version1〜34 | 完了 |
 | Version35 | 完了（Program B Architecture Gate整理、Mobile Ingressデータ契約確定、ローカルMVP実装・実機確認） |
 | Version36 | 完了（Quick Capture UI、`MOBILE_INGRESS_HOST` opt-in、sync自動化スクリプト） |
-| Typecheck / Lint | 2026-07-19合格（Version36時点で再確認） |
+| Version37 | 完了（Mobile Ingressセキュリティ強化、退避ログJSONL Importer、Cloud Adapter境界整理） |
+| Typecheck / Lint | 2026-07-19合格（Version37時点で再確認） |
 | Build | 不合格。TS2742と`dist`書込競合（Version31以降スコープ外、ARC-PM-005として継続） |
-| Test | Version36時点603件合格 |
+| Test | Version37時点626件合格 |
 | Remote MCP | 認証の実装・テストは完備（Version22）。**本番は今なお無認証**（ADR 0051の「有効化した」という記録は誤りだったとVersion30で判明、訂正済み）。MCP Tool数26（Version34から変化なし——Mobile IngressはRemote MCPの一部ではない） |
 | Program A | DevelopmentGrant・AgentTaskが読み取り専用でARCから確認可能。write操作は未公開（変化なし） |
-| Program B | Mobile Ingress・Sync Workerのローカルモデル完成（`pnpm mobile-ingress`・`pnpm mobile-sync`）、Quick Capture UI・sync自動化スクリプト追加（Version36）。クラウドデプロイ・本番URL公開はActivation Gate待ち。スマホからの実送信はLAN公開のOwner確認待ち |
+| Program B | Mobile Ingress・Sync Workerのローカルモデル完成。認証（fail-closed、token設定時のみ）・rate limit・監査ログ・退避ログImporter追加（Version37）。クラウドデプロイ・本番URL公開はActivation Gate待ち。スマホからの実送信はLAN公開＋トークン設定のOwner確認待ち |
 | Data Durability | `pnpm backup create/list/restore`が動作。`data/ingress-records.json`も自動的にbackup対象に含まれることを実機で確認済み |
 | Bridge Layer | MealLog/NutritionLog/WeightLog/FinanceLog/StudySessionのImport/Export対応を追加（Version9〜27間のギャップ解消） |
 
@@ -58,30 +61,30 @@ Version35_Decision_Packet.md`に集約した（Version36で確認事項3を
 | ARC-PM-011 | P2 | ADR status・形式不統一 | ADR indexとtemplate |
 | ARC-PM-012 | P2 | AGENTS / CLAUDE重複、Claude偏重 | 共通規約へ集約 |
 | ARC-PM-013 | P2 | `apiKeyAuth.ts`（ARC Connector）が非timing-safe比較 | Version30 security reviewでの観察。ローカル専用のため実害は限定的。次回機会に`timingSafeEqual`化を検討 |
-| ARC-PM-014 | P2 | 「現在退避中の16件」の実体不明 | Version35でOwner指示にあった16件のimport対象を全リポジトリ検索したが該当データ・形式仕様を発見できず。`Version35_Decision_Packet.md`でOwner確認事項として提起済み。判明次第、既存Bridge Layer（`ImportLogsUseCase`）で取り込む方針は決定済み（ADR 0065） |
 
 解決済み（Open Issuesから除外）：
 - **ARC-PM-003**（Claude許可設定の`rm -rf data`）：OwnerがWindowsローカル側で該当許可2件を除去し、JSON正常性を確認済み（Version30、2026-07-19）。
 - **ARC-PM-002**（JSON生活データのbackup/restore/schema migration契約なし）：Version31で解決。`jsonStore.ts`のatomic書き込み化、`BackupService`・`pnpm backup create/list/restore`、世代retention（既定10世代）を実装し、実機で復元演習を確認済み。schemaVersionはmanifestレベル（`"1"`）のみ、行レベルは次Version以降（ADR 0058「未決定」参照）。
+- **ARC-PM-014**（「現在退避中の16件」の実体不明）：Version37で解決。実データはOwnerのCodex workspaceに保管されており、取り込み形式・重複防止規則をADR 0067として確定、`pnpm import-pending-logs`を実装・テスト済み（合成データのみ、実データはこのリポジトリに含まれない）。実際の取り込みはOwner自身が実行する。
 
 ## 現在の目標・次のマイルストーン
 
-**Program B**: Architecture Gate論点整理（ADR 0064）とMobile Ingressデータ契約（ADR 0065）、ローカルMVP（`pnpm mobile-ingress` / `pnpm mobile-sync`）、Quick Capture UI・sync自動化（Version36）まで完了。次はOwner確認事項3（`MOBILE_INGRESS_HOST`のLAN公開可否）の回答を受けての実地確認。クラウドへのActivation Gate（vendor選定・実デプロイ・本番URL公開）はOwner確認事項（`Version35_Decision_Packet.md`）待ちで、契約・課金・秘密情報設定は未実施のまま凍結する。
+**Program B**: Architecture Gate論点整理（ADR 0064）、Mobile Ingressデータ契約（ADR 0065）、ローカルMVP、Quick Capture UI・sync自動化（Version36）、セキュリティ強化・退避ログImporter・Cloud Adapter境界（Version37）まで完了。次はOwner確認事項3（`MOBILE_INGRESS_HOST`のLAN公開＋トークン設定）の回答を受けての実地確認と、実際の16件の取り込み。クラウドへのActivation Gate（vendor選定・実デプロイ・本番URL公開）はOwner確認事項（`Version35_Decision_Packet.md`・`Version37_Decision_Packet.md`）待ちで、契約・課金・秘密情報設定は未実施のまま凍結する。
 
-**Stability Gate**: 残りARC-PM-005〜010を閉じる。ARC-PM-001は本番反映（Owner Action）のみ残存、ARC-PM-002〜004は解消済み。外部公開、認証、秘密情報、データ削除はOwner承認が必要。
+**Stability Gate**: 残りARC-PM-005〜010を閉じる。ARC-PM-001は本番反映（Owner Action）のみ残存、ARC-PM-002〜004・014は解消済み。外部公開、認証、秘密情報、データ削除はOwner承認が必要。
 
 ## 技術的負債
 
 - P0: なし（ARC-PM-002は解決、ARC-PM-001は本番反映のみ残存）
 - P1: build、契約同期、巨大module、model重複、release管理、文書正本
-- P2: 命名・template・歴史資料、Docker/Supabase説明、apiKeyAuthのtiming-safe化、Entity行レベルschemaVersion、「16件」の実体不明（ARC-PM-014）
+- P2: 命名・template・歴史資料、Docker/Supabase説明、apiKeyAuthのtiming-safe化、Entity行レベルschemaVersion、未対応type（RewardSystem等7種）へのEntity設計要否（Owner/ARC判断待ち）
 
 ## 停止中タスク
 
 - OAuth本番有効化: 準備完了（Version30）。Owner承認と接続再設定待ち——`docs/setup/remote-mcp-oauth-migration.md`のチェックリストで一度で実行できる
-- Program B（Mobile Ingress）クラウドActivation Gate: ローカルMVPは完成済み（Version35〜36）。vendor選定（ADR 0064はCloudflare Workersを暫定候補と仮置きのみ）・実デプロイ・cost上限確定はOwner確認事項（`Version35_Decision_Packet.md`）待ち
-- `MOBILE_INGRESS_HOST`のLAN公開有効化: Owner確認事項（確認事項3、`Version35_Decision_Packet.md`）——スマホからの実送信に必要
-- 「現在退避中の16件」の実体確認: Owner確認事項（ARC-PM-014、`Version35_Decision_Packet.md`）
+- Program B（Mobile Ingress）クラウドActivation Gate: ローカルMVPは完成済み（Version35〜37）。vendor選定（ADR 0064はCloudflare Workersを暫定候補と仮置きのみ）・実デプロイ・cost上限確定はOwner確認事項（`Version37_Decision_Packet.md`）待ち
+- `MOBILE_INGRESS_HOST`のLAN公開＋`MOBILE_INGRESS_API_TOKEN`設定の有効化: Owner確認事項（確認事項3、`Version35_Decision_Packet.md`）——スマホからの実送信に必要。認証機構は実装済み（fail-closed、ADR 0066）
+- 実際の16件の取り込み: Owner自身が`pnpm import-pending-logs`を実行（Importerは実装済み、ADR 0067）
 - `STUDY_TIMER_API_TOKEN`と実timer疎通: Owner作業
 - StudyLog配線: StudySessionとのmodel判断待ち
 

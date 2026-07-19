@@ -46,6 +46,10 @@ const envSchema = z.object({
   // こちらは「変更しない限り最も閉じた既定値のまま」というopt-in設計）。
   MOBILE_INGRESS_PORT: z.coerce.number().int().positive().default(3941),
   MOBILE_INGRESS_HOST: z.string().default('127.0.0.1'),
+  // Version37、Owner 2026-07-20指示書。MOBILE_INGRESS_HOSTを127.0.0.1
+  // 以外へ変更する場合は必須（fail-closed、`validateExposureConfig()`）。
+  // 既定のloopback運用では未設定のままでよい。
+  MOBILE_INGRESS_API_TOKEN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
