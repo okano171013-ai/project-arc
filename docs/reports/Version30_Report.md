@@ -1,5 +1,7 @@
 # Version30 Report: Remote MCP OAuth本番移行準備・記録整合
 
+commit: `f3cb3e6`
+
 ## 1. Version概要
 
 PM Review（2026-07-19）がP0として指摘したARC-PM-001（公開Remote MCP

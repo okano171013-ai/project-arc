@@ -4,7 +4,7 @@
 
 - Version / 日付: Version30 / 2026-07-19
 - 担当エンジン: Claude Code
-- Git commit / tag: `docs/reports/Version30_Report.md`参照（本Feedback作成時点でコミット前のため、後続コミットでhashを追記）
+- Git commit / tag: `f3cb3e6`
 - 対応Issue / 関連Report: ARC-PM-001, ARC-PM-003（解決） / `docs/reports/Version30_Report.md`
 - 状態: Complete
 
@@ -112,7 +112,7 @@ ADR 0051の記録訂正、PM Status更新、activation checklist整備。
 ## 完了宣言
 
 - [x] Report、Feedback、Roadmap、PM Status、Open Issuesが同じ事実を示す
-- [ ] commit / tagを記録した（本コミット後、follow-upコミットでhashを追記）
+- [x] commit / tagを記録した
 - [x] 未実行テストを成功扱いしていない（本番`.env`反映は「未実施」と明記）
 - [x] Owner確認事項を通常タスクへ埋没させていない（9章で分離）
 - [x] 次担当者がこの文書だけで再開できる（8章に依存関係付きで記載）
