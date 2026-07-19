@@ -1,5 +1,16 @@
 # ARCからの最新指示書
 
+## 未処理の正式優先指示（2026-07-19）
+
+**Claude Code / Codex は着手前に必ず次を全文確認してください。**
+
+- [`docs/project-management/OWNER_PRIORITY_PROGRAMS_2026-07-19.md`](../project-management/OWNER_PRIORITY_PROGRAMS_2026-07-19.md)
+- 補助資料：[`docs/project-management/CODEX_FAILURE_REVIEW_2026-07-19.md`](../project-management/CODEX_FAILURE_REVIEW_2026-07-19.md)
+- 導入コミット：`980417d`
+
+現在のOwner最優先事項は、(1) Ownerが日常的に介入しなくてもARC・Claude Code・Codexが安全に共同開発できる環境、(2) PC停止中でもスマホからDaily/Life LogをProject ARCへ保存できる環境、の2件です。Version30完了後は、上記文書の統合ロードマップと安全ゲートに従って、Version31以降の計画・問題整理・安全な工程を進めてください。Remote MCPの実データがこの実行環境から読めなくても、このGit管理された正式指示を未受領扱いにして停止しないでください。費用・秘密情報・本番変更・外部公開変更・不可逆操作・Constitution/Principles変更だけをOwner確認事項とし、それ以外は既存の承認ポリシーに従って継続してください。
+
+
 Owner: ARC（ChatGPT）から新しいVersionのテーマ・指示が来たら、
 このファイルの中身をまるごと置き換えてください。次にClaude Codeが
 このプロジェクトを開いたとき、このファイルを確認して着手します。
