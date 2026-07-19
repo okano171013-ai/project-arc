@@ -30,20 +30,22 @@ Version2以降（外部サービス連携、企業研究、家計管理等）は
 ## セットアップ
 
 ```bash
-# 依存関係のインストール
+# 依存関係のインストール（Supabase CLIはdevDependency経由でpnpmから実行）
 pnpm install
 
-# ローカルSupabaseスタックの起動（要 Supabase CLI）
-supabase start
+# ローカルSupabaseスタックの起動（要Docker）
+pnpm db:start
 
-# .env を作成し、supabase start の出力から
-# SUPABASE_URL / SUPABASE_ANON_KEY を設定する
+# .env を作成し、上記コマンドの出力から
+# SUPABASE_URL(=API URL) / SUPABASE_ANON_KEY を設定する
 cp .env.example .env
 
-# スキーマ適用
-# supabase/migrations/ に src/infrastructure/db/schema.sql をコピーしてから
-supabase db reset
+# スキーマ適用（supabase/migrations/ 配下のマイグレーションを実行）
+pnpm db:reset
 ```
+
+スキーマ定義の正は `src/infrastructure/db/schema.sql`。変更する際は
+`supabase/migrations/`にも同内容のマイグレーションを追加すること。
 
 ## よく使うコマンド
 
@@ -54,6 +56,10 @@ pnpm typecheck       # 型チェック
 pnpm build           # ビルド
 pnpm reflect         # 今日の振り返りをCLIで記録（InMemory実行、既定）
 pnpm reflect --db=supabase   # Supabase接続で記録
+
+pnpm db:start        # ローカルSupabaseスタック起動（要Docker）
+pnpm db:reset        # マイグレーション適用（supabase/migrations/を再適用）
+pnpm db:stop         # ローカルSupabaseスタック停止
 ```
 
 ## ディレクトリ構成
