@@ -1,4 +1,4 @@
-import type { BridgeLogType } from './BridgeLogType.js';
+import type { BridgeLogType } from '../../../domain/value-objects/BridgeLogType.js';
 import type { ReflectionRepository } from '../../ports/ReflectionRepository.js';
 import type { MemoryRepository } from '../../ports/MemoryRepository.js';
 import type { InventoryRepository } from '../../ports/InventoryRepository.js';
@@ -11,6 +11,11 @@ import type { ExternalSourceRepository } from '../../ports/ExternalSourceReposit
 import type { ExternalKnowledgeRepository } from '../../ports/ExternalKnowledgeRepository.js';
 import type { ExternalKnowledge, ExternalKnowledgeStatus } from '../../../domain/entities/ExternalKnowledge.js';
 import type { ExternalSourceType } from '../../../domain/entities/ExternalSource.js';
+import type { MealLogRepository } from '../../ports/MealLogRepository.js';
+import type { NutritionLogRepository } from '../../ports/NutritionLogRepository.js';
+import type { WeightLogRepository } from '../../ports/WeightLogRepository.js';
+import type { FinanceLogRepository } from '../../ports/FinanceLogRepository.js';
+import type { StudySessionRepository } from '../../ports/StudySessionRepository.js';
 
 import {
   serializeReflection,
@@ -23,6 +28,11 @@ import {
   serializeThirdPersonEvaluation,
   serializeExternalSource,
   serializeExternalKnowledge,
+  serializeMealLog,
+  serializeNutritionLog,
+  serializeWeightLog,
+  serializeFinanceLog,
+  serializeStudySession,
 } from '../../serializers.js';
 
 const REFLECTION_FETCH_LIMIT = 3650; // GetTimelineUseCaseと同じ理由（ADR 0009）
@@ -72,6 +82,11 @@ const ALL_BRIDGE_LOG_TYPES: BridgeLogType[] = [
   'ThirdPersonEvaluation',
   'ExternalSource',
   'ExternalKnowledge',
+  'MealLog',
+  'NutritionLog',
+  'WeightLog',
+  'FinanceLog',
+  'StudySession',
 ];
 
 /**
@@ -96,6 +111,11 @@ export class ExportLogsUseCase {
     private readonly thirdPersonEvaluationRepository: ThirdPersonEvaluationRepository,
     private readonly externalSourceRepository: ExternalSourceRepository,
     private readonly externalKnowledgeRepository: ExternalKnowledgeRepository,
+    private readonly mealLogRepository: MealLogRepository,
+    private readonly nutritionLogRepository: NutritionLogRepository,
+    private readonly weightLogRepository: WeightLogRepository,
+    private readonly financeLogRepository: FinanceLogRepository,
+    private readonly studySessionRepository: StudySessionRepository,
   ) {}
 
   async execute(input: ExportLogsInput = {}): Promise<ExportLogsOutput> {
@@ -159,6 +179,26 @@ export class ExportLogsUseCase {
         const items = await this.externalKnowledgeRepository.findAll();
         const filtered = this.filterKnowledge(items, filters);
         return filtered.map(serializeExternalKnowledge);
+      }
+      case 'MealLog': {
+        const items = await this.mealLogRepository.findAll();
+        return items.map(serializeMealLog);
+      }
+      case 'NutritionLog': {
+        const items = await this.nutritionLogRepository.findAll();
+        return items.map(serializeNutritionLog);
+      }
+      case 'WeightLog': {
+        const items = await this.weightLogRepository.findAll();
+        return items.map(serializeWeightLog);
+      }
+      case 'FinanceLog': {
+        const items = await this.financeLogRepository.findAll();
+        return items.map(serializeFinanceLog);
+      }
+      case 'StudySession': {
+        const items = await this.studySessionRepository.findAll();
+        return items.map(serializeStudySession);
       }
       default: {
         const exhaustive: never = type;

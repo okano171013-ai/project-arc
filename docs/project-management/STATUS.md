@@ -1,32 +1,40 @@
 # Project ARC — PM Status
 
-最終監査日: 2026-07-19（Version34時点に更新）  
-基準HEAD: `39e446a`（Version34）  
+最終監査日: 2026-07-19（Version35時点に更新）  
+基準HEAD: Version35コミット（`docs/reports/Version35_Report.md`参照）  
 作業ツリー: `.claude/settings.local.json`のみ未追跡（ローカル設定、対象外）。
 
 ## 5分サマリー
 
-Version1〜34まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durability、Program A（DevelopmentGrant・AgentTask、読み取り専用公開済み）まで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
+Version1〜35まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durability、Program A（読み取り専用公開）、**Program B Mobile Ingressローカルモデル**まで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
 
-Version30でRemote MCP OAuthの本番移行準備を完了（**本番`.env`反映はOwner Action待ち**）。Version31でdata foundation（atomic書き込み・汎用backup/restore・retention・restore drill）を完了し、ARC-PM-002を解決した。Version32でProgram A/B着手前ADR6本すべて（0058〜0063）が出揃った。Version33でDevelopmentGrant・AgentTask Entityを実装。Version34で`agent_task_list`・`development_grant_list`を**読み取り専用**でMCP Tool・HTTP Route公開した（**write操作はOAuth本番有効化＝ARC-PM-001完了後の別Versionへ**、脅威モデル7章参照）。
+Owner優先順位（2026-07-19）により、Version35からProgram B
+（Mobile Daily Capture）を最優先で進めた。Architecture Gate論点
+（無料枠優先・月額上限0円を初期既定、ADR 0064）を整理し、Mobile
+Ingress（受信・idempotency・競合検出・待機/失敗状態）のデータ契約
+（ADR 0065）を確定、**完全ローカルのMVPとして実装**した
+（`pnpm mobile-ingress` + `pnpm mobile-sync`）。実機で
+受信→再送無視→sync→競合検出→Owner確認による解決、の一連を確認
+済み。**クラウド契約・課金・本番公開・秘密情報設定は一切実施して
+いない**（Owner指示通り）。
 
-**次はWrite操作の権限境界設計（ARC-PM-001完了が前提）、または
-DevelopmentGrantの初回発行（Owner確認）**。Program B（Mobile Daily
-Capture）はADR 0062のArchitecture Gate（cloud候補・cost上限のOwner
-確認）待ちのまま。
+Owner向け判断事項は`docs/project-management/
+Version35_Decision_Packet.md`に集約した。
 
 ## 現在の進捗
 
 | 項目 | 状態 |
 |---|---|
-| Version1〜33 | 完了 |
-| Version34 | 完了（`agent_task_list`・`development_grant_list`を読み取り専用でMCP Tool・HTTP Route公開） |
-| Typecheck / Lint | 2026-07-19合格（Version34時点で再確認） |
+| Version1〜34 | 完了 |
+| Version35 | 完了（Program B Architecture Gate整理、Mobile Ingressデータ契約確定、ローカルMVP実装・実機確認） |
+| Typecheck / Lint | 2026-07-19合格（Version35時点で再確認） |
 | Build | 不合格。TS2742と`dist`書込競合（Version31以降スコープ外、ARC-PM-005として継続） |
-| Test | Version34時点573件合格 |
-| Remote MCP | 認証の実装・テストは完備（Version22）。**本番は今なお無認証**（ADR 0051の「有効化した」という記録は誤りだったとVersion30で判明、訂正済み）。MCP Tool数24→26（Version34） |
-| Program A | DevelopmentGrant・AgentTaskが`agent_task_list`・`development_grant_list`経由でARCから読み取り可能。write操作（claim/heartbeat/状態遷移等）は未公開——OAuth本番有効化後の別Versionへ |
-| Data Durability | `pnpm backup create/list/restore`が動作。実機で復元演習（backup→データ削除→restore→内容一致）を確認済み |
+| Test | Version35時点602件合格 |
+| Remote MCP | 認証の実装・テストは完備（Version22）。**本番は今なお無認証**（ADR 0051の「有効化した」という記録は誤りだったとVersion30で判明、訂正済み）。MCP Tool数26（Version34から変化なし——Mobile IngressはRemote MCPの一部ではない） |
+| Program A | DevelopmentGrant・AgentTaskが読み取り専用でARCから確認可能。write操作は未公開（変化なし） |
+| Program B | Mobile Ingress・Sync Workerのローカルモデル完成（`pnpm mobile-ingress`・`pnpm mobile-sync`）。クラウドデプロイ・本番URL公開はActivation Gate待ち |
+| Data Durability | `pnpm backup create/list/restore`が動作。`data/ingress-records.json`も自動的にbackup対象に含まれることを実機で確認済み |
+| Bridge Layer | MealLog/NutritionLog/WeightLog/FinanceLog/StudySessionのImport/Export対応を追加（Version9〜27間のギャップ解消） |
 
 ## Open Issues
 
@@ -43,6 +51,7 @@ Capture）はADR 0062のArchitecture Gate（cloud候補・cost上限のOwner
 | ARC-PM-011 | P2 | ADR status・形式不統一 | ADR indexとtemplate |
 | ARC-PM-012 | P2 | AGENTS / CLAUDE重複、Claude偏重 | 共通規約へ集約 |
 | ARC-PM-013 | P2 | `apiKeyAuth.ts`（ARC Connector）が非timing-safe比較 | Version30 security reviewでの観察。ローカル専用のため実害は限定的。次回機会に`timingSafeEqual`化を検討 |
+| ARC-PM-014 | P2 | 「現在退避中の16件」の実体不明 | Version35でOwner指示にあった16件のimport対象を全リポジトリ検索したが該当データ・形式仕様を発見できず。`Version35_Decision_Packet.md`でOwner確認事項として提起済み。判明次第、既存Bridge Layer（`ImportLogsUseCase`）で取り込む方針は決定済み（ADR 0065） |
 
 解決済み（Open Issuesから除外）：
 - **ARC-PM-003**（Claude許可設定の`rm -rf data`）：OwnerがWindowsローカル側で該当許可2件を除去し、JSON正常性を確認済み（Version30、2026-07-19）。
@@ -50,18 +59,21 @@ Capture）はADR 0062のArchitecture Gate（cloud候補・cost上限のOwner
 
 ## 現在の目標・次のマイルストーン
 
-**Stability Gate**: 残りARC-PM-005〜010を閉じる。ARC-PM-001は本番反映（Owner Action）のみ残存、ARC-PM-002〜004は解消済み。外部公開、認証、秘密情報、データ削除はOwner承認が必要。Version32以降はOwner Priority Programsに従いProgram A/Bへ移行する（Architecture Gateでcloud候補・cost上限をOwner確認してから実装着手）。
+**Program B**: Architecture Gate論点整理（ADR 0064）とMobile Ingressデータ契約（ADR 0065）は完了。ローカルMVP（`pnpm mobile-ingress` / `pnpm mobile-sync`）を実装・実機確認済み。次はVersion36として同じローカルMVPの完成度を上げる（Owner指示により継続可）。クラウドへのActivation Gate（vendor選定・実デプロイ・本番URL公開）はOwner確認事項（`Version35_Decision_Packet.md`）待ちで、契約・課金・秘密情報設定は未実施のまま凍結する。
+
+**Stability Gate**: 残りARC-PM-005〜010を閉じる。ARC-PM-001は本番反映（Owner Action）のみ残存、ARC-PM-002〜004は解消済み。外部公開、認証、秘密情報、データ削除はOwner承認が必要。
 
 ## 技術的負債
 
 - P0: なし（ARC-PM-002は解決、ARC-PM-001は本番反映のみ残存）
 - P1: build、契約同期、巨大module、model重複、release管理、文書正本
-- P2: 命名・template・歴史資料、Docker/Supabase説明、apiKeyAuthのtiming-safe化、Entity行レベルschemaVersion
+- P2: 命名・template・歴史資料、Docker/Supabase説明、apiKeyAuthのtiming-safe化、Entity行レベルschemaVersion、「16件」の実体不明（ARC-PM-014）
 
 ## 停止中タスク
 
 - OAuth本番有効化: 準備完了（Version30）。Owner承認と接続再設定待ち——`docs/setup/remote-mcp-oauth-migration.md`のチェックリストで一度で実行できる
-- Program B（Mobile Ingress）実装: Architecture Gate（cloud候補・cost上限・data保管地域のOwner確認）待ち——ADR 0059はProposedで設計のみ完了
+- Program B（Mobile Ingress）クラウドActivation Gate: ローカルMVPは完成済み（Version35）。vendor選定（ADR 0064はCloudflare Workersを暫定候補と仮置きのみ）・実デプロイ・cost上限確定はOwner確認事項（`Version35_Decision_Packet.md`）待ち
+- 「現在退避中の16件」の実体確認: Owner確認事項（ARC-PM-014、`Version35_Decision_Packet.md`）
 - `STUDY_TIMER_API_TOKEN`と実timer疎通: Owner作業
 - StudyLog配線: StudySessionとのmodel判断待ち
 

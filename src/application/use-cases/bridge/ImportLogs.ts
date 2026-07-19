@@ -1,4 +1,4 @@
-import type { BridgeLogType } from './BridgeLogType.js';
+import type { BridgeLogType } from '../../../domain/value-objects/BridgeLogType.js';
 import { RecordDailyReflectionUseCase } from '../reflection/RecordDailyReflection.js';
 import { AddMemoryEntryUseCase } from '../memory/AddMemoryEntry.js';
 import { AddInventoryItemUseCase } from '../inventory/AddInventoryItem.js';
@@ -9,6 +9,11 @@ import { AddChallengeLogUseCase } from '../challenge/AddChallengeLog.js';
 import { AddThirdPersonEvaluationUseCase } from '../evaluation/AddThirdPersonEvaluation.js';
 import { AddExternalSourceUseCase } from '../external-source/AddExternalSource.js';
 import { AddExternalKnowledgeUseCase } from '../external-knowledge/AddExternalKnowledge.js';
+import { AddMealLogUseCase } from '../meal/AddMealLog.js';
+import { AddNutritionLogUseCase } from '../nutrition/AddNutritionLog.js';
+import { AddWeightLogUseCase } from '../weight/AddWeightLog.js';
+import { AddFinanceLogUseCase } from '../finance/AddFinanceLog.js';
+import { RecordStudySessionUseCase } from '../study-session/RecordStudySession.js';
 
 import type { ReflectionRepository } from '../../ports/ReflectionRepository.js';
 import type { MemoryRepository } from '../../ports/MemoryRepository.js';
@@ -20,6 +25,11 @@ import type { ChallengeLogRepository } from '../../ports/ChallengeLogRepository.
 import type { ThirdPersonEvaluationRepository } from '../../ports/ThirdPersonEvaluationRepository.js';
 import type { ExternalSourceRepository } from '../../ports/ExternalSourceRepository.js';
 import type { ExternalKnowledgeRepository } from '../../ports/ExternalKnowledgeRepository.js';
+import type { MealLogRepository } from '../../ports/MealLogRepository.js';
+import type { NutritionLogRepository } from '../../ports/NutritionLogRepository.js';
+import type { WeightLogRepository } from '../../ports/WeightLogRepository.js';
+import type { FinanceLogRepository } from '../../ports/FinanceLogRepository.js';
+import type { StudySessionRepository } from '../../ports/StudySessionRepository.js';
 
 export interface ImportLogEntry {
   type: BridgeLogType;
@@ -76,6 +86,11 @@ export class ImportLogsUseCase {
     private readonly thirdPersonEvaluationRepository: ThirdPersonEvaluationRepository,
     private readonly externalSourceRepository: ExternalSourceRepository,
     private readonly externalKnowledgeRepository: ExternalKnowledgeRepository,
+    private readonly mealLogRepository: MealLogRepository,
+    private readonly nutritionLogRepository: NutritionLogRepository,
+    private readonly weightLogRepository: WeightLogRepository,
+    private readonly financeLogRepository: FinanceLogRepository,
+    private readonly studySessionRepository: StudySessionRepository,
   ) {}
 
   async execute(input: ImportLogsInput): Promise<ImportLogsOutput> {
@@ -172,6 +187,41 @@ export class ImportLogsUseCase {
           entry.data as unknown as Parameters<typeof useCase.execute>[0],
         );
         return result.knowledge.id;
+      }
+      case 'MealLog': {
+        const useCase = new AddMealLogUseCase(this.mealLogRepository);
+        const result = await useCase.execute(
+          entry.data as unknown as Parameters<typeof useCase.execute>[0],
+        );
+        return result.log.id;
+      }
+      case 'NutritionLog': {
+        const useCase = new AddNutritionLogUseCase(this.nutritionLogRepository);
+        const result = await useCase.execute(
+          entry.data as unknown as Parameters<typeof useCase.execute>[0],
+        );
+        return result.log.id;
+      }
+      case 'WeightLog': {
+        const useCase = new AddWeightLogUseCase(this.weightLogRepository);
+        const result = await useCase.execute(
+          entry.data as unknown as Parameters<typeof useCase.execute>[0],
+        );
+        return result.log.id;
+      }
+      case 'FinanceLog': {
+        const useCase = new AddFinanceLogUseCase(this.financeLogRepository);
+        const result = await useCase.execute(
+          entry.data as unknown as Parameters<typeof useCase.execute>[0],
+        );
+        return result.log.id;
+      }
+      case 'StudySession': {
+        const useCase = new RecordStudySessionUseCase(this.studySessionRepository);
+        const result = await useCase.execute(
+          entry.data as unknown as Parameters<typeof useCase.execute>[0],
+        );
+        return result.session.id;
       }
       default: {
         const exhaustive: never = entry.type;

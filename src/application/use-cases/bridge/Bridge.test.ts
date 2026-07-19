@@ -12,6 +12,11 @@ import type { ChallengeLogRepository } from '../../ports/ChallengeLogRepository.
 import type { ThirdPersonEvaluationRepository } from '../../ports/ThirdPersonEvaluationRepository.js';
 import type { ExternalSourceRepository } from '../../ports/ExternalSourceRepository.js';
 import type { ExternalKnowledgeRepository } from '../../ports/ExternalKnowledgeRepository.js';
+import type { MealLogRepository } from '../../ports/MealLogRepository.js';
+import type { NutritionLogRepository } from '../../ports/NutritionLogRepository.js';
+import type { WeightLogRepository } from '../../ports/WeightLogRepository.js';
+import type { FinanceLogRepository } from '../../ports/FinanceLogRepository.js';
+import type { StudySessionRepository } from '../../ports/StudySessionRepository.js';
 
 import type { MemoryEntry } from '../../../domain/entities/MemoryEntry.js';
 import type { InventoryItem } from '../../../domain/entities/InventoryItem.js';
@@ -22,6 +27,11 @@ import type { ChallengeLog } from '../../../domain/entities/ChallengeLog.js';
 import type { ThirdPersonEvaluation } from '../../../domain/entities/ThirdPersonEvaluation.js';
 import type { ExternalSource } from '../../../domain/entities/ExternalSource.js';
 import type { ExternalKnowledge } from '../../../domain/entities/ExternalKnowledge.js';
+import type { MealLog } from '../../../domain/entities/MealLog.js';
+import type { NutritionLog } from '../../../domain/entities/NutritionLog.js';
+import type { WeightLog } from '../../../domain/entities/WeightLog.js';
+import type { FinanceLog } from '../../../domain/entities/FinanceLog.js';
+import type { StudySession } from '../../../domain/entities/StudySession.js';
 
 class FakeMemoryRepository implements MemoryRepository {
   store = new Map<string, MemoryEntry>();
@@ -143,6 +153,56 @@ class FakeExternalKnowledgeRepository implements ExternalKnowledgeRepository {
   }
 }
 
+class FakeMealLogRepository implements MealLogRepository {
+  store = new Map<string, MealLog>();
+  async save(l: MealLog): Promise<void> {
+    this.store.set(l.id, l);
+  }
+  async findAll(): Promise<MealLog[]> {
+    return [...this.store.values()];
+  }
+}
+
+class FakeNutritionLogRepository implements NutritionLogRepository {
+  store = new Map<string, NutritionLog>();
+  async save(l: NutritionLog): Promise<void> {
+    this.store.set(l.id, l);
+  }
+  async findAll(): Promise<NutritionLog[]> {
+    return [...this.store.values()];
+  }
+}
+
+class FakeWeightLogRepository implements WeightLogRepository {
+  store = new Map<string, WeightLog>();
+  async save(l: WeightLog): Promise<void> {
+    this.store.set(l.id, l);
+  }
+  async findAll(): Promise<WeightLog[]> {
+    return [...this.store.values()];
+  }
+}
+
+class FakeFinanceLogRepository implements FinanceLogRepository {
+  store = new Map<string, FinanceLog>();
+  async save(l: FinanceLog): Promise<void> {
+    this.store.set(l.id, l);
+  }
+  async findAll(): Promise<FinanceLog[]> {
+    return [...this.store.values()];
+  }
+}
+
+class FakeStudySessionRepository implements StudySessionRepository {
+  store = new Map<string, StudySession>();
+  async save(s: StudySession): Promise<void> {
+    this.store.set(s.id, s);
+  }
+  async findAll(): Promise<StudySession[]> {
+    return [...this.store.values()];
+  }
+}
+
 function buildUseCases() {
   const reflectionRepo = new InMemoryReflectionRepository();
   const memoryRepo = new FakeMemoryRepository();
@@ -154,6 +214,11 @@ function buildUseCases() {
   const evaluationRepo = new FakeThirdPersonEvaluationRepository();
   const sourceRepo = new FakeExternalSourceRepository();
   const knowledgeRepo = new FakeExternalKnowledgeRepository();
+  const mealRepo = new FakeMealLogRepository();
+  const nutritionRepo = new FakeNutritionLogRepository();
+  const weightRepo = new FakeWeightLogRepository();
+  const financeRepo = new FakeFinanceLogRepository();
+  const studySessionRepo = new FakeStudySessionRepository();
 
   const importLogs = new ImportLogsUseCase(
     reflectionRepo,
@@ -166,6 +231,11 @@ function buildUseCases() {
     evaluationRepo,
     sourceRepo,
     knowledgeRepo,
+    mealRepo,
+    nutritionRepo,
+    weightRepo,
+    financeRepo,
+    studySessionRepo,
   );
   const exportLogs = new ExportLogsUseCase(
     reflectionRepo,
@@ -178,12 +248,17 @@ function buildUseCases() {
     evaluationRepo,
     sourceRepo,
     knowledgeRepo,
+    mealRepo,
+    nutritionRepo,
+    weightRepo,
+    financeRepo,
+    studySessionRepo,
   );
 
   return {
     importLogs,
     exportLogs,
-    repos: { memoryRepo, skinRepo, purchaseRepo, sourceRepo, knowledgeRepo },
+    repos: { memoryRepo, skinRepo, purchaseRepo, sourceRepo, knowledgeRepo, mealRepo, nutritionRepo, weightRepo, financeRepo, studySessionRepo },
   };
 }
 
@@ -270,6 +345,53 @@ describe('ImportLogs', () => {
     });
     expect(results[0]?.ok).toBe(false);
     expect(results[0]?.error).toMatch(/ExternalSource not found/);
+  });
+
+  it('Version35で追加したMealLog/NutritionLog/WeightLog/FinanceLog/StudySessionをtype経由でインポートできる', async () => {
+    const { results } = await useCases.importLogs.execute({
+      logs: [
+        { type: 'MealLog', data: { record: { occurredAt: '2026-07-19T12:00:00.000Z', items: ['米', '味噌汁'] } } },
+        {
+          type: 'NutritionLog',
+          data: {
+            record: {
+              mealLogId: 'meal-1',
+              calories: 500,
+              proteinG: 20,
+              fatG: 10,
+              carbohydrateG: 60,
+              fiberG: 3,
+              saltG: 2,
+              estimated: true,
+              basis: 'ARCによる推定',
+              confidence: 'medium',
+            },
+          },
+        },
+        { type: 'WeightLog', data: { record: { measuredAt: '2026-07-19T07:00:00.000Z', weightKg: 65 } } },
+        { type: 'FinanceLog', data: { record: { occurredAt: '2026-07-19', type: 'Expense', category: '食費', amount: 1000 } } },
+        {
+          type: 'StudySession',
+          data: {
+            record: {
+              sessionId: 'bridge-test-session-1',
+              subject: '行政法',
+              startedAt: '2026-07-19T09:00:00.000Z',
+              endedAt: '2026-07-19T09:30:00.000Z',
+              durationMs: 30 * 60 * 1000,
+              source: 'bridge-import-test',
+              clientCreatedAt: '2026-07-19T09:30:05.000Z',
+            },
+          },
+        },
+      ],
+    });
+    expect(results.every((r) => r.ok)).toBe(true);
+    expect(useCases.repos.mealRepo.store.size).toBe(1);
+    expect(useCases.repos.nutritionRepo.store.size).toBe(1);
+    expect(useCases.repos.weightRepo.store.size).toBe(1);
+    expect(useCases.repos.financeRepo.store.size).toBe(1);
+    expect(useCases.repos.studySessionRepo.store.size).toBe(1);
   });
 });
 
@@ -387,5 +509,34 @@ describe('ExportLogs', () => {
       sourceType: 'book',
     });
     expect(logs).toHaveLength(1);
+  });
+
+  it('Version35で追加したMealLog等をExportできる（インポートしたものがそのまま出力される）', async () => {
+    await useCases.importLogs.execute({
+      logs: [
+        { type: 'WeightLog', data: { record: { measuredAt: '2026-07-19T07:00:00.000Z', weightKg: 65 } } },
+        {
+          type: 'StudySession',
+          data: {
+            record: {
+              sessionId: 'bridge-export-test-session-1',
+              subject: '民法',
+              startedAt: '2026-07-19T10:00:00.000Z',
+              endedAt: '2026-07-19T10:45:00.000Z',
+              durationMs: 45 * 60 * 1000,
+              source: 'bridge-export-test',
+              clientCreatedAt: '2026-07-19T10:45:05.000Z',
+            },
+          },
+        },
+      ],
+    });
+
+    const weightExport = await useCases.exportLogs.execute({ type: 'WeightLog' });
+    expect(weightExport.logs).toHaveLength(1);
+    expect((weightExport.logs[0]?.data as { record: { weightKg: number } }).record.weightKg).toBe(65);
+
+    const studySessionExport = await useCases.exportLogs.execute({ type: 'StudySession' });
+    expect(studySessionExport.logs).toHaveLength(1);
   });
 });

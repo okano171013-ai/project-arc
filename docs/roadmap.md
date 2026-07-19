@@ -76,10 +76,29 @@ ADR 0062 Cloud Provider比較、ADR 0063 Mobile Sync/Idempotency）を
 操作できる書き込み経路」を開発プロセス自体に持ち込むため
 （`docs/security/remote-mcp-threat-model.md`7章）。
 
-**Version35以降**：write操作の権限境界設計はARC-PM-001
-（OAuth本番有効化）の完了が前提条件。それまでは、
-DevelopmentGrantの初回発行（Owner確認）や、Program Bの
-Architecture Gate論点の整理を先行させる。
+**Version35は完了済み**：Owner優先順位（2026-07-19）により、
+write操作の権限境界設計（ARC-PM-001完了待ち）よりProgram B
+（Mobile Daily Capture）を優先した。Architecture Gate論点整理
+（無料枠優先のcloud比較、月額上限0円を初期既定、ADR 0064）と
+Mobile Ingressデータ契約（受信・idempotency・競合検出・待機/
+失敗状態、ADR 0065）を確定し、**完全ローカルのMVP**として
+`IngressRecord`Entity・`pnpm mobile-ingress`（受信サーバー、
+127.0.0.1限定）・`pnpm mobile-sync`（sync/list/resolve/retry CLI）を
+実装、実機で受信→再送無視→sync→競合検出→Owner解決の一連を
+確認した。あわせてBridge Layer（Version9）をMealLog/NutritionLog/
+WeightLog/FinanceLog/StudySessionへ拡張し（Version9〜27間の
+ギャップ解消）、Mobile IngressのCanonicalizeが既存Import経路を
+再利用できるようにした。クラウド契約・課金・本番公開・秘密情報
+設定は一切実施していない。Owner向け判断事項（cloud vendor
+選定・「現在退避中の16件」の実体確認）は`docs/project-management/
+Version35_Decision_Packet.md`に集約した。詳細は`docs/reports/
+Version35_Report.md`・ADR 0064・0065参照。
+
+**Version36以降**：Owner指示により、Version35の安全な範囲完了を
+受けて同じ条件（設計・調査・文書化・ローカル実装・無料で可逆な
+テストはOwner返信を待たず継続）でMobile Ingressローカル
+MVPの完成度を高める。クラウドへのActivation Gate（vendor実デプロイ・
+本番URL公開）はOwner確認事項が解決してから着手する。
 
 | 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
 |---:|---|---|---|

@@ -203,3 +203,61 @@ write toolを追加することは、Constitution第1条・第2条の観点か�
 ARC-PM-001（OAuth本番有効化）が完了すれば、この2 Toolも自動的に
 認証保護下に入る（`/mcp`エンドポイント全体を保護する設計、5章参照）
 ——追加の個別対応は不要。
+
+## 8. Version35監査：ARC Mobile Ingress（ローカルMVP）
+
+ADR 0064・0065に基づき、Mobile Ingress（`src/infrastructure/http/
+mobileIngress.ts`）・Sync Worker（`pnpm mobile-sync`）のローカルMVP
+を実装した。以下、権限境界・脅威モデルを事前に確認した内容を記録
+する。
+
+### 8.1 公開範囲：`127.0.0.1`限定、トンネル・外部公開なし
+
+`mobileIngress.ts`は`127.0.0.1`にのみbindする（`remoteServer.ts`と
+同じ`node:http`ベースの実装）。**本Versionではngrok/Cloudflare等の
+トンネルを一切張らない**——Remote MCP（1〜7章）とは独立した、別の
+公開面である。同一マシン・同一Wi-Fi内からのみ到達可能なため、
+Remote MCPの脅威モデル（無認証・公開URL漏洩）は本MVPには適用され
+ない。将来Activation Gate（ADR 0064）でクラウドへ実際にデプロイする
+際は、ADR 0064が要求する`strong auth`（OAuth/passkey等）・TLSを
+別途実装し、そのタイミングで本セクションを更新する。
+
+### 8.2 認証を実装しなかった理由（ローカルMVPの範囲内）
+
+`POST /ingress`・`GET /ingress`はいずれも認証を要求しない。理由：
+
+- `127.0.0.1`限定であり、同一マシン上のプロセスまたは同一
+  Wi-Fi内の信頼できるデバイス（Owner本人のスマートフォン）からしか
+  到達できない。
+- 本番相当の認証実装（ADR 0064の`strong auth`要求）を、実際の
+  デプロイ先（Cloudflare Workers等）が確定する前に作ると、
+  デプロイ先のAuth機構（例：Cloudflare Access、Workers自身の
+  検証ロジック）と重複・不整合を起こす可能性がある——認証は
+  Activation Gateで実際のプラットフォームに合わせて実装する
+  （YAGNI、Principle 9）。
+
+### 8.3 書き込み経路の性質：Systemは判断しない設計を維持
+
+`ReceiveIngressRecordUseCase`は、Owner本人（またはOwnerのスマート
+フォン）が明示入力した事実の機械保存のみを行う——受信した内容の
+解釈・分類・確定判断は一切行わない（Constitution第2条）。競合時は
+`Pending`として保持し、Owner確認（`resolve accept|discard`）を経て
+のみCanonicalizeする（Systemが自動で選ばない、ADR 0063・0065）。
+
+### 8.4 データ保持
+
+ローカルMVPでは、Canonicalize後もIngressRecordを削除しない
+（`data/ingress-records.json`にAccepted/Canonicalized/Pending/
+Failed/Discardedの全件が残る）。本番運用時のretention policy
+（Program B文書「最小data、短いretention」要求）は、Activation Gate
+で実際のIngress実装（クラウド側）を設計する際に別途定める——
+ローカルMVPの`data/ingress-records.json`自体は`pnpm backup`
+（ADR 0058）の対象に自動的に含まれるため、データ損失のリスクは
+ない。
+
+### 8.5 結論
+
+ローカルMVPは外部への公開面を一切持たないため、Remote MCPの
+脅威モデル（1〜7章）とは独立した、リスクの低い開発環境である。
+本番デプロイ時は、ADR 0064のActivation Gateで認証・TLS・
+retention policyを確定してから、本セクションを全面的に書き直す。

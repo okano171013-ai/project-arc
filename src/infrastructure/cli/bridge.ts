@@ -13,7 +13,7 @@ import { readFile } from 'node:fs/promises';
 import { argv } from 'node:process';
 import { ImportLogsUseCase } from '../../application/use-cases/bridge/ImportLogs.js';
 import { ExportLogsUseCase } from '../../application/use-cases/bridge/ExportLogs.js';
-import type { BridgeLogType } from '../../application/use-cases/bridge/BridgeLogType.js';
+import type { BridgeLogType } from '../../domain/value-objects/BridgeLogType.js';
 import { JsonFileReflectionRepository } from '../../adapters/repositories/JsonFileReflectionRepository.js';
 import { JsonFileMemoryRepository } from '../../adapters/repositories/JsonFileMemoryRepository.js';
 import { JsonFileInventoryRepository } from '../../adapters/repositories/JsonFileInventoryRepository.js';
@@ -24,6 +24,11 @@ import { JsonFileChallengeLogRepository } from '../../adapters/repositories/Json
 import { JsonFileThirdPersonEvaluationRepository } from '../../adapters/repositories/JsonFileThirdPersonEvaluationRepository.js';
 import { JsonFileExternalSourceRepository } from '../../adapters/repositories/JsonFileExternalSourceRepository.js';
 import { JsonFileExternalKnowledgeRepository } from '../../adapters/repositories/JsonFileExternalKnowledgeRepository.js';
+import { JsonFileMealLogRepository } from '../../adapters/repositories/JsonFileMealLogRepository.js';
+import { JsonFileNutritionLogRepository } from '../../adapters/repositories/JsonFileNutritionLogRepository.js';
+import { JsonFileWeightLogRepository } from '../../adapters/repositories/JsonFileWeightLogRepository.js';
+import { JsonFileFinanceLogRepository } from '../../adapters/repositories/JsonFileFinanceLogRepository.js';
+import { JsonFileStudySessionRepository } from '../../adapters/repositories/JsonFileStudySessionRepository.js';
 
 function line(char = '─', length = 44): string {
   return char.repeat(length);
@@ -40,6 +45,11 @@ function buildUseCases() {
   const thirdPersonEvaluationRepository = new JsonFileThirdPersonEvaluationRepository();
   const externalSourceRepository = new JsonFileExternalSourceRepository();
   const externalKnowledgeRepository = new JsonFileExternalKnowledgeRepository();
+  const mealLogRepository = new JsonFileMealLogRepository();
+  const nutritionLogRepository = new JsonFileNutritionLogRepository();
+  const weightLogRepository = new JsonFileWeightLogRepository();
+  const financeLogRepository = new JsonFileFinanceLogRepository();
+  const studySessionRepository = new JsonFileStudySessionRepository();
 
   return {
     importLogs: new ImportLogsUseCase(
@@ -53,6 +63,11 @@ function buildUseCases() {
       thirdPersonEvaluationRepository,
       externalSourceRepository,
       externalKnowledgeRepository,
+      mealLogRepository,
+      nutritionLogRepository,
+      weightLogRepository,
+      financeLogRepository,
+      studySessionRepository,
     ),
     exportLogs: new ExportLogsUseCase(
       reflectionRepository,
@@ -65,6 +80,11 @@ function buildUseCases() {
       thirdPersonEvaluationRepository,
       externalSourceRepository,
       externalKnowledgeRepository,
+      mealLogRepository,
+      nutritionLogRepository,
+      weightLogRepository,
+      financeLogRepository,
+      studySessionRepository,
     ),
   };
 }

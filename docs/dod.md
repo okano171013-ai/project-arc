@@ -812,3 +812,43 @@ Version28のDoDは全項目達成済み。
 - [x] `.claude/`、認証、外部公開、本番タスク、秘密情報を変更していない
 - [ ] 全Vitest——当該Codex隔離環境では設定ロード前に停止。コミット可能な
       別セッションで全件合格を確認してから完了報告を保存する
+
+Version29完了後、`pnpm test`は別セッションで573件（Version34時点）まで
+全件緑を確認済み。Version30〜34の完了チェックリストは、本ファイルへの
+逐次追記ではなく各`docs/developer-feedback/VersionN_Developer_
+Feedback.md`の「完了宣言」セクションに記録する運用へ移行した
+（ARC-PM-006「Roadmap/README/DoD/Reportsの重複・矛盾」を踏まえ、
+正本を分散させないための判断）。本ファイルはVersion1〜29の履歴と
+DoD基準そのものの定義を保持する。
+
+## Version35完了チェックリスト
+
+- [x] `pnpm test` が全て緑（602件、`IngressRecord`単体テスト11件・
+      `MobileIngress`（Application層）テスト7件・`mobileIngress.ts`
+      HTTPサーバーテスト5件・`mobileSync.ts` CLIテスト4件・Bridge
+      Layer拡張テスト2件を含む）
+- [x] `pnpm typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `IngressRecord` Entity（`Accepted/Canonicalized/Pending/Failed/
+      Discarded`状態機械、circuit breaker）を実装・単体テスト済み
+- [x] `pnpm mobile-ingress`（受信サーバー、127.0.0.1限定）・
+      `pnpm mobile-sync`（sync/list/resolve/retry CLI）を実装・
+      実機確認済み
+- [x] Bridge Layer（Import/Export）をMealLog/NutritionLog/
+      WeightLog/FinanceLog/StudySessionへ拡張済み
+- [x] **実機確認**：受信→idempotent再送→sync→競合検出→Owner解決
+      （accept/discard）→backup自動対象化の一連をコマンドラインから
+      確認済み
+- [x] `serializeIngressRecord`未使用による private field漏洩バグを
+      実機確認で発見・修正済み
+- [x] ADR 0064（Program B Architecture Gate）・ADR 0065（Mobile
+      Ingressデータ契約）を作成済み
+- [x] `docs/security/remote-mcp-threat-model.md`8章を追加済み
+- [x] README / docsに実装との乖離がない
+- [x] `docs/reports/Version35_Report.md`を生成済み（14章構成）
+- [x] `docs/developer-feedback/Version35_Developer_Feedback.md`を生成済み
+- [x] `docs/project-management/Version35_Decision_Packet.md`
+      （Owner向け判断事項の集約）を生成済み
+- [x] クラウド契約・課金・本番公開・秘密情報設定は一切実施していない
+
+Version35のDoDは全項目達成済み。

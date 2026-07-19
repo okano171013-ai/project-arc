@@ -34,6 +34,8 @@
     "checkin-runner": "tsx src/infrastructure/runner/checkInPrompter.ts",
     "runner-control": "tsx src/infrastructure/runner/runnerControlCli.ts",
     "backup": "tsx src/infrastructure/cli/backup.ts",
+    "mobile-ingress": "tsx src/infrastructure/http/mobileIngress.ts",
+    "mobile-sync": "tsx src/infrastructure/cli/mobileSync.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",
     "test:watch": "vitest",

@@ -31,7 +31,7 @@ import { GetTimelineUseCase } from '../../application/use-cases/timeline/GetTime
 import { AddThirdPersonEvaluationUseCase } from '../../application/use-cases/evaluation/AddThirdPersonEvaluation.js';
 import { ImportLogsUseCase } from '../../application/use-cases/bridge/ImportLogs.js';
 import { ExportLogsUseCase } from '../../application/use-cases/bridge/ExportLogs.js';
-import type { BridgeLogType } from '../../application/use-cases/bridge/BridgeLogType.js';
+import type { BridgeLogType } from '../../domain/value-objects/BridgeLogType.js';
 import type { TimelineSource } from '../../domain/value-objects/TimelineEntry.js';
 import { AddExternalSourceUseCase } from '../../application/use-cases/external-source/AddExternalSource.js';
 import { ListExternalSourcesUseCase } from '../../application/use-cases/external-source/ListExternalSources.js';
@@ -279,6 +279,11 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       thirdPersonEvaluationRepository,
       externalSourceRepository,
       externalKnowledgeRepository,
+      mealLogRepository,
+      nutritionLogRepository,
+      weightLogRepository,
+      financeLogRepository,
+      studySessionRepository,
     ),
     exportLogs: new ExportLogsUseCase(
       reflectionRepository,
@@ -291,6 +296,11 @@ export function buildUseCases(options: BuildAppOptions = {}) {
       thirdPersonEvaluationRepository,
       externalSourceRepository,
       externalKnowledgeRepository,
+      mealLogRepository,
+      nutritionLogRepository,
+      weightLogRepository,
+      financeLogRepository,
+      studySessionRepository,
     ),
     addExternalSource: new AddExternalSourceUseCase(externalSourceRepository),
     listExternalSources: new ListExternalSourcesUseCase(externalSourceRepository),

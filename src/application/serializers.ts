@@ -39,6 +39,8 @@ import type { Intervention } from '../domain/entities/Intervention.js';
 import type { InterventionPolicySettings } from '../domain/entities/InterventionPolicySettings.js';
 import type { DevelopmentGrant } from '../domain/entities/DevelopmentGrant.js';
 import type { AgentTask } from '../domain/entities/AgentTask.js';
+import type { StudySession } from '../domain/entities/StudySession.js';
+import type { IngressRecord } from '../domain/entities/IngressRecord.js';
 
 export function serializeReflection(reflection: Reflection) {
   return {
@@ -286,6 +288,28 @@ export function serializeFinanceLog(log: FinanceLog) {
     id: log.id,
     record: log.record,
     createdAt: log.createdAt.toISOString(),
+  };
+}
+
+/** Version35、Bridge Layer拡張。StudySessionは`createdAt`ではなく`storedAt`を持つ（Version27）。 */
+export function serializeStudySession(session: StudySession) {
+  return {
+    id: session.id,
+    record: session.record,
+    storedAt: session.storedAt.toISOString(),
+  };
+}
+
+/** Version35、ADR 0065（Mobile Ingress）。 */
+export function serializeIngressRecord(record: IngressRecord) {
+  return {
+    id: record.id,
+    data: record.data,
+    receivedAt: record.receivedAt.toISOString(),
+    status: record.status,
+    retryCount: record.retryCount,
+    failureReason: record.failureReason,
+    canonicalizedAs: record.canonicalizedAs,
   };
 }
 

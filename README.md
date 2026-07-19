@@ -518,6 +518,12 @@ pnpm run mcp                       # MCPサーバーを起動（stdio、Version1
 pnpm run mcp:remote                # Remote MCPサーバーを起動（Streamable HTTP、Version18、既定ポート3940）。認証なし（ADR 0044）
 pnpm run openapi:generate          # docs/openapi.json を生成（Version18、主要10エンドポイントのみ）
 pnpm run runner                    # Collaboration Runnerを1回実行（Version20、機械的な新着検知のみ、ADR 0046）
+
+pnpm mobile-ingress                 # Mobile Ingress受信サーバーを起動（Version35、127.0.0.1限定、既定ポート3941）。POST /ingressで生活ログを受信、GET /ingressで一覧取得
+pnpm mobile-sync                    # Sync Worker：受信済みAccepted状態のログをlocalへCanonicalize（Version35）
+pnpm mobile-sync list <status>      # IngressRecordを状態別に一覧表示（Accepted/Canonicalized/Pending/Failed/Discarded）
+pnpm mobile-sync resolve <id> accept|discard  # Pending/FailedなIngressRecordをOwnerが解決
+pnpm mobile-sync retry <id>         # Failed状態のIngressRecordを再試行（MAX_RETRY超過後は不可）
 ```
 
 `pnpm run api`起動後の動作確認例（`curl`はGit Bash上で日本語を含む
