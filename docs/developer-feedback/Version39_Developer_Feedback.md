@@ -4,7 +4,7 @@
 
 - Version / 日付: Version39 / 2026-07-20
 - 担当エンジン: Claude Code
-- Git commit / tag: （コミット後の追記コミットで実ハッシュに置き換える）
+- Git commit / tag: `61f0055`
 - 対応Issue / 関連Report: Cloud Quick Capture & PC-off Gap Closure / `docs/reports/Version39_Report.md`
 - 状態: Complete（ローカル・Miniflareエミュレータ検証のみ。実デプロイはOwner確認待ち）
 
@@ -142,7 +142,7 @@ Capability/Gap表と、Canonical Store所在の3案比較ADRを作成する。
 ## 完了宣言
 
 - [x] Report、Feedback、Roadmap、PM Status、Open Issuesが同じ事実を示す
-- [x] commit / tagを記録する（本コミット後の追記コミットで実ハッシュに置き換える）
+- [x] commit / tagを記録した（`61f0055`）
 - [x] 未実行テストを成功扱いしていない（642件+17件全件実行・全件合格を実機で確認）
 - [x] Owner確認事項を通常タスクへ埋没させていない（9章に明記）
 - [x] 次担当者がこの文書だけで再開できる（8章に依存関係付きで記載）

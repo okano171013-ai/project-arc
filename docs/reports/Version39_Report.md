@@ -1,6 +1,6 @@
 # Version39 Report: Cloud Quick Capture & PC-off Gap Closure
 
-commit: （このセクションはコミット後の追記コミットで実ハッシュに置き換える）
+commit: `61f0055`
 
 ## 1. Version概要
 
