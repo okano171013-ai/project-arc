@@ -917,3 +917,42 @@ Version36のDoDは全項目達成済み。
 - [x] クラウド契約・課金・本番公開・秘密情報設定は一切実施していない
 
 Version37のDoDは全項目達成済み。
+
+## Version38完了チェックリスト
+
+- [x] `pnpm test` が全て緑（640件、最小権限GET・NutritionLog・
+      PullCloudIngress・HttpCloudIngressClient・pull設定確認テストを
+      含む）
+- [x] `pnpm cloudflare:test` が全て緑（14件、Miniflare実機、別ゲート）
+- [x] `pnpm typecheck` / `pnpm cloudflare:typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] Cloudflare Worker実装（`cloudflare/src/worker.ts`・
+      `kvIngressRecordRepository.ts`）をMiniflareで実機検証済み
+      （アカウント・ログイン・デプロイなし）
+- [x] 二段階token（DEVICE_TOKEN／PULL_TOKEN）による最小権限read
+      契約を実装・実機確認済み。ローカル版`mobileIngress.ts`にも
+      同じ最小権限ルールを適用
+- [x] `pnpm mobile-sync pull`（`PullCloudIngressUseCase`・
+      `HttpCloudIngressClient`）を実装・テスト済み。idempotency・
+      部分失敗の区別（`failed`/`pulled-ack-failed`）・retention
+      （ack）を検証済み
+- [x] **実機確認**：Miniflareで起動した実Workerと実
+      `pnpm mobile-sync pull`/`sync`を繋いだ手動end-to-end確認
+      （送信→pull→sync→Canonicalize、既存の競合検出がcloud経由でも
+      機能することを確認）
+- [x] NutritionLogのQuick Capture対応を実装・実機確認済み
+      （`mealLogId`手入力、自動推測なし）
+- [x] 無関係な既存バグ（Check-In Prompterの時刻依存フレーキテスト）
+      を発見・修正済み
+- [x] ADR 0069（Cloud Worker実装・Pull/Reconciliation・最小権限
+      read契約）を作成済み
+- [x] `docs/security/remote-mcp-threat-model.md`11章を追加済み
+- [x] README / docsに実装との乖離がない
+- [x] `docs/reports/Version38_Report.md`を生成済み（14章構成）
+- [x] `docs/developer-feedback/Version38_Developer_Feedback.md`を生成済み
+- [x] `docs/project-management/Version38_Activation_Packet.md`
+      （実デプロイの1ページ実行チェックリスト）を生成済み
+- [x] クラウド契約・課金・本番公開・秘密情報設定・認証済みLAN公開の
+      有効化は一切実施していない
+
+Version38のDoDは全項目達成済み。

@@ -1,11 +1,18 @@
 #!/usr/bin/env node
 /**
- * pnpm mobile-sync [sync|list|resolve|retry]（Version35、ADR 0064・0065）
+ * pnpm mobile-sync [sync|list|resolve|retry|pull]（Version35、
+ * ADR 0064・0065。`pull`はVersion38、ADR 0069）
  *
  * Mobile Ingress（`mobileIngress.ts`、127.0.0.1限定）が受信した
  * `Accepted`状態のIngressRecordを、PC起動時にlocalへCanonicalizeする
  * 「Sync Worker」のローカルMVP実装。ADR 0059の設計図
  * 「Sync Worker（PC起動時）」に対応する。
+ *
+ * `pull`はcloud側（Cloudflare Workers等、`cloudflare/src/worker.ts`）
+ * のqueueをローカルへ引き下ろす2段目のTransport hop。
+ * `CLOUD_INGRESS_URL`/`CLOUD_INGRESS_PULL_TOKEN`が未設定の場合は
+ * 明確なエラーで終了する——クラウド未使用のOwnerには一切影響しない
+ * opt-in機能。
  */
 import { buildUseCases } from '../http/server.js';
 import { JsonFileReflectionRepository } from '../../adapters/repositories/JsonFileReflectionRepository.js';
@@ -14,9 +21,13 @@ import { SyncIngressRecordsUseCase } from '../../application/use-cases/mobile-in
 import { ResolveIngressRecordUseCase } from '../../application/use-cases/mobile-ingress/ResolveIngressRecord.js';
 import { RetryFailedIngressRecordUseCase } from '../../application/use-cases/mobile-ingress/RetryFailedIngressRecord.js';
 import { ListIngressRecordsUseCase } from '../../application/use-cases/mobile-ingress/ListIngressRecords.js';
+import { ReceiveIngressRecordUseCase } from '../../application/use-cases/mobile-ingress/ReceiveIngressRecord.js';
+import { PullCloudIngressUseCase } from '../../application/use-cases/mobile-ingress/PullCloudIngress.js';
+import { HttpCloudIngressClient } from '../http/cloudIngressClient.js';
 import type { IngressRecordStatus } from '../../domain/entities/IngressRecord.js';
 import { serializeIngressRecord } from '../../application/serializers.js';
 import { isMainModule } from '../runner/runnerLock.js';
+import { loadEnv } from '../config/env.js';
 
 function buildCommands(dataDir = 'data') {
   const reflectionRepository = new JsonFileReflectionRepository(`${dataDir}/reflections.json`);
@@ -28,7 +39,23 @@ function buildCommands(dataDir = 'data') {
     resolve: new ResolveIngressRecordUseCase(ingressRecordRepository, reflectionRepository),
     retry: new RetryFailedIngressRecordUseCase(ingressRecordRepository),
     list: new ListIngressRecordsUseCase(ingressRecordRepository),
+    receive: new ReceiveIngressRecordUseCase(ingressRecordRepository),
   };
+}
+
+/** テスト用に`CloudIngressClient`実装を差し替えられるようexportする（Version38）。 */
+export function buildPullUseCase(dataDir = 'data', cloudUrl?: string, pullToken?: string): PullCloudIngressUseCase {
+  const { CLOUD_INGRESS_URL, CLOUD_INGRESS_PULL_TOKEN } = loadEnv();
+  const url = cloudUrl ?? CLOUD_INGRESS_URL;
+  const token = pullToken ?? CLOUD_INGRESS_PULL_TOKEN;
+  if (!url || !token) {
+    throw new Error(
+      'pull requires CLOUD_INGRESS_URL and CLOUD_INGRESS_PULL_TOKEN to be set ' +
+        '(cloud Activation Gate not yet configured — see docs/project-management/Version38_Activation_Packet.md)',
+    );
+  }
+  const client = new HttpCloudIngressClient(url, token);
+  return new PullCloudIngressUseCase(client, buildCommands(dataDir).receive);
 }
 
 export async function runMobileSyncCommand(
@@ -59,8 +86,12 @@ export async function runMobileSyncCommand(
       const result = await commands.retry.execute({ id: arg1 });
       return { id: result.record.id, status: result.record.status };
     }
+    case 'pull': {
+      const pull = buildPullUseCase(dataDir);
+      return pull.execute();
+    }
     default:
-      throw new Error('usage: pnpm mobile-sync [sync|list [status]|resolve <id> accept|discard|retry <id>]');
+      throw new Error('usage: pnpm mobile-sync [sync|list [status]|resolve <id> accept|discard|retry <id>|pull]');
   }
 }
 

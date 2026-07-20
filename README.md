@@ -524,9 +524,14 @@ pnpm mobile-sync                    # Sync Worker：受信済みAccepted状態�
 pnpm mobile-sync list <status>      # IngressRecordを状態別に一覧表示（Accepted/Canonicalized/Pending/Failed/Discarded）
 pnpm mobile-sync resolve <id> accept|discard  # Pending/FailedなIngressRecordをOwnerが解決
 pnpm mobile-sync retry <id>         # Failed状態のIngressRecordを再試行（MAX_RETRY超過後は不可）
+pnpm mobile-sync pull               # cloud側queue（Cloudflare Workers等）をローカルへ引き下ろす（Version38、ADR 0069）。CLOUD_INGRESS_URL/CLOUD_INGRESS_PULL_TOKEN未設定なら明確なエラーで終了
 
 pnpm import-pending-logs -- <path> --dry-run  # 退避中ログJSONLファイルをschema検証のみ行う（書き込みなし、Version37、ADR 0067）
 pnpm import-pending-logs -- <path>            # 対応済みtypeの行のみIngressRecordとしてAccept（未対応typeはunsupported_typeとして報告、実データはこのリポジトリに含まれない）
+
+# cloudflare/配下（Version38、ローカルエミュレータのみ、実デプロイなし）
+pnpm cloudflare:typecheck           # cloudflare/tsconfig.json（Workers型定義）でtsc --noEmit
+pnpm cloudflare:test                # Miniflare（実workerdランタイム）でCloudflare Worker実装を実機検証
 ```
 
 `pnpm run api`起動後の動作確認例（`curl`はGit Bash上で日本語を含む

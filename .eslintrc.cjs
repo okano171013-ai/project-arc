@@ -24,5 +24,10 @@ module.exports = {
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/no-explicit-any': 'warn',
   },
-  ignorePatterns: ['dist', 'node_modules', 'coverage'],
+  // cloudflare/はtsconfig.eslint.jsonのproject対象外の別tsconfig
+  // （cloudflare/tsconfig.json、Workers用の型定義）を使う独立した
+  // サブプロジェクトのため、メインのlintからは除外する（Version38）。
+  // 型チェックは`pnpm cloudflare:typecheck`、テストは
+  // `pnpm cloudflare:test`で個別に検証する。
+  ignorePatterns: ['dist', 'node_modules', 'coverage', 'cloudflare'],
 };

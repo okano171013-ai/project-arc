@@ -128,12 +128,32 @@ WeightLog/FinanceLog対応を実装した。クラウド契約・課金・本番
 `Version37_Decision_Packet.md`に集約した。詳細は`docs/reports/
 Version37_Report.md`・ADR 0066〜0068参照。
 
-**Version38以降**：Owner確認事項3（LAN公開＋トークン設定の可否）
-への回答を受けて実地確認（実際のスマホからの送信）を行う。実際の
-16件を`pnpm import-pending-logs`で取り込み、未対応typeの一覧を
-踏まえた新規Entity設計の要否をOwner/ARCと相談する。クラウド
-Activation Gate（vendor実デプロイ・本番URL公開）はOwner確認事項が
-解決してから着手する。
+**Version38は完了済み**：ARCがGit経由で送った指示書（2026-07-20、
+`docs/handoff/archive/Version38_ARC_Brief.md`）に基づき、Program B
+のCloud Activation Gateへ向けた「cloud-readyなローカル実装」を
+行った。Cloudflare Worker実装（`cloudflare/src/worker.ts`・
+`kvIngressRecordRepository.ts`）をCloudflareの公式local emulator
+（Miniflare、実`workerd`ランタイム）で実機検証した——アカウント
+作成・ログイン・デプロイは一切実施していない。二段階token
+（DEVICE_TOKEN／PULL_TOKEN）による最小権限read契約
+（Owner指示「全生活履歴の無制限公開を避ける」への対応、ローカル版
+`mobileIngress.ts`にも同じ最小権限ルールを適用）、
+`pnpm mobile-sync pull`によるcloud→localのpull/reconciliation
+（idempotency・部分失敗の区別・retention込み）、NutritionLogの
+Quick Capture対応を実装した。実際にMiniflareで起動した実Workerと
+実`pnpm mobile-sync pull`/`sync`を繋いだ手動end-to-end確認も実施
+した。副次的に、無関係な既存テスト（Check-In Prompter）の時刻
+依存フレーキネスを発見・修正した。クラウド契約・課金・本番公開・
+秘密情報設定・認証済みLAN公開の有効化は一切実施していない。
+Owner向け判断事項（実デプロイの実行可否）は`docs/project-
+management/Version38_Activation_Packet.md`（1ページの実行
+チェックリスト）に集約した。詳細は`docs/reports/
+Version38_Report.md`・ADR 0069参照。
+
+**Version39以降**：Owner確認事項（LAN公開＋トークン設定の可否、
+実際の16件の取り込み、Cloudflare実デプロイの実行可否）への回答を
+受けて、実地確認・実際のデプロイを行う。cloud側Quick Capture UIの
+要否をOwner/ARCと相談する。
 
 | 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
 |---:|---|---|---|

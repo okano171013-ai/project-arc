@@ -50,6 +50,12 @@ const envSchema = z.object({
   // 以外へ変更する場合は必須（fail-closed、`validateExposureConfig()`）。
   // 既定のloopback運用では未設定のままでよい。
   MOBILE_INGRESS_API_TOKEN: z.string().optional(),
+  // Version38（ADR 0069）。`pnpm mobile-sync pull`がcloud側
+  // （Cloudflare Workers等）のMobile Ingress queueを引き下ろす際の
+  // 接続先。未設定なら`pull`コマンドは明確なエラーで終了する
+  // （クラウド未使用のOwnerには一切影響しないopt-in機能）。
+  CLOUD_INGRESS_URL: z.string().url().optional(),
+  CLOUD_INGRESS_PULL_TOKEN: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

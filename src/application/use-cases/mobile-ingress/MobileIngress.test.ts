@@ -155,6 +155,21 @@ describe('Mobile Ingress (Version35, ADR 0065)', () => {
     expect(records.records[0]?.canonicalizedAs).toBe(saved!.id);
   });
 
+  it('NutritionLog is a supported payloadType and Canonicalizes (Version38)', async () => {
+    await env.receive.execute({
+      idempotencyKey: 'idem-nutrition-1',
+      payloadType: 'NutritionLog',
+      payload: { record: { mealLogId: 'meal-placeholder-id', basis: 'プレースホルダー', estimated: true, confidence: 'low' } },
+      clientCreatedAt: '2026-07-19T21:00:00.000Z',
+    });
+
+    const syncResult = await env.sync.execute();
+    expect(syncResult).toEqual({ canonicalized: 1, pending: 0, failed: 0 });
+
+    const records = await env.list.execute({ status: 'Canonicalized' });
+    expect(records.records.some((r) => r.data.payloadType === 'NutritionLog')).toBe(true);
+  });
+
   it('conflict path: a second Reflection for the same date goes to Pending, not silently overwritten', async () => {
     // 1件目：PC側で直接記録済みという想定（既存データ）。
     await env.reflectionRepo.save(

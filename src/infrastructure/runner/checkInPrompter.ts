@@ -72,10 +72,11 @@ function buildUseCase(dataDir: string): GenerateInterventionsUseCase {
 
 export async function runOnce(
   dataDir = 'data',
+  now: Date = new Date(),
 ): Promise<{ generated: Intervention[]; notificationPath?: string }> {
   const p = paths(dataDir);
   const useCase = buildUseCase(dataDir);
-  const { generated } = await useCase.execute({ now: new Date() });
+  const { generated } = await useCase.execute({ now });
 
   if (generated.length === 0) {
     await appendLog(p.logPath, 'no new interventions generated');

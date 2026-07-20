@@ -231,6 +231,60 @@ describe('ARC Mobile Ingress — auth, rate limit (Version37)', () => {
   });
 });
 
+describe('ARC Mobile Ingress — least privilege GET /ingress (Version38)', () => {
+  const DATA_DIR = 'data/_test-mobile-ingress-least-privilege';
+  let server: Server;
+  let baseUrl: string;
+
+  beforeAll(async () => {
+    await rm(DATA_DIR, { recursive: true, force: true });
+    // rateLimitMaxを高めに設定し、rate limitのテストとは別の関心事
+    // （最小権限）だけを検証する。
+    server = createMobileIngressApp(DATA_DIR, { apiToken: 'least-priv-token', rateLimitMax: 100 });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const address = server.address() as AddressInfo;
+    baseUrl = `http://127.0.0.1:${address.port}`;
+  });
+
+  afterAll(async () => {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await rm(DATA_DIR, { recursive: true, force: true });
+  });
+
+  it('rejects authenticated GET /ingress without idempotencyKey (400, least privilege)', async () => {
+    const res = await fetch(`${baseUrl}/ingress`, { headers: { Authorization: 'Bearer least-priv-token' } });
+    expect(res.status).toBe(400);
+  });
+
+  it('rejects authenticated GET /ingress?status=Accepted without idempotencyKey too', async () => {
+    const res = await fetch(`${baseUrl}/ingress?status=Accepted`, {
+      headers: { Authorization: 'Bearer least-priv-token' },
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it('allows authenticated GET /ingress?idempotencyKey= (own submission status)', async () => {
+    const submit = await fetch(`${baseUrl}/ingress`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer least-priv-token' },
+      body: JSON.stringify({
+        idempotencyKey: 'least-privilege-check',
+        payloadType: 'Reflection',
+        payload: { date: '2026-07-19', record: { proudOf: '最小権限テスト' } },
+        clientCreatedAt: '2026-07-19T21:00:00.000Z',
+      }),
+    });
+    expect([200, 201]).toContain(submit.status);
+
+    const res = await fetch(`${baseUrl}/ingress?idempotencyKey=least-privilege-check`, {
+      headers: { Authorization: 'Bearer least-priv-token' },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { records: unknown[] };
+    expect(body.records).toHaveLength(1);
+  });
+});
+
 describe('validateExposureConfig (Version37)', () => {
   it('does not throw for the default 127.0.0.1 host, with or without a token', () => {
     expect(() => validateExposureConfig('127.0.0.1', undefined)).not.toThrow();

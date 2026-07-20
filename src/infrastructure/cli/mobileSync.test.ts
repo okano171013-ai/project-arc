@@ -39,6 +39,16 @@ describe('mobile-sync CLI', () => {
     await expect(runMobileSyncCommand('resolve', 'some-id', undefined, DATA_DIR)).rejects.toThrow('usage:');
   });
 
+  it('pull requires CLOUD_INGRESS_URL/CLOUD_INGRESS_PULL_TOKEN to be configured (Version38)', async () => {
+    // このサンドボックスに.envは無く、CLOUD_INGRESS_*も未設定のため、
+    // クラウド未使用のOwnerに影響しないopt-in設計を検証する。
+    delete process.env.CLOUD_INGRESS_URL;
+    delete process.env.CLOUD_INGRESS_PULL_TOKEN;
+    await expect(runMobileSyncCommand('pull', undefined, undefined, DATA_DIR)).rejects.toThrow(
+      /CLOUD_INGRESS_URL and CLOUD_INGRESS_PULL_TOKEN/,
+    );
+  });
+
   it('cleans up: no leftover .tmp files after sync writes (atomic writes, ADR 0058)', async () => {
     const repo = new JsonFileIngressRecordRepository(`${DATA_DIR}/ingress-records.json`);
     await new ReceiveIngressRecordUseCase(repo).execute({

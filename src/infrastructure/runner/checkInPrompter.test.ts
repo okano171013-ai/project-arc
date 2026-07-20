@@ -21,19 +21,25 @@ describe('Check-In Prompter', () => {
   });
 
   it('generates an intervention and writes a notification when a check-in is overdue', async () => {
+    // quiet hours（既定23:00-07:00、InterventionPolicySettings）の
+    // 影響を受けないよう、実行時刻に関わらず日中固定の`now`を注入する
+    // （実wall-clockに依存すると、quiet hours帯に実行した場合だけ
+    // 失敗するflaky testになる——実際に2026-07-20 05:xx UTC実行時に
+    // 発覚したバグ、Version38 Report参照）。
+    const fixedNow = new Date('2026-07-20T14:00:00.000Z');
     const checkInRepository = new JsonFileCheckInRepository(path.join(DATA_DIR, 'check-ins.json'));
     await checkInRepository.save(
       CheckIn.create({
         id: 'c-1',
         record: {
-          occurredAt: new Date(Date.now() - 300 * 60 * 1000).toISOString(),
+          occurredAt: new Date(fixedNow.getTime() - 300 * 60 * 1000).toISOString(),
           currentActivity: 'x',
           nextTwoHourGoal: 'y',
         },
       }),
     );
 
-    const result = await runOnce(DATA_DIR);
+    const result = await runOnce(DATA_DIR, fixedNow);
 
     expect(result.generated.length).toBeGreaterThan(0);
     expect(result.notificationPath).toBeDefined();
@@ -44,15 +50,19 @@ describe('Check-In Prompter', () => {
   });
 
   it('writes nothing when no rule fires', async () => {
+    // 同じ理由でquiet hoursの影響を受けない日中固定の`now`を使う
+    // ——「overdueでないため発火しない」ことを検証する意図であり、
+    // 「quiet hoursだから発火しない」との混同を避ける。
+    const fixedNow = new Date('2026-07-20T14:00:00.000Z');
     const checkInRepository = new JsonFileCheckInRepository(path.join(DATA_DIR, 'check-ins.json'));
     await checkInRepository.save(
       CheckIn.create({
         id: 'c-2',
-        record: { occurredAt: new Date().toISOString(), currentActivity: 'x', nextTwoHourGoal: 'y' },
+        record: { occurredAt: fixedNow.toISOString(), currentActivity: 'x', nextTwoHourGoal: 'y' },
       }),
     );
 
-    const result = await runOnce(DATA_DIR);
+    const result = await runOnce(DATA_DIR, fixedNow);
 
     expect(result.generated).toHaveLength(0);
     expect(result.notificationPath).toBeUndefined();

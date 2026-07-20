@@ -2,6 +2,8 @@
 /**
  * ARC Mobile Ingress — ローカルMVP（Version35、ADR 0064・0065）。
  * 専用認証・rate limit・入力上限・監査ログはVersion37（ADR 0066）で追加。
+ * Version38で、認証時の`GET /ingress`を`idempotencyKey`必須（最小権限、
+ * 電話側は自分のsubmission状態確認に限定）へ変更した（ADR 0069）。
  *
  * 将来クラウド常駐先へそのまま移設できることを想定した、
  * Mobile Ingress単体のHTTPサーバー。**既定は127.0.0.1限定**——外部
@@ -102,14 +104,17 @@ async function appendAuditLog(dataDir: string, event: AuditEvent): Promise<void>
 /**
  * Quick Capture — 生活ログを送信するための最小限のHTMLフォーム
  * （Version36でReflectionのみ実装、Version37でMealLog/WeightLog/
- * FinanceLogへ拡張、ADR 0066）。外部JS依存なし、`fetch`のみで
- * `POST /ingress`を叩く。送信側クライアントが存在しなかった
- * Version35の空白（Report10章）を埋める最小実装。
+ * FinanceLogへ拡張、Version38でNutritionLogへ拡張、ADR 0066・0069）。
+ * 外部JS依存なし、`fetch`のみで`POST /ingress`を叩く。送信側
+ * クライアントが存在しなかったVersion35の空白（Report10章）を埋める
+ * 最小実装。
  *
- * NutritionLogは対象外——既存の`MealLogId`と紐付ける設計のため、
- * Mobile IngressのTransport層（Canonical Storeを直接参照しない）
- * からは対応するMealLogを選べず、意味のあるフォームを作れない
- * （Version37 Report「実装しなかった機能」参照）。
+ * NutritionLogは`mealLogId`をOwnerが手入力する設計とした——Mobile
+ * IngressのTransport層はCanonical Storeを直接参照しないため、
+ * どのMealLogに紐付くかをSystemが推測することはできない
+ * （Constitution第2条・Owner指示書「入力から別typeを推測・自動生成
+ * しないでください」）。既存MealLogのidをOwnerが把握している前提の
+ * 手動入力欄とした。
  *
  * 認証トークンを設定している場合（`MOBILE_INGRESS_API_TOKEN`）、
  * ブラウザのlocalStorageに保存したトークンを`Authorization`ヘッダーへ
@@ -143,6 +148,7 @@ const QUICK_CAPTURE_HTML = `<!doctype html>
     <select name="payloadType" id="payloadType">
       <option value="Reflection">今日の振り返り</option>
       <option value="MealLog">食事</option>
+      <option value="NutritionLog">栄養（食事に紐付け）</option>
       <option value="WeightLog">体重</option>
       <option value="FinanceLog">支出・収入</option>
     </select>
@@ -179,6 +185,26 @@ const QUICK_CAPTURE_HTML = `<!doctype html>
     </label>
     <label>食べたもの（カンマ区切り）<input type="text" name="items"></label>
     <label>メモ<textarea name="meal-notes" rows="2"></textarea></label>
+  </fieldset>
+
+  <fieldset class="type-fields" data-type="NutritionLog">
+    <p>紐付ける食事の記録ID（<code>GET /ingress</code>や後日Owner確認で
+    分かったMealLogのidを手入力してください。Systemは自動で紐付けを
+    推測しません）。</p>
+    <label>MealLogのid<input type="text" name="mealLogId" required></label>
+    <label>カロリー（kcal）<input type="number" step="1" name="calories"></label>
+    <label>タンパク質（g）<input type="number" step="0.1" name="proteinG"></label>
+    <label>根拠（basis、必須）<input type="text" name="basis" required placeholder="例：栄養成分表示から算出"></label>
+    <label>確信度
+      <select name="confidence">
+        <option value="">（未選択）</option>
+        <option value="low">low</option>
+        <option value="medium">medium</option>
+        <option value="high">high</option>
+      </select>
+    </label>
+    <label>不確実性の注記（confidence未選択の場合はこちらが必須）<input type="text" name="uncertaintyNote"></label>
+    <label><input type="checkbox" name="estimated" checked style="width:auto;display:inline;"> 推定値である</label>
   </fieldset>
 
   <fieldset class="type-fields" data-type="WeightLog">
@@ -254,6 +280,22 @@ function buildPayload(fd) {
     if (mealType) record.mealType = mealType;
     if (notes) record.notes = notes;
     return { payloadType: 'MealLog', payload: { record } };
+  }
+  if (type === 'NutritionLog') {
+    const record = {
+      mealLogId: fd.get('mealLogId'),
+      basis: fd.get('basis'),
+      estimated: fd.get('estimated') === 'on',
+    };
+    const calories = fd.get('calories');
+    const proteinG = fd.get('proteinG');
+    const confidence = fd.get('confidence');
+    const uncertaintyNote = fd.get('uncertaintyNote');
+    if (calories) record.calories = Number(calories);
+    if (proteinG) record.proteinG = Number(proteinG);
+    if (confidence) record.confidence = confidence;
+    if (uncertaintyNote) record.uncertaintyNote = uncertaintyNote;
+    return { payloadType: 'NutritionLog', payload: { record } };
   }
   if (type === 'WeightLog') {
     const record = {
@@ -477,6 +519,18 @@ export function createMobileIngressApp(dataDir = 'data', options: MobileIngressA
     if (url.pathname === '/ingress' && req.method === 'GET') {
       const status = (url.searchParams.get('status') ?? undefined) as IngressRecordStatus | undefined;
       const idempotencyKey = url.searchParams.get('idempotencyKey') ?? undefined;
+      // 最小権限（Version38、Owner指示）：認証を要求する構成
+      // （apiToken設定時）では、全件・状態別の無制限一覧を許可しない
+      // ——電話側の既定の利用は「自分が送った1件の状態確認」に限定する。
+      // token未設定（既定のローカル運用）ではVersion35〜37と同じ挙動を
+      // 維持する。
+      if (options.apiToken && !idempotencyKey) {
+        audit('rejected', 400, 'idempotencyKey required when authenticated (least privilege, Version38)');
+        sendJson(res, 400, {
+          error: 'idempotencyKey is required when MOBILE_INGRESS_API_TOKEN is configured (least privilege)',
+        });
+        return;
+      }
       const result = await list.execute({ status, idempotencyKey });
       audit('accepted', 200);
       sendJson(res, 200, {

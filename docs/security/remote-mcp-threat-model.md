@@ -365,3 +365,59 @@ Version37の変更により、LAN公開（`MOBILE_INGRESS_HOST`変更）は
 単一の共有シークレット（Bearer固定文字列）であり、本番クラウド
 デプロイ時にはADR 0064のActivation Gateでより堅牢な認証
 （OAuth・TLS等）へ置き換える前提は変わらない。
+
+## 11. Version38監査：Cloudflare Worker実装・Pull/Reconciliation
+
+Owner指示書（2026-07-20、`docs/handoff/archive/
+Version38_ARC_Brief.md`）に基づき、`cloudflare/`をreference-onlyから
+実装済み（ローカルエミュレータで検証済み、未デプロイ）へ進めた。
+ADR 0069参照。
+
+### 11.1 公開範囲：実デプロイ・アカウントなし、Miniflareのみ
+
+`wrangler login`・`wrangler deploy`は一度も実行していない。
+`pnpm cloudflare:test`はCloudflareの公式local emulator（Miniflare、
+実`workerd`ランタイムをローカルプロセスとして起動）上で検証する
+——外部ネットワークアクセス・アカウントは一切不要。実際に
+インターネットへ公開されている面は存在しない。
+
+### 11.2 二段階tokenによる最小権限（Owner指示3への対応）
+
+`DEVICE_TOKEN`（スマホ：送信＋自分のstatus確認のみ、payload本体は
+返さない）と`PULL_TOKEN`（Owner PC：全件list・ack、payload本体を
+含む）を分離した。ローカル版`mobileIngress.ts`の`GET /ingress`にも
+同じ最小権限ルール（`idempotencyKey`必須化）を適用した。詳細は
+ADR 0069・9.2参照。実機テストで、deviceTokenでは`status=Accepted`の
+無制限listが取得できない（400）ことを確認済み。
+
+### 11.3 rate limitの既知の限界
+
+KVベースの固定ウィンドウカウンタは、KVの`get`+`put`が原子的でない
+ため高並行下でカウントを取りこぼしうる（実際にテスト中に確認——
+35件の並行送信では制限が正確に働かないため、テストは順次送信で
+検証している）。個人利用規模の乱用防止としては許容範囲と判断した
+——真に正確な制限が必要になった場合はDurable Objectsへの移行を
+検討する技術的負債として記録する（ADR 0069）。
+
+### 11.4 監査ログの方式差異
+
+ローカル版はファイル書き込み、cloud版は`console.log`
+（Cloudflare Workers Logs）——Workersにはローカルファイルシステムが
+ないための方式差異。token値は両方とも記録しない。
+
+### 11.5 Pull/Reconciliationのretention・部分失敗
+
+`POST /ingress/:id/ack`（pull token専用）でローカルへの反映成功後に
+cloud側のKVエントリを削除する——cloud queueは一時的なTransportに
+過ぎず、肥大化を防ぐ。部分失敗（`failed`／`pulled-ack-failed`）は
+明確に区別して報告し、いずれの場合もデータが失われない設計である
+ことをテストで確認済み（詳細はADR 0069参照）。
+
+### 11.6 結論
+
+Version38で追加したコード・公開面は、いずれもローカルエミュレータ
+検証のみで実際の外部公開を伴わない。将来の実デプロイ時は、本
+セクションを実際のCloudflareアカウント・secret・TLS証明書の構成に
+合わせて全面的に書き直す必要がある——特にKVベースのrate limitの
+限界（11.3）は、実際の公開後にDurable Objects等への移行を検討する
+判断材料として残す。
