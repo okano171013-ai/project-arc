@@ -285,6 +285,31 @@ Version38_Activation_Packet.md`）を作成した。クラウド契約・課金�
 （またはARCが直接AgentMessageとして送ってくることもあります
 ——`agent_message_list`も必ず確認すること）。
 
+## 緊急優先診断：公開Remote MCPが旧10ツールのまま — 2026-07-20
+
+Ownerが別のChatGPTチャットから実接続確認したところ、公開ツールは
+旧10件のままで、`capability_registry_get`およびMealLog / NutritionLog /
+WeightLog / FinanceLogが見えていません。夕食のMealLog 1件は代替保存せず
+非公開待機キューへ保護済みです（待機総数17件）。個人データはrepositoryへ
+入れないでください。
+
+Version39の通常実装より先に、次の**読み取り専用診断**を実施してください。
+
+1. 現在のGit HEAD、Remote MCPプロセスの起動時刻・実行パス・build commit、
+   公開トンネルの接続先port/URLを照合する。
+2. localhostと実公開URLの両方へ実MCP clientで接続し、tool count、tool names、
+   `capability_registry_get`結果を採取する。
+3. 10ツールになる地点が、旧プロセス、旧build、別port、別tunnel、ChatGPT側
+   connector cacheのどれかを切り分ける。
+4. 秘密情報を表示・変更せず、再起動前後の検証手順とrollbackを作成する。
+5. 診断結果と、Ownerが行う必要のある最小操作を1か所へ記録する。
+
+この段階ではRemote MCP/ngrokの再起動、URL変更、OAuth有効化、`.env`変更、
+外部公開範囲変更を実行しないでください。診断後、同じURL・同じ公開範囲での
+最新版プロセス再起動だけで直ると確認できた場合も、本番反映直前にOwnerへ
+承認を求めてください。診断は返答待ちで止めずに完了し、その後Version39の
+安全なローカル工程へ戻ってください。
+
 ## 未処理の正式指示：Version39「Cloud Quick Capture & PC-off Gap Closure」— 2026-07-20
 
 ### 受領
