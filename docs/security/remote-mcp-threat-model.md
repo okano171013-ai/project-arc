@@ -421,3 +421,88 @@ Version38で追加したコード・公開面は、いずれもローカルエ�
 合わせて全面的に書き直す必要がある——特にKVベースのrate limitの
 限界（11.3）は、実際の公開後にDurable Objects等への移行を検討する
 判断材料として残す。
+
+## 12. Version39監査：Cloud Quick Capture UI・CSP・token非埋め込み
+
+Owner指示書（2026-07-20、`docs/handoff/archive/
+Version39_ARC_Brief.md`）に基づき、`GET /`にスマホ向けQuick Capture
+UIを実装した（ローカル版・cloud版共通、ADR 0070）。本UIは静的HTML
+であり、ユーザー入力を反映（reflect）する箇所を持たない
+——XSSの主要な攻撃面（反射型・格納型の入力エコー）はそもそも
+存在しないが、以下の防御をdefense-in-depthとして追加した。
+
+### 12.1 CSPをper-requestなnonceで強制（`'unsafe-inline'`不使用）
+
+`Content-Security-Policy: default-src 'none'; script-src
+'nonce-<random>'; style-src 'nonce-<random>'; connect-src 'self';
+base-uri 'none'; form-action 'self'`をGET `/`のレスポンスへ付与した。
+nonceはリクエストごとにWeb Crypto（`crypto.getRandomValues`、cloud
+版）／`node:crypto`の`randomBytes`（ローカル版）で生成し、`<script
+nonce="...">`・`<style nonce="...">`要素にのみ埋め込む——ハード
+コードされた固定nonceではないため、レスポンスを事前に取得しても
+別リクエストのnonceは推測できない。
+
+**実機のヘッドレスブラウザ検証で判明した仕様上の落とし穴**：nonceは
+`<script>`／`<style>`要素自体には効くが、任意要素のinline
+`style="..."`**属性**には効かない（CSP仕様上、nonceは要素単位の
+許可であり属性単位ではない）。修正前は複数のinline `style`属性が
+無音でブロックされていた（コンソールにCSP違反ログが出るのみで、
+機能的には見た目が崩れるだけの劣化だったが、意図しないブロックで
+あることに変わりはない）。全てCSSクラスへ置き換えて解消した
+（ADR 0070 2.3節）。`'unsafe-hashes'`でこの属性を許可する代替案も
+あったが、nonce方式より防御力が弱いため見送った。
+
+### 12.2 Token非埋め込み（Owner指示2）
+
+`DEVICE_TOKEN`／`PULL_TOKEN`の値は、HTML・JS・URLクエリ・監査ログの
+いずれにも一切埋め込まない——`renderQuickCaptureHtml(nonce)`は
+nonce以外の動的値を受け取らない純粋関数であり、token値を知り得ない
+設計になっている（構造的に埋め込めない）。既定ではブラウザの
+`localStorage`にも保存せず、ページを開くたびに空欄から始まる。
+Ownerが明示的に「このデバイスに保存する」へチェックした場合のみ、
+危険性の説明を表示した上でopt-inのlocalStorage保存を行う。テストで
+`tokenInput`要素のraw HTMLに`value="..."`が存在しないことを確認
+済み（`mobileIngress.test.ts`・`worker.test.ts`双方）。
+
+### 12.3 実機ブラウザ検証で発見した機能バグ（セキュリティ上の direct な脆弱性ではないが、フォーム全体を無音でブロックする不具合）
+
+NutritionLog用フィールドの`required`属性が、そのfieldsetが
+`display:none`で非表示の間もHTML5ネイティブフォームバリデーション
+の対象であり続けたため、Reflection等の**別type選択時に送信ボタンが
+無音で機能しなくなる**バグが実機ブラウザ検証（Playwright）で発覚
+した。直接`fetch()`を叩くテスト（Version38までの検証方法）では
+ネイティブフォームバリデーションを経由しないため発見できなかった
+——「実機確認」がHTTPレベルだけでなく、実際のブラウザ操作
+（クリック・フォーム送信）を経由する必要があることを示す具体例と
+なった。`data-required-when-active`マーカーへ置き換えて修正した
+（ADR 0070 2.4節、Version39 Report 7章）。
+
+### 12.4 送信UXとidempotency（Owner指示4）
+
+再送時に同じ`idempotencyKey`を再利用し（確定成功までnullへ戻さない）、
+オフライン・サーバーエラー時は入力内容を保持したままフォームを
+クリアしないよう実装した。Playwrightの`page.route().abort('failed')`
+でネットワーク断を模擬し、再送が同一`idempotencyKey`で行われ
+サーバーが`duplicate: true`を返すことを実機確認した。
+
+### 12.5 HTTPS前提（Owner指示3）
+
+Miniflareのローカルテストは平文HTTPで動作する（ブラウザは
+`Strict-Transport-Security`ヘッダーを無視する）。実デプロイ後は
+Cloudflare edge側の仕様として常時HTTPSが強制されるため、
+`Strict-Transport-Security: max-age=63072000; includeSubDomains`を
+付与済みで、実デプロイ後にそのまま有効になる。ローカル版
+（`mobileIngress.ts`、`node:http`）はHTTP限定のままであり、
+このヘッダーは付与していない——ローカル版はLAN内利用が前提
+（ADR 0066）であり、HTTPS化は別途検討課題として残る。
+
+### 12.6 結論
+
+Version39で追加したCloud Quick Capture UIは、静的HTML・nonceベース
+CSP・token非埋め込み・冪等な再送UXにより、既知の攻撃面
+（反射型XSS・token漏洩・重複送信）への対策は実機ブラウザ検証込みで
+確認済みである。ただし、ADR 0070が明らかにした通り、これは
+「PC停止中でも安全に生活ログを保存・参照できる」という要件全体を
+満たすものではなく、cloud ingress受付（段階a）のみをカバーする
+——canonical ARCへの確定保存（段階b）・全生活履歴のread
+availability（段階c）は引き続きPC起動が前提のままである。

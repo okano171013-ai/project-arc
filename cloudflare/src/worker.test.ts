@@ -79,6 +79,43 @@ describe('ARC Mobile Ingress — Cloudflare Worker (Version38, local emulator on
     expect(await res.json()).toEqual({ ok: true });
   });
 
+  it('GET / serves the Quick Capture UI with a nonce-based CSP, no unsafe-inline (Version39)', async () => {
+    const res = await mf.dispatchFetch('http://worker/');
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toContain('text/html');
+    const csp = res.headers.get('content-security-policy');
+    expect(csp).toBeTruthy();
+    expect(csp).not.toContain('unsafe-inline');
+    expect(csp).toMatch(/script-src 'nonce-[A-Za-z0-9+/=]+'/);
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(res.headers.get('strict-transport-security')).toBeTruthy();
+
+    const html = await res.text();
+    const nonceMatch = /nonce-([A-Za-z0-9+/=]+)/.exec(csp ?? '');
+    expect(nonceMatch).not.toBeNull();
+    expect(html).toContain(`<script nonce="${nonceMatch?.[1]}">`);
+    expect(html).toContain(`<style nonce="${nonceMatch?.[1]}">`);
+  });
+
+  it('GET / never embeds DEVICE_TOKEN or PULL_TOKEN in the page (Version39)', async () => {
+    const res = await mf.dispatchFetch('http://worker/');
+    const html = await res.text();
+    expect(html).not.toContain(DEVICE_TOKEN);
+    expect(html).not.toContain(PULL_TOKEN);
+    expect(html).toContain('id="tokenInput"');
+    expect(html).not.toMatch(/id="tokenInput"[^>]*value="[^"]+"/);
+  });
+
+  it('GET / offers Reflection/MealLog/NutritionLog/WeightLog/FinanceLog with no auto-derivation of type (Version39)', async () => {
+    const res = await mf.dispatchFetch('http://worker/');
+    const html = await res.text();
+    for (const type of ['Reflection', 'MealLog', 'NutritionLog', 'WeightLog', 'FinanceLog']) {
+      expect(html).toContain(`data-type="${type}"`);
+    }
+    // NutritionLogのmealLogIdはOwner手入力欄——サーバー側は候補を提示しない。
+    expect(html).toContain('name="mealLogId"');
+  });
+
   it('rejects POST /ingress with no Authorization header (401)', async () => {
     const res = await mf.dispatchFetch('http://worker/ingress', {
       method: 'POST',

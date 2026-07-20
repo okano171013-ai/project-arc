@@ -956,3 +956,53 @@ Version37のDoDは全項目達成済み。
       有効化は一切実施していない
 
 Version38のDoDは全項目達成済み。
+
+## Version39完了チェックリスト
+
+- [x] `pnpm test` が全て緑（642件、CSPヘッダー・token非埋め込み
+      テストを含む）
+- [x] `pnpm cloudflare:test` が全て緑（17件、Miniflare実機、
+      CSP/nonce・token非埋め込み・5type網羅テストを含む、別ゲート）
+- [x] `pnpm typecheck` / `pnpm cloudflare:typecheck` がエラーゼロ
+- [x] `pnpm lint` がエラーゼロ
+- [x] `pnpm cloudflare:preflight`（新設）を実行し、READY/NOT READY
+      判定を確認（アカウント操作は一切実行していない）
+- [x] Cloud Quick Capture UI（`cloudflare/src/worker.ts`の`GET /`、
+      ローカル版と共通の`renderQuickCaptureHtml`モジュール）を実装・
+      Miniflareで実機検証済み
+- [x] Reflection/MealLog/NutritionLog/WeightLog/FinanceLogを明示
+      選択でき、型からの自動推測・自動生成を行わないことを実機確認
+- [x] DEVICE_TOKEN/PULL_TOKENをHTML/JS/URL query/ログへ一切埋め込ま
+      ないことをテスト・実機確認。既定非永続・opt-in・危険性表示・
+      消去操作を実装
+- [x] CSP（per-request nonce、`'unsafe-inline'`不使用）・token
+      非漏洩・5type網羅の否定テストを追加
+- [x] idempotencyKeyの再送再利用・オフライン時の入力内容保持を
+      Playwrightのネットワーク断シミュレーションで実機確認
+- [x] **実機確認**：Playwrightヘッドレスブラウザでローカル版・
+      cloud版（Miniflare）両方のQuick Capture UIを実際に操作し、
+      CSP・token・オフライン再送を確認。この過程で2件の実装バグ
+      （CSP inline-style属性ブロック、非表示fieldset内`required`
+      によるフォーム全体ブロック）を発見・修正済み
+- [x] 「PC-off保存」を(a)cloud ingress受付・(b)canonical ARC確定・
+      (c)read availabilityへ分解したCapability/Gap表を作成し、
+      Version39時点でも(b)(c)が未達であることを明示（ADR 0070）
+- [x] Canonical Store所在（cloud全面移行・現行Transport-queue案・
+      hybrid案）を6軸で比較するADR 0071を作成。**実際の移行は
+      行っていない**
+- [x] ARC-PM-005（`pnpm build`のTS2742失敗）が本Versionの変更と
+      無関係であることを`git stash`比較で再確認
+- [x] ADR 0070（Cloud Quick Capture UI・Capability/Gap表）・
+      ADR 0071（Canonical Store所在比較）を作成済み
+- [x] `docs/security/remote-mcp-threat-model.md`12章を追加済み
+- [x] README / docsに実装との乖離がない
+- [x] `docs/reports/Version39_Report.md`を生成済み（14章構成）
+- [x] `docs/developer-feedback/Version39_Developer_Feedback.md`を生成済み
+- [x] `Version38_Activation_Packet.md`をVersion39のQuick Capture UI
+      分で更新済み
+- [x] `docs/handoff/LATEST_ARC_FEEDBACK.md`のポインタを
+      `Version39_Developer_Feedback.md`へ更新済み
+- [x] クラウド契約・課金・本番公開・秘密情報設定・認証済みLAN公開の
+      有効化・Canonical Storeの実移行は一切実施していない
+
+Version39のDoDは全項目達成済み。

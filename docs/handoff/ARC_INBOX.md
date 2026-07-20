@@ -285,40 +285,33 @@ Version38_Activation_Packet.md`）を作成した。クラウド契約・課金�
 （またはARCが直接AgentMessageとして送ってくることもあります
 ——`agent_message_list`も必ず確認すること）。
 
-## 未処理の正式指示：Version39「Cloud Quick Capture & PC-off Gap Closure」— 2026-07-20
+**処理済み**：Version39「Cloud Quick Capture & PC-off Gap Closure」
+（`docs/reports/Version39_Report.md`）。Cloudflare Worker側
+`GET /`にQuick Capture UI（Reflection/MealLog/NutritionLog/
+WeightLog/FinanceLog明示選択、ローカル版と共通の
+`renderQuickCaptureHtml`モジュール）を実装した。per-request
+nonceのCSP（`'unsafe-inline'`不使用）、DEVICE_TOKEN/PULL_TOKENの
+非埋め込み（既定非永続・opt-in・危険性表示・消去操作）を実装し、
+CSP・token非漏洩・5type網羅の否定テストを追加した。「PC-off保存」を
+(a)cloud ingress受付・(b)canonical ARC確定・(c)read availabilityへ
+分解したCapability/Gap表（ADR 0070）を作成し、Version39時点でも
+(b)(c)が未達であることを明記した。Canonical Store所在（cloud全面
+移行・現行Transport-queue案・hybrid案）を6軸で比較するADR 0071を
+作成——**実際の移行は行っていない**、現行案を維持する決定のみを
+記録した。デプロイ前preflightチェック（`pnpm cloudflare:preflight`、
+アカウント操作なし）を新設した。実機のヘッドレスブラウザ検証で
+2件の実装バグ（CSP inline-style属性ブロック、非表示fieldset内
+`required`属性によるフォーム全体ブロック）を発見・修正した。
+メイン642件・cloudflare専用17件のテストが全て合格。ARC-PM-005が
+本Versionと無関係であることを`git stash`比較で再確認した。クラウド
+契約・課金・本番公開・秘密情報設定・認証済みLAN公開の有効化・
+Canonical Storeの実移行は未実施（原文は`docs/handoff/archive/
+Version39_ARC_Brief.md`に保管）。
 
-### 受領
-
-Version38（本体 `76b5e3f`、メイン640件＋Cloudflare 14件 green）を完了として受領します。Cloudflare Worker、二段階token、pull/reconciliation、NutritionLog、Miniflare E2Eは妥当です。
-
-### 重要な現状認識
-
-Version38はクラウド待機キューまで完成しましたが、次のOwner最優先要件はまだ未達です。
-
-- スマホから使えるcloud側Quick Capture UIがない。
-- PC停止中はIngressRecordとして待機できるが、canonical ARCへの確定保存はPC再開後である。
-- PC停止中の参照はsubmission statusに限られ、生活ログ全体の安全な参照ではない。
-
-これらを曖昧に「PC-off対応完了」と表現しないでください。
-
-### Version39の安全な実装範囲
-
-1. Cloudflare Workerにスマホ向けQuick Capture UIを実装してください。Reflection / MealLog / NutritionLog / WeightLog / FinanceLogを明示選択でき、入力から別typeを推測・自動生成しないこと。
-2. DEVICE_TOKENはソース、HTML、URL query、ログへ埋め込まないでください。初回手入力を基本とし、既定では永続保存しない設計にしてください。tokenを保持する場合は明示opt-in、危険性表示、消去操作を必須とします。
-3. CSP、XSS対策、HTTPS前提、64KB上限、rate limit、認証失敗、token非漏えいを否定テストしてください。
-4. 送信直後にsubmission statusを表示し、再送時も同じidempotencyKeyを再利用できるUXにしてください。オフライン・通信失敗時に内容を消失させず、重複作成もしないこと。
-5. 「PC-off保存」の意味を、(a) cloud ingress受付、(b) canonical ARC確定、(c) read availabilityに分解したCapability/Gap表を作成してください。各段階のデータ所在、整合性、復旧方法を明記します。
-6. canonical ARCをcloudへ移す案、Transport queueのみcloudに置く現行案、hybrid案を比較するADR/Decision Packetを作成してください。個人情報、バックアップ、削除、費用0円、provider portability、Remote MCPとの統合を評価し、実移行は行わないでください。
-7. デプロイ前preflightを追加してください。設定・binding・secret名・test結果を検査するだけとし、login、account作成、secret生成、deploy、公開URL発行は実行しないこと。
-8. Version38で残ったbuild問題（ARC-PM-005）を今回変更と混同せず、cloud UIと同期経路の全gateを実行してください。
-9. Report、Developer Feedback、ADR/threat model、STATUS、Roadmap、DoD、Activation Packet、ARC_INBOX archiveを更新してください。LATEST_ARC_FEEDBACK.mdの古いVersion28ポインタもVersion39完了時に必ず更新してください。
-
-### 継続・停止条件
-
-- ローカル、Miniflare、無課金、可逆、秘密情報不要の工程はOwner返答を待たずに完了してください。
-- アカウント作成、秘密情報生成・設定、実デプロイ、外部公開、課金、canonical個人データのcloud移行、Constitution/Principles変更はActivation GateとしてOwner確認を求めてください。
-- 退避中16件の実データは公開repositoryへ入れず、実importもしないでください。
-- live MCPが読めない場合も、このGit指示を正式指示として継続してください。
+次の指示書を待っています。新しい指示が来たら、このファイルの
+「ここにARCの指示書を貼り付け」以下を置き換えてください
+（またはARCが直接AgentMessageとして送ってくることもあります
+——`agent_message_list`も必ず確認すること）。
 
 
 <!-- ここにARCの指示書を貼り付け -->

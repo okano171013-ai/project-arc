@@ -3,8 +3,18 @@
 Owner指示書（2026-07-20）の(f)「後日Ownerが5分以内に判断・実行できる
 1ページのActivation Packet」に対応する。**このPacketに書かれた操作は
 まだ何一つ実行していない**——実装・ローカルエミュレータ検証のみ
-完了している（Version38 Report・ADR 0069参照）。実行するかどうかは
-Ownerの判断。
+完了している（Version38 Report・ADR 0069、Version39 Report・
+ADR 0070参照）。実行するかどうかはOwnerの判断。
+
+**Version39追記**：Version39でCloud側`GET /`にQuick Capture UI
+（Reflection/MealLog/NutritionLog/WeightLog/FinanceLog明示選択）を
+実装した。以下の手順1〜8を実行してデプロイすれば、追加設定なしで
+そのままスマホのブラウザから使える（8番目の手順「疎通確認」を
+Quick Capture UIでの実送信に置き換えてよい）。ただし、これは
+(a) cloud ingress受付のみを満たすものであり、「PC-off対応完了」を
+意味しない——(b) canonical ARC確定・(c) 全生活履歴read availability
+は引き続きPC起動時の`pnpm mobile-sync pull`+`sync`が前提のまま
+である（ADR 0070のCapability/Gap表参照）。
 
 ## 前提：ここまでで準備済みのもの
 
@@ -58,7 +68,10 @@ Cloudflare Workers無料枠：10万リクエスト/日、KV読み取り10万/日
 ## 実行後に確認すべきこと（Owner自身）
 
 - `pnpm mobile-sync pull`が実際にcloud側のレコードを取得できるか
-- スマホのブラウザから`https://xxx.workers.dev/`は**存在しない**
-  ——現状Quick Capture UIはcloud Worker側に実装していない
-  （ローカル版`mobileIngress.ts`のみ）。スマホから直接cloudへ
-  送信するUIは次Versionの検討事項
+- スマホのブラウザから`https://xxx.workers.dev/`を開くと、
+  Version39で実装したQuick Capture UI（Reflection/MealLog/
+  NutritionLog/WeightLog/FinanceLog明示選択）がそのまま使える
+  （Miniflareで実機検証済み）。初回はtoken欄が空欄なので、
+  `DEVICE_TOKEN`（手順5で生成した値）を毎回手入力するか、
+  明示的にopt-inした場合のみこの端末に保存できる（既定は非永続）
+- 送信後、画面に自動でsubmission statusが表示されることを確認する

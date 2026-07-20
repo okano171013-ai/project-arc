@@ -150,10 +150,29 @@ management/Version38_Activation_Packet.md`（1ページの実行
 チェックリスト）に集約した。詳細は`docs/reports/
 Version38_Report.md`・ADR 0069参照。
 
-**Version39以降**：Owner確認事項（LAN公開＋トークン設定の可否、
-実際の16件の取り込み、Cloudflare実デプロイの実行可否）への回答を
-受けて、実地確認・実際のデプロイを行う。cloud側Quick Capture UIの
-要否をOwner/ARCと相談する。
+**Version39は完了済み**：ARCがGit経由で送った指示書（2026-07-20、
+`docs/handoff/archive/Version39_ARC_Brief.md`）に基づき、
+「クラウド待機キューまでで、PC-off対応完了とは言えない」という
+ARCの指摘へ応えた。Cloudflare Worker側`GET /`にQuick Capture UI
+（Reflection/MealLog/NutritionLog/WeightLog/FinanceLog明示選択、
+ローカル版と共通の`renderQuickCaptureHtml`モジュール）を実装し、
+per-request nonceのCSP・token非埋め込み（既定非永続・opt-in・
+危険性表示・消去操作）を実装した。「PC-off保存」を(a)cloud
+ingress受付・(b)canonical ARC確定・(c)read availabilityへ分解した
+Capability/Gap表（ADR 0070）を作成し、Version39時点でも(b)(c)は
+未達であることを明示的に記録した。Canonical Store所在（cloud全面
+移行・現行Transport-queue案・hybrid案）を6軸で比較するADR 0071を
+作成し、現行案を維持する決定を記録した（**実際の移行は行っていない**）。
+デプロイ前preflightチェック（`pnpm cloudflare:preflight`、
+アカウント操作なし）を追加した。実機のヘッドレスブラウザ検証で
+2件の実装バグ（CSP inline-style属性ブロック、非表示fieldset内
+`required`属性によるフォーム全体ブロック）を発見・修正した。
+クラウド契約・課金・本番公開・秘密情報設定は一切実施していない。
+詳細は`docs/reports/Version39_Report.md`・ADR 0070・0071参照。
+
+**Version40以降**：Owner確認事項（LAN公開＋トークン設定の可否、
+実際の16件の取り込み、Cloudflare実デプロイの実行可否、ADR 0071・
+案Cの要否）への回答を受けて、実地確認・実際のデプロイを行う。
 
 | 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
 |---:|---|---|---|

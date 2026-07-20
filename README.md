@@ -519,7 +519,7 @@ pnpm run mcp:remote                # Remote MCPサーバーを起動（Streamabl
 pnpm run openapi:generate          # docs/openapi.json を生成（Version18、主要10エンドポイントのみ）
 pnpm run runner                    # Collaboration Runnerを1回実行（Version20、機械的な新着検知のみ、ADR 0046）
 
-pnpm mobile-ingress                 # Mobile Ingress受信サーバーを起動（Version35、127.0.0.1限定、既定ポート3941）。POST /ingressで生活ログを受信、GET /ingressで一覧取得、GET /でQuick Capture UI（Version36〜37）
+pnpm mobile-ingress                 # Mobile Ingress受信サーバーを起動（Version35、127.0.0.1限定、既定ポート3941）。POST /ingressで生活ログを受信、GET /ingressで一覧取得、GET /でQuick Capture UI（Version36〜37、CSP nonce・token非埋め込みはVersion39）
 pnpm mobile-sync                    # Sync Worker：受信済みAccepted状態のログをlocalへCanonicalize（Version35）
 pnpm mobile-sync list <status>      # IngressRecordを状態別に一覧表示（Accepted/Canonicalized/Pending/Failed/Discarded）
 pnpm mobile-sync resolve <id> accept|discard  # Pending/FailedなIngressRecordをOwnerが解決
@@ -529,9 +529,10 @@ pnpm mobile-sync pull               # cloud側queue（Cloudflare Workers等）�
 pnpm import-pending-logs -- <path> --dry-run  # 退避中ログJSONLファイルをschema検証のみ行う（書き込みなし、Version37、ADR 0067）
 pnpm import-pending-logs -- <path>            # 対応済みtypeの行のみIngressRecordとしてAccept（未対応typeはunsupported_typeとして報告、実データはこのリポジトリに含まれない）
 
-# cloudflare/配下（Version38、ローカルエミュレータのみ、実デプロイなし）
+# cloudflare/配下（Version38〜39、ローカルエミュレータのみ、実デプロイなし）
 pnpm cloudflare:typecheck           # cloudflare/tsconfig.json（Workers型定義）でtsc --noEmit
-pnpm cloudflare:test                # Miniflare（実workerdランタイム）でCloudflare Worker実装を実機検証
+pnpm cloudflare:test                # Miniflare（実workerdランタイム）でCloudflare Worker実装を実機検証（GET /のQuick Capture UIを含む）
+pnpm cloudflare:preflight           # デプロイ前チェック（Version39）。wrangler.tomlの設定・binding名・secret非ハードコード・test結果のみ確認。login/deploy/secret作成は実行しない
 ```
 
 `pnpm run api`起動後の動作確認例（`curl`はGit Bash上で日本語を含む

@@ -1,6 +1,7 @@
 import { ReceiveIngressRecordUseCase } from '../../src/application/use-cases/mobile-ingress/ReceiveIngressRecord.js';
 import { ListIngressRecordsUseCase } from '../../src/application/use-cases/mobile-ingress/ListIngressRecords.js';
 import type { IngressRecordStatus } from '../../src/domain/entities/IngressRecord.js';
+import { renderQuickCaptureHtml } from '../../src/infrastructure/http/quickCaptureHtml.js';
 import { KvIngressRecordRepository } from './kvIngressRecordRepository.js';
 
 /**
@@ -61,6 +62,13 @@ function auditLog(event: { method: string; path: string; outcome: 'accepted' | '
   console.log(JSON.stringify({ timestamp: new Date().toISOString(), ...event }));
 }
 
+/** Web Crypto（`nodejs_compat`不要、Workers標準API）でCSP用のper-requestなnonceを生成する（Version39）。 */
+function generateNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes));
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -70,6 +78,29 @@ export default {
 
     if (url.pathname === '/health') {
       return json({ ok: true });
+    }
+
+    // スマホ向けQuick Capture UI（Version39、Owner指示書2026-07-20、ADR 0070）。
+    // ローカル版（`mobileIngress.ts`）と同じ`renderQuickCaptureHtml()`を再利用し、
+    // UIの実装を重複させない。認証は不要（このページ自体は静的HTMLでtokenを
+    // 含まず、送信・状態確認は同一オリジンの`/ingress`をfetchで叩く際に
+    // ブラウザ側で入力されたtokenを使う）。
+    if (url.pathname === '/' && request.method === 'GET') {
+      const nonce = generateNonce();
+      return new Response(renderQuickCaptureHtml(nonce), {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Content-Security-Policy':
+            `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'nonce-${nonce}'; ` +
+            "connect-src 'self'; base-uri 'none'; form-action 'self'",
+          'X-Content-Type-Options': 'nosniff',
+          // Cloudflare Workersは実デプロイ時、常にHTTPS経由で配信される
+          // （edge側の仕様）。ローカルMiniflareテスト（HTTP）では
+          // ブラウザ側でこのヘッダーは単純に無視される。
+          'Strict-Transport-Security': 'max-age=63072000; includeSubDomains',
+        },
+      });
     }
 
     if (url.pathname === '/ingress' && request.method === 'POST') {

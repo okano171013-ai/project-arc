@@ -102,6 +102,30 @@ describe('ARC Mobile Ingress (local MVP)', () => {
     expect(html).toContain("fetch('/ingress'");
   });
 
+  it('GET / sends a nonce-based CSP with no unsafe-inline (Version39)', async () => {
+    const res = await fetch(`${baseUrl}/`);
+    const csp = res.headers.get('content-security-policy');
+    expect(csp).toBeTruthy();
+    expect(csp).not.toContain('unsafe-inline');
+    expect(csp).toMatch(/script-src 'nonce-[A-Za-z0-9+/=]+'/);
+    const html = await res.text();
+    const nonceMatch = /nonce-([A-Za-z0-9+/=]+)/.exec(csp ?? '');
+    expect(nonceMatch).not.toBeNull();
+    // HTML内の<script>/<style>タグが同じnonceを使っていることを確認する。
+    expect(html).toContain(`<script nonce="${nonceMatch?.[1]}">`);
+    expect(html).toContain(`<style nonce="${nonceMatch?.[1]}">`);
+  });
+
+  it('GET / never embeds a token value or secret in the page (Version39)', async () => {
+    const res = await fetch(`${baseUrl}/`);
+    const html = await res.text();
+    // トークン欄は必ず空のpassword inputとして始まり、サーバー側の
+    // MOBILE_INGRESS_API_TOKEN等の値がHTMLへ焼き込まれていないことを確認する。
+    expect(html).toContain('id="tokenInput"');
+    expect(html).not.toMatch(/value="[^"]+"\s+id="tokenInput"/);
+    expect(html).not.toMatch(/id="tokenInput"[^>]*value="[^"]+"/);
+  });
+
   it('GET /ingress?idempotencyKey= returns only the matching record (Version37 read contract)', async () => {
     await fetch(`${baseUrl}/ingress`, {
       method: 'POST',

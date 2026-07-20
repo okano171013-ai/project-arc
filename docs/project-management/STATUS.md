@@ -1,31 +1,36 @@
 # Project ARC — PM Status
 
-最終監査日: 2026-07-20（Version38時点に更新）  
-基準HEAD: `76b5e3f`（Version38、`docs/reports/Version38_Report.md`参照）  
+最終監査日: 2026-07-20（Version39時点に更新）  
+基準HEAD: （Version39、`docs/reports/Version39_Report.md`参照、コミット後に追記コミットで実ハッシュへ更新）  
 作業ツリー: `.claude/settings.local.json`のみ未追跡（ローカル設定、対象外）。
 
 ## 5分サマリー
 
-Version1〜38まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durability、Program A（読み取り専用公開）、**Program B Mobile Ingress（ローカル完成＋Cloudflare Workers実装をローカルエミュレータで実機検証）**まで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
+Version1〜39まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durability、Program A（読み取り専用公開）、**Program B Mobile Ingress（ローカル完成＋Cloudflare Workers実装をローカルエミュレータで実機検証、cloud側Quick Capture UI実装済み）**まで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
 
 Owner優先順位（2026-07-19）により、Version35からProgram B
 （Mobile Daily Capture）を最優先で進めた。Version35〜37でローカル
 MVP・セキュリティ強化・退避ログImporterを完成させた（ADR 0064〜
-0068）。**Version38は、ARCがGit経由で送った指示書（2026-07-20、
-`docs/handoff/archive/Version38_ARC_Brief.md`）**を受け、Cloudflare
-Workers実装（`cloudflare/src/worker.ts`）をCloudflareの公式local
-emulator（Miniflare、実`workerd`ランタイム）で実機検証した——
-アカウント作成・ログイン・デプロイは一切実施していない。二段階
-token（DEVICE_TOKEN／PULL_TOKEN）による最小権限read契約、
-`pnpm mobile-sync pull`によるcloud→localのreconciliation、
-NutritionLogのQuick Capture対応も実装した。**クラウド契約・課金・
-本番公開・秘密情報設定・認証済みLAN公開の有効化は一切実施して
-いない**（Owner指示通り）。
+0068）。Version38はCloudflare Workers実装をMiniflareで実機検証した
+（ADR 0069）。**Version39は、ARCがGit経由で送った指示書
+（2026-07-20、`docs/handoff/archive/Version39_ARC_Brief.md`）**を
+受け、「クラウド待機キューまでで、PC-off対応完了とは言えない」
+というARCの指摘に応え、cloud Worker側`GET /`にQuick Capture UI
+（Reflection/MealLog/NutritionLog/WeightLog/FinanceLog明示選択、
+per-request nonceのCSP、token非埋め込み）を実装した。あわせて、
+「PC-off保存」を(a)cloud ingress受付・(b)canonical ARC確定・
+(c)read availabilityへ分解したCapability/Gap表（ADR 0070）と、
+Canonical Store所在の3案比較（ADR 0071、実移行なし）、デプロイ前
+preflightチェック（`pnpm cloudflare:preflight`）を追加した。実機
+ブラウザ検証で2件の実装バグ（CSP inline-style属性ブロック、
+非表示fieldset内`required`によるフォーム全体ブロック）を発見・
+修正した。**クラウド契約・課金・本番公開・秘密情報設定・認証済み
+LAN公開の有効化は一切実施していない**（Owner指示通り）。
 
 Owner向け判断事項は`docs/project-management/
 Version35_Decision_Packet.md`・`Version37_Decision_Packet.md`・
-新設の`docs/project-management/Version38_Activation_Packet.md`
-（実デプロイの1ページ実行チェックリスト）に集約した。
+`Version38_Activation_Packet.md`（実デプロイの1ページ実行
+チェックリスト、Version39でQuick Capture UI分を追記）に集約した。
 
 ## 現在の進捗
 
@@ -36,12 +41,13 @@ Version35_Decision_Packet.md`・`Version37_Decision_Packet.md`・
 | Version36 | 完了（Quick Capture UI、`MOBILE_INGRESS_HOST` opt-in、sync自動化スクリプト） |
 | Version37 | 完了（Mobile Ingressセキュリティ強化、退避ログJSONL Importer、Cloud Adapter境界整理） |
 | Version38 | 完了（Cloudflare Worker実装・Miniflare実機検証、最小権限read契約、pull/reconciliation、NutritionLog対応） |
-| Typecheck / Lint | 2026-07-20合格（Version38時点で再確認、`cloudflare:typecheck`も合格） |
-| Build | 不合格。TS2742と`dist`書込競合（Version31以降スコープ外、ARC-PM-005として継続） |
-| Test | Version38時点640件合格（メイン）＋14件合格（`pnpm cloudflare:test`、別ゲート） |
+| Version39 | 完了（Cloud Quick Capture UI、CSP nonce、token非埋め込み、PC-off Capability/Gap表、Canonical Store所在3案比較、`cloudflare:preflight`） |
+| Typecheck / Lint | 2026-07-20合格（Version39時点で再確認、`cloudflare:typecheck`も合格） |
+| Build | 不合格。TS2742と`dist`書込競合（Version31以降スコープ外、ARC-PM-005として継続。Version39で`git stash`比較により無関係を再確認） |
+| Test | Version39時点642件合格（メイン）＋17件合格（`pnpm cloudflare:test`、別ゲート） |
 | Remote MCP | 認証の実装・テストは完備（Version22）。**本番は今なお無認証**（ADR 0051の「有効化した」という記録は誤りだったとVersion30で判明、訂正済み）。MCP Tool数26（Version34から変化なし——Mobile IngressはRemote MCPの一部ではない） |
 | Program A | DevelopmentGrant・AgentTaskが読み取り専用でARCから確認可能。write操作は未公開（変化なし） |
-| Program B | ローカルMobile Ingress完成（認証・rate limit・監査ログ・退避ログImporter）。Cloudflare Worker実装をMiniflareで実機検証済み・未デプロイ。実デプロイはOwner確認待ち（`Version38_Activation_Packet.md`） |
+| Program B | ローカルMobile Ingress完成（認証・rate limit・監査ログ・退避ログImporter）。Cloudflare Worker実装（cloud側Quick Capture UI込み）をMiniflareで実機検証済み・未デプロイ。実デプロイはOwner確認待ち（`Version38_Activation_Packet.md`）。「PC-off対応」は(a)cloud ingress受付のみ達成、(b)canonical確定・(c)全履歴read availabilityは未達（ADR 0070のCapability/Gap表） |
 | Data Durability | `pnpm backup create/list/restore`が動作。`data/ingress-records.json`も自動的にbackup対象に含まれることを実機で確認済み |
 | Bridge Layer | MealLog/NutritionLog/WeightLog/FinanceLog/StudySessionのImport/Export対応を追加（Version9〜27間のギャップ解消） |
 
@@ -68,7 +74,7 @@ Version35_Decision_Packet.md`・`Version37_Decision_Packet.md`・
 
 ## 現在の目標・次のマイルストーン
 
-**Program B**: Architecture Gate論点整理（ADR 0064）、Mobile Ingressデータ契約（ADR 0065）、ローカルMVP、Quick Capture UI・sync自動化（Version36）、セキュリティ強化・退避ログImporter・Cloud Adapter境界（Version37）、Cloudflare Worker実装のMiniflare実機検証・pull/reconciliation（Version38）まで完了。次はOwner確認事項（`MOBILE_INGRESS_HOST`のLAN公開＋トークン設定、実際の16件の取り込み、Cloudflare実デプロイ）の回答を受けての実地確認。契約・課金・秘密情報設定・実デプロイは`Version38_Activation_Packet.md`の手順が確定するまで未実施のまま凍結する。
+**Program B**: Architecture Gate論点整理（ADR 0064）、Mobile Ingressデータ契約（ADR 0065）、ローカルMVP、Quick Capture UI・sync自動化（Version36）、セキュリティ強化・退避ログImporter・Cloud Adapter境界（Version37）、Cloudflare Worker実装のMiniflare実機検証・pull/reconciliation（Version38）、cloud側Quick Capture UI・CSP・token非埋め込み・PC-off Capability/Gap表（ADR 0070）・Canonical Store所在3案比較（ADR 0071）・`cloudflare:preflight`（Version39）まで完了。次はOwner確認事項（`MOBILE_INGRESS_HOST`のLAN公開＋トークン設定、実際の16件の取り込み、Cloudflare実デプロイ、ADR 0071・案Cの要否）の回答を受けての実地確認。契約・課金・秘密情報設定・実デプロイは`Version38_Activation_Packet.md`の手順が確定するまで未実施のまま凍結する。
 
 **Stability Gate**: 残りARC-PM-005〜010を閉じる。ARC-PM-001は本番反映（Owner Action）のみ残存、ARC-PM-002〜004・014は解消済み。外部公開、認証、秘密情報、データ削除はOwner承認が必要。
 
@@ -81,7 +87,8 @@ Version35_Decision_Packet.md`・`Version37_Decision_Packet.md`・
 ## 停止中タスク
 
 - OAuth本番有効化: 準備完了（Version30）。Owner承認と接続再設定待ち——`docs/setup/remote-mcp-oauth-migration.md`のチェックリストで一度で実行できる
-- Program B（Mobile Ingress）クラウドActivation Gate: ローカルMVPは完成済み（Version35〜37）。Cloudflare Worker実装はMiniflareで実機検証済み・未デプロイ（Version38、ADR 0069）。実デプロイの実行手順は`Version38_Activation_Packet.md`（1ページ）に整理済み——実行はOwner確認待ち
+- Program B（Mobile Ingress）クラウドActivation Gate: ローカルMVPは完成済み（Version35〜37）。Cloudflare Worker実装（cloud側Quick Capture UI込み）はMiniflareで実機検証済み・未デプロイ（Version38〜39、ADR 0069・0070）。実デプロイの実行手順は`Version38_Activation_Packet.md`（1ページ、Version39でQuick Capture UI分を追記）に整理済み——実行はOwner確認待ち
+- ADR 0071・案C（Hybrid read-through cache）の要否: Owner/ARCの価値判断待ち（急ぎ度：低）
 - `MOBILE_INGRESS_HOST`のLAN公開＋`MOBILE_INGRESS_API_TOKEN`設定の有効化: Owner確認事項（確認事項3、`Version35_Decision_Packet.md`）——スマホからの実送信に必要。認証機構は実装済み（fail-closed、ADR 0066）
 - 実際の16件の取り込み: Owner自身が`pnpm import-pending-logs`を実行（Importerは実装済み、ADR 0067）
 - `STUDY_TIMER_API_TOKEN`と実timer疎通: Owner作業

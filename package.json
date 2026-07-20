@@ -39,6 +39,7 @@
     "import-pending-logs": "tsx src/infrastructure/cli/importPendingLifeLogs.ts",
     "cloudflare:typecheck": "tsc --noEmit -p cloudflare/tsconfig.json",
     "cloudflare:test": "vitest run --config cloudflare/vitest.config.ts",
+    "cloudflare:preflight": "tsx cloudflare/preflight.ts",
     "find": "tsx src/infrastructure/cli/search.ts",
     "test": "vitest run",
     "test:watch": "vitest",
