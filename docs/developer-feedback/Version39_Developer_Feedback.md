@@ -119,6 +119,20 @@ Capability/Gap表と、Canonical Store所在の3案比較ADRを作成する。
 
 ## 9. Owner確認事項
 
+- **【急ぎ度：高】公開Remote MCPが旧10ツールのままな件の実機診断**：
+  Version39着手前に対応すべきだった緊急指示（`docs/handoff/
+  ARC_INBOX.md`コミット`e65960c`、リモートへの追記に気づかず
+  Version39を先に完了させてしまった）。このセッションからは
+  Owner実機（常駐プロセス・ngrokトンネル）へアクセスできないため、
+  完全な原因特定にはOwner自身の実行が必要——
+  `docs/incidents/2026-07-20_remote-mcp-stale-tools.md`の4〜6章
+  手順（新設`scripts/diagnose-remote-mcp.mjs`をOwnerのPCで実行し
+  localhostと公開URLの`tool count`/`buildCommit`を比較）に従って
+  切り分けてください。現在のソースコードは26ツールを公開する設計
+  であることは本セッションで実機確認済み——「旧10ツール」は
+  Version18〜27頃のbuildが再起動されずに動き続けている可能性が
+  最も高いという分析結果を記録した。再起動が必要と判明した場合も、
+  実行はOwner自身の操作となる（本番反映に相当するため）。
 - **実際のCloudflareデプロイの実行可否**：
   `docs/project-management/Version38_Activation_Packet.md`
   （実行手順1ページ、Version39時点でも内容は変わらず有効）参照。

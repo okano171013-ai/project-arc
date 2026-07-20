@@ -285,36 +285,29 @@ Version38_Activation_Packet.md`）を作成した。クラウド契約・課金�
 （またはARCが直接AgentMessageとして送ってくることもあります
 ——`agent_message_list`も必ず確認すること）。
 
-## 緊急優先診断：公開Remote MCPが旧10ツールのまま — 2026-07-20（対応中）
-
-Ownerが別のChatGPTチャットから実接続確認したところ、公開ツールは
-旧10件のままで、`capability_registry_get`およびMealLog / NutritionLog /
-WeightLog / FinanceLogが見えていません。夕食のMealLog 1件は代替保存せず
-非公開待機キューへ保護済みです（待機総数17件）。個人データはrepositoryへ
-入れないでください。
-
-Version39の通常実装より先に、次の**読み取り専用診断**を実施してください。
-
-1. 現在のGit HEAD、Remote MCPプロセスの起動時刻・実行パス・build commit、
-   公開トンネルの接続先port/URLを照合する。
-2. localhostと実公開URLの両方へ実MCP clientで接続し、tool count、tool names、
-   `capability_registry_get`結果を採取する。
-3. 10ツールになる地点が、旧プロセス、旧build、別port、別tunnel、ChatGPT側
-   connector cacheのどれかを切り分ける。
-4. 秘密情報を表示・変更せず、再起動前後の検証手順とrollbackを作成する。
-5. 診断結果と、Ownerが行う必要のある最小操作を1か所へ記録する。
-
-この段階ではRemote MCP/ngrokの再起動、URL変更、OAuth有効化、`.env`変更、
-外部公開範囲変更を実行しないでください。診断後、同じURL・同じ公開範囲での
-最新版プロセス再起動だけで直ると確認できた場合も、本番反映直前にOwnerへ
-承認を求めてください。診断は返答待ちで止めずに完了し、その後Version39の
-安全なローカル工程へ戻ってください。
-
-**注記**：この指示はVersion39完了後にGit履歴上で発見した（本来は
-Version39着手前に対応すべき診断だったが、リモートへの追記に気づかず
-Version39を先に完了させてしまった）。Version39自体はローカル・
+**処理済み**：緊急優先診断「公開Remote MCPが旧10ツールのまま」
+（2026-07-20、`docs/incidents/2026-07-20_remote-mcp-stale-tools.md`）。
+この指示はVersion39完了後にGit履歴上で発見した（本来はVersion39
+着手前に対応すべき診断だったが、リモートへの追記に気づかず
+Version39を先に完了させてしまった——Version39自体はローカル・
 Miniflareのみの安全な工程であり、この診断結果とは独立して有効な
-ため取り消さない。診断はこの直後に実施する。
+ため取り消していない）。
+
+現在のリポジトリのソースコードは26ツールを公開する設計であることを
+確認し、本セッションのサンドボックスで実際に`pnpm run api`＋
+`pnpm run mcp:remote`を起動、新設した`scripts/diagnose-remote-mcp.mjs`
+（実MCP client、読み取り専用）で`tool count: 26`・
+`capability_registry_get`のbuildCommitが起動時点のgit HEADと一致
+することを実機確認した。「旧10ツール」という症状は、Version18
+（2026-07-14、「主要10エンドポイント」として実装、`capability_
+registry_get`自体はVersion28で新規追加）時点のbuildが、その後一度も
+再起動・再ビルドされずに動き続けている可能性が最も高いという分析
+結果を記録した。**Owner実機（Windows常駐プロセス・ngrokトンネル）は
+このセッションから直接アクセスできないため、実際のプロセス起動時刻・
+公開URLの照合、および再起動要否の最終判断はOwner自身が
+`scripts/diagnose-remote-mcp.mjs`と診断doc4〜6章の手順で実行する
+必要がある**。秘密情報の表示・変更、Remote MCP/ngrokの再起動は
+実行していない。
 
 **処理済み**：Version39「Cloud Quick Capture & PC-off Gap Closure」
 （`docs/reports/Version39_Report.md`）。Cloudflare Worker側

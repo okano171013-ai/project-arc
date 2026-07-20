@@ -45,7 +45,7 @@ Version35_Decision_Packet.md`・`Version37_Decision_Packet.md`・
 | Typecheck / Lint | 2026-07-20合格（Version39時点で再確認、`cloudflare:typecheck`も合格） |
 | Build | 不合格。TS2742と`dist`書込競合（Version31以降スコープ外、ARC-PM-005として継続。Version39で`git stash`比較により無関係を再確認） |
 | Test | Version39時点642件合格（メイン）＋17件合格（`pnpm cloudflare:test`、別ゲート） |
-| Remote MCP | 認証の実装・テストは完備（Version22）。**本番は今なお無認証**（ADR 0051の「有効化した」という記録は誤りだったとVersion30で判明、訂正済み）。MCP Tool数26（Version34から変化なし——Mobile IngressはRemote MCPの一部ではない） |
+| Remote MCP | 認証の実装・テストは完備（Version22）。**本番は今なお無認証**（ADR 0051の「有効化した」という記録は誤りだったとVersion30で判明、訂正済み）。MCP Tool数26（Version34から変化なし——Mobile IngressはRemote MCPの一部ではない）。**2026-07-20、Owner報告：公開Remote MCPが旧10ツールのまま**（`docs/incidents/2026-07-20_remote-mcp-stale-tools.md`）。現在のソースは26ツール公開が正しいことを実機確認済み——原因はOwner実機側の未再起動の可能性が高いが、最終確認・対応はOwner Action待ち |
 | Program A | DevelopmentGrant・AgentTaskが読み取り専用でARCから確認可能。write操作は未公開（変化なし） |
 | Program B | ローカルMobile Ingress完成（認証・rate limit・監査ログ・退避ログImporter）。Cloudflare Worker実装（cloud側Quick Capture UI込み）をMiniflareで実機検証済み・未デプロイ。実デプロイはOwner確認待ち（`Version38_Activation_Packet.md`）。「PC-off対応」は(a)cloud ingress受付のみ達成、(b)canonical確定・(c)全履歴read availabilityは未達（ADR 0070のCapability/Gap表） |
 | Data Durability | `pnpm backup create/list/restore`が動作。`data/ingress-records.json`も自動的にbackup対象に含まれることを実機で確認済み |
@@ -86,6 +86,7 @@ Version35_Decision_Packet.md`・`Version37_Decision_Packet.md`・
 
 ## 停止中タスク
 
+- **【急ぎ度：高】公開Remote MCPが旧10ツールのまま**: `docs/incidents/2026-07-20_remote-mcp-stale-tools.md`4〜6章の手順（`scripts/diagnose-remote-mcp.mjs`）でOwner自身が実機診断・要否判断のうえ`.\scripts\stop-all.ps1`/`start-all.ps1`を実行する必要がある——Owner実機はこのセッションからアクセス不可
 - OAuth本番有効化: 準備完了（Version30）。Owner承認と接続再設定待ち——`docs/setup/remote-mcp-oauth-migration.md`のチェックリストで一度で実行できる
 - Program B（Mobile Ingress）クラウドActivation Gate: ローカルMVPは完成済み（Version35〜37）。Cloudflare Worker実装（cloud側Quick Capture UI込み）はMiniflareで実機検証済み・未デプロイ（Version38〜39、ADR 0069・0070）。実デプロイの実行手順は`Version38_Activation_Packet.md`（1ページ、Version39でQuick Capture UI分を追記）に整理済み——実行はOwner確認待ち
 - ADR 0071・案C（Hybrid read-through cache）の要否: Owner/ARCの価値判断待ち（急ぎ度：低）
