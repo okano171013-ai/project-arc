@@ -285,6 +285,37 @@ Version38_Activation_Packet.md`）を作成した。クラウド契約・課金�
 （またはARCが直接AgentMessageとして送ってくることもあります
 ——`agent_message_list`も必ず確認すること）。
 
+## 緊急優先診断：公開Remote MCPが旧10ツールのまま — 2026-07-20（対応中）
+
+Ownerが別のChatGPTチャットから実接続確認したところ、公開ツールは
+旧10件のままで、`capability_registry_get`およびMealLog / NutritionLog /
+WeightLog / FinanceLogが見えていません。夕食のMealLog 1件は代替保存せず
+非公開待機キューへ保護済みです（待機総数17件）。個人データはrepositoryへ
+入れないでください。
+
+Version39の通常実装より先に、次の**読み取り専用診断**を実施してください。
+
+1. 現在のGit HEAD、Remote MCPプロセスの起動時刻・実行パス・build commit、
+   公開トンネルの接続先port/URLを照合する。
+2. localhostと実公開URLの両方へ実MCP clientで接続し、tool count、tool names、
+   `capability_registry_get`結果を採取する。
+3. 10ツールになる地点が、旧プロセス、旧build、別port、別tunnel、ChatGPT側
+   connector cacheのどれかを切り分ける。
+4. 秘密情報を表示・変更せず、再起動前後の検証手順とrollbackを作成する。
+5. 診断結果と、Ownerが行う必要のある最小操作を1か所へ記録する。
+
+この段階ではRemote MCP/ngrokの再起動、URL変更、OAuth有効化、`.env`変更、
+外部公開範囲変更を実行しないでください。診断後、同じURL・同じ公開範囲での
+最新版プロセス再起動だけで直ると確認できた場合も、本番反映直前にOwnerへ
+承認を求めてください。診断は返答待ちで止めずに完了し、その後Version39の
+安全なローカル工程へ戻ってください。
+
+**注記**：この指示はVersion39完了後にGit履歴上で発見した（本来は
+Version39着手前に対応すべき診断だったが、リモートへの追記に気づかず
+Version39を先に完了させてしまった）。Version39自体はローカル・
+Miniflareのみの安全な工程であり、この診断結果とは独立して有効な
+ため取り消さない。診断はこの直後に実施する。
+
 **処理済み**：Version39「Cloud Quick Capture & PC-off Gap Closure」
 （`docs/reports/Version39_Report.md`）。Cloudflare Worker側
 `GET /`にQuick Capture UI（Reflection/MealLog/NutritionLog/
@@ -312,6 +343,34 @@ Version39_ARC_Brief.md`に保管）。
 「ここにARCの指示書を貼り付け」以下を置き換えてください
 （またはARCが直接AgentMessageとして送ってくることもあります
 ——`agent_message_list`も必ず確認すること）。
+
+## Owner確定ゴール：PC不要・全ChatGPTチャット共通接続
+
+Ownerは次の2点を最優先のProduct Acceptance Criteriaとして確定しました。
+
+1. **PC停止中でも利用可能**：スマホだけでProject ARCのcanonicalな生活ログへ
+   正式保存でき、保存結果と過去ログを安全に参照できること。単なるcloud待機
+   queueへの受付だけを完成扱いにしない。
+2. **どのChatGPTチャットからも読み書き可能**：新旧チャットを問わず、同じ
+   最新Remote MCP capabilityへ接続でき、MealLog / NutritionLog / WeightLog /
+   FinanceLog等の正式型を利用できること。旧10ツールcacheを放置しない。
+
+Version39完了後は、このゴールへ最短で到達する後続Versionを計画・継続して
+ください。少なくとも以下を設計対象に含めます。
+
+- canonical ARC datastoreのcloud residency（D1等）とlocal data migration
+- cloud-hosted authenticated Remote MCPとcapability/version自己診断
+- connector更新・cache refresh・後方互換の運用手順
+- 自動backup/restore。Google Driveは将来の暗号化backup/export先候補であり、
+  primary datastoreにはしない
+- 無料枠優先、予算上限0円。上限到達時は課金せずfail closed
+- 個人データの暗号化、最小権限、監査、重複防止、削除・rollback
+
+ローカル実装・emulator・migration dry-run・合成データtest・文書化はOwner返答を
+待たず進めてください。Cloudflareアカウント作成、実secret設定、実デプロイ、
+公開URL変更、実個人データ移行、課金はActivation GateとしてOwner承認を求めます。
+完了報告では上記2条件を実機で満たした証拠がない限り「PC不要」「全チャット対応」
+と表現しないでください。
 
 
 <!-- ここにARCの指示書を貼り付け -->
