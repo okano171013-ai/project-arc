@@ -345,5 +345,33 @@ Version38はクラウド待機キューまで完成しましたが、次のOwner
 - 退避中16件の実データは公開repositoryへ入れず、実importもしないでください。
 - live MCPが読めない場合も、このGit指示を正式指示として継続してください。
 
+## Owner確定ゴール：PC不要・全ChatGPTチャット共通接続
+
+Ownerは次の2点を最優先のProduct Acceptance Criteriaとして確定しました。
+
+1. **PC停止中でも利用可能**：スマホだけでProject ARCのcanonicalな生活ログへ
+   正式保存でき、保存結果と過去ログを安全に参照できること。単なるcloud待機
+   queueへの受付だけを完成扱いにしない。
+2. **どのChatGPTチャットからも読み書き可能**：新旧チャットを問わず、同じ
+   最新Remote MCP capabilityへ接続でき、MealLog / NutritionLog / WeightLog /
+   FinanceLog等の正式型を利用できること。旧10ツールcacheを放置しない。
+
+Version39完了後は、このゴールへ最短で到達する後続Versionを計画・継続して
+ください。少なくとも以下を設計対象に含めます。
+
+- canonical ARC datastoreのcloud residency（D1等）とlocal data migration
+- cloud-hosted authenticated Remote MCPとcapability/version自己診断
+- connector更新・cache refresh・後方互換の運用手順
+- 自動backup/restore。Google Driveは将来の暗号化backup/export先候補であり、
+  primary datastoreにはしない
+- 無料枠優先、予算上限0円。上限到達時は課金せずfail closed
+- 個人データの暗号化、最小権限、監査、重複防止、削除・rollback
+
+ローカル実装・emulator・migration dry-run・合成データtest・文書化はOwner返答を
+待たず進めてください。Cloudflareアカウント作成、実secret設定、実デプロイ、
+公開URL変更、実個人データ移行、課金はActivation GateとしてOwner承認を求めます。
+完了報告では上記2条件を実機で満たした証拠がない限り「PC不要」「全チャット対応」
+と表現しないでください。
+
 
 <!-- ここにARCの指示書を貼り付け -->
