@@ -4,7 +4,7 @@
 
 - Version / 日付: Version38 / 2026-07-20
 - 担当エンジン: Claude Code
-- Git commit / tag: （次コミットで記録）
+- Git commit / tag: `76b5e3f`
 - 対応Issue / 関連Report: Cloud-ready Mobile Life Log（ローカルエミュレータ実装） / `docs/reports/Version38_Report.md`
 - 状態: Complete（ローカルエミュレータ検証のみ。実デプロイはOwner確認待ち）
 
@@ -107,7 +107,7 @@ rate limit方式）を含むため、ADR 0069を新規作成した
 ## 完了宣言
 
 - [x] Report、Feedback、Roadmap、PM Status、Open Issuesが同じ事実を示す
-- [x] commit / tagを記録した（次コミットで反映、フォローアップ済み）
+- [x] commit / tagを記録した（`76b5e3f`）
 - [x] 未実行テストを成功扱いしていない（640件+14件全件実行・全件合格を実機で確認）
 - [x] Owner確認事項を通常タスクへ埋没させていない（9章に明記、Activation Packetへも集約）
 - [x] 次担当者がこの文書だけで再開できる（8章に依存関係付きで記載）

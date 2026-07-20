@@ -1,5 +1,7 @@
 # Version38 Report: Cloud-ready Mobile Life Log（ローカルエミュレータ実装）
 
+commit: `76b5e3f`
+
 ## 1. Version概要
 
 ARCがGit経由で送った指示書（2026-07-20、`docs/handoff/archive/
