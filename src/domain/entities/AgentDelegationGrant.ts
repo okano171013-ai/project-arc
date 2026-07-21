@@ -20,6 +20,14 @@ import type { ProposalType } from '../value-objects/Proposal.js';
  * 支出・資産・課金・契約に関する操作は常にOwnerの個別承認を要求する
  * （`ClassifyApprovalLevelUseCase`の型固定Level2ルールと二重の安全
  * 装置）。`Appearance`・`ManagementFeedback`を追加した。
+ *
+ * Version41（ADR 0073）：`Memory`をOwner本人の明示指示
+ * （2026-07-21、チャット内「個別確認無しで保存して」）により追加。
+ * Version40指示の項目3は「重要な長期MemoryおよびExternalKnowledge
+ * への保存」を個別確認対象として例示していたが、これはOwnerの現在の
+ * 意思で明示的に上書きされた——FinanceLog除外の際と同じ「過去の
+ * 判断はOwnerの現在の指示で更新されうる」という扱い。
+ * `ExternalKnowledge`は今回の指示の対象外のため追加していない。
  */
 export type AgentDelegationGrantScope = Extract<
   ProposalType,
@@ -32,6 +40,7 @@ export type AgentDelegationGrantScope = Extract<
   | 'DistractionSignal'
   | 'Appearance'
   | 'ManagementFeedback'
+  | 'Memory'
 >;
 
 export type AgentDelegationGrantStatus = 'Active' | 'Paused' | 'Revoked';

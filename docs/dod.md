@@ -1046,3 +1046,21 @@ Version39のDoDは全項目達成済み。
       クラウド契約・課金・本番公開・秘密情報設定は一切実施していない
 
 Version40のDoDは全項目達成済み。
+
+## Version41完了チェックリスト
+
+- [x] `pnpm test` が全て緑（661件、92 test files、Memory型のGrant
+      自動承認テストを含む）
+- [x] `pnpm typecheck` / `pnpm lint` がエラーゼロ
+- [x] AgentDelegationGrantScope・AUTO_APPROVABLE_TYPESへMemoryを
+      追加（Owner本人のチャット内明示指示に基づく）
+- [x] `verifyPersisted`にMemory用read-after-write検証を追加
+- [x] ADR 0073（Memory scope自動承認を追加した理由）を作成済み
+- [x] ARC-PM-005が本Versionの変更と無関係であることを`git stash`
+      比較で再確認
+- [x] `docs/reports/Version41_Report.md`を生成済み（14章構成）
+- [x] `docs/developer-feedback/Version41_Developer_Feedback.md`を生成済み
+- [x] 実際のAgentDelegationGrant発行・Constitution/Principles変更は
+      一切実施していない
+
+Version41のDoDは全項目達成済み。

@@ -549,6 +549,7 @@ describe('WriteProposalGatewayUseCase', () => {
           | 'DistractionSignal'
           | 'Appearance'
           | 'ManagementFeedback'
+          | 'Memory'
         )[];
       }> = {},
     ) {
@@ -738,8 +739,15 @@ describe('WriteProposalGatewayUseCase', () => {
         },
         (ctx2: ReturnType<typeof buildGateway>) => ctx2.feedbackRepo.store.size,
       ],
+      [
+        'Memory' as const,
+        {
+          record: { category: 'Preferences', title: 'ほしい物リスト', content: 'テスト用の記録' },
+        },
+        (ctx2: ReturnType<typeof buildGateway>) => ctx2.memoryRepo.store.size,
+      ],
     ])(
-      'auto-approves a %s proposal when a valid grant covers it (Version25/26/40: Life Log/行動介入レイヤー/Appearance・ManagementFeedbackの自動承認)',
+      'auto-approves a %s proposal when a valid grant covers it (Version25/26/40/41: Life Log/行動介入レイヤー/Appearance・ManagementFeedback・Memoryの自動承認)',
       async (type, payload, countOf) => {
         await seedGrant(ctx, { scope: [type] });
         const proposal = await ctx.gateway.createProposal({

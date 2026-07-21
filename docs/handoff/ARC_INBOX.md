@@ -390,5 +390,17 @@ Constitution第4条との整合性は既存の`AgentDelegationGrant`機構
 Constitution/Principles変更・クラウド契約・課金は一切実施していない
 （原文は`docs/handoff/archive/Version40_ARC_Brief.md`に保管）。
 
+**処理済み**：Version41「MemoryをAgentdelegationgrant scopeへ追加」
+（`docs/reports/Version41_Report.md`）。Owner本人が、Claude Code
+セッションのチャット上で、Version40完了直後に実際にMemory型の内容
+（ほしい物リスト・方針）を保存しようとした際、「個別確認無しで
+保存して」と明示指示した。Version40の項目3が示した「Memoryは個別
+確認を維持する」方針をOwner本人の現在の意思で上書きし、
+`AgentDelegationGrantScope`・`AUTO_APPROVABLE_TYPES`へ`Memory`を
+追加した（ADR 0073）。新規ツールは追加せず既存`proposal_create`の
+auto-approve機構を拡張しただけ。`ExternalKnowledge`は指示の対象外
+のため追加していない。661件のテストが全て合格。実際のGrant発行は
+未実施（Constitution第4条によりOwner自身の操作が必要）。
+
 
 <!-- ここにARCの指示書を貼り付け -->

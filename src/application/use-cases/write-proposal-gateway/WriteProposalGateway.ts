@@ -40,7 +40,8 @@ import { RecordApprovalDecisionUseCase } from '../approval-policy/RecordApproval
 
 /**
  * Version24で導入、Version25・Version26で拡張、Version40で再編
- * （ADR 0072、Owner指示`ba6548bc-...`）：この9型のみ、有効な
+ * （ADR 0072、Owner指示`ba6548bc-...`）、Version41で`Memory`追加
+ * （ADR 0073、Owner本人のチャット内明示指示）：この10型のみ、有効な
  * AgentDelegationGrantがあれば自動承認の対象になりうる。
  * `AgentDelegationGrant`自体・`InterventionPolicySettings`・
  * `InterventionResponse`・**`FinanceLog`**は絶対に含めない（型固定
@@ -49,7 +50,8 @@ import { RecordApprovalDecisionUseCase } from '../approval-policy/RecordApproval
  * 広げないというVersion26の判断、`FinanceLog`は収入・支出・資産・
  * 課金・契約に関する操作を常にOwner個別確認とするVersion40の
  * Owner指示に基づく（過去Versionでは`AUTO_APPROVABLE_TYPES`に
- * 含まれていたが、Version40で明示的に除外した）。
+ * 含まれていたが、Version40で明示的に除外した）。`ExternalKnowledge`
+ * は今回のOwner指示の対象外のため引き続き含めていない。
  */
 const AUTO_APPROVABLE_TYPES: readonly ProposalType[] = [
   'Reflection',
@@ -61,6 +63,7 @@ const AUTO_APPROVABLE_TYPES: readonly ProposalType[] = [
   'DistractionSignal',
   'Appearance',
   'ManagementFeedback',
+  'Memory',
 ];
 
 /**
@@ -373,7 +376,7 @@ export class WriteProposalGatewayUseCase {
 
   constructor(
     private readonly reflectionRepository: ReflectionRepository,
-    memoryRepository: MemoryRepository,
+    private readonly memoryRepository: MemoryRepository,
     externalKnowledgeRepository: ExternalKnowledgeRepository,
     externalSourceRepository: ExternalSourceRepository,
     private readonly appearanceLogRepository: AppearanceLogRepository,
@@ -607,6 +610,11 @@ export class WriteProposalGatewayUseCase {
       case 'ManagementFeedback': {
         const { feedback } = result as { feedback: { id: string } };
         const found = await this.managementFeedbackRepository.findById(feedback.id);
+        return found !== null;
+      }
+      case 'Memory': {
+        const { entry } = result as { entry: { id: string } };
+        const found = await this.memoryRepository.findById(entry.id);
         return found !== null;
       }
       default:

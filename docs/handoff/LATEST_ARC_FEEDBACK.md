@@ -1,6 +1,6 @@
 # 最新のARCへのフィードバック
 
-現在の最新版：[`docs/developer-feedback/Version40_Developer_Feedback.md`](../developer-feedback/Version40_Developer_Feedback.md)
+現在の最新版：[`docs/developer-feedback/Version41_Developer_Feedback.md`](../developer-feedback/Version41_Developer_Feedback.md)
 
 Ownerはこのファイルの中身をコピーして、ARC（ChatGPT）との会話に
 貼り付けてください。次のVersionが完了するたびに、Claude Codeが

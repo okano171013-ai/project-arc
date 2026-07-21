@@ -70,6 +70,7 @@ const AGENT_DELEGATION_GRANT_SCOPES: AgentDelegationGrantScope[] = [
   'DistractionSignal',
   'Appearance',
   'ManagementFeedback',
+  'Memory',
 ];
 const MEMORY_CATEGORIES: MemoryCategory[] = [
   'Assets', 'Appearance', 'Goals', 'Preferences', 'Education',

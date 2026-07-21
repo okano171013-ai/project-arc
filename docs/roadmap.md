@@ -189,9 +189,20 @@ StudySessionの対話型ライフサイクル（create/update/finish/list、
 発行・Constitution/Principlesの変更は一切実施していない。詳細は
 `docs/reports/Version40_Report.md`・ADR 0072参照。
 
-**Version41以降**：Owner確認事項（LAN公開＋トークン設定の可否、
+**Version41は完了済み**：Version40完了直後、Owner本人がChatGPT
+接続チャットで実際にMemory型の内容（ほしい物リスト・方針）を保存
+しようとした際、Proposal個別確認の往復を不便に感じ、「個別確認
+無しで保存して」と明示指示した。Version40の項目3が示した
+「Memoryは個別確認を維持する」方針をOwner本人の現在の意思で上書きし、
+`AgentDelegationGrantScope`・`AUTO_APPROVABLE_TYPES`へ`Memory`を
+追加した（ADR 0073）。新規ツールは追加せず既存`proposal_create`の
+auto-approve機構を拡張しただけ。`ExternalKnowledge`は指示の対象外
+のため追加していない。詳細は`docs/reports/Version41_Report.md`・
+ADR 0073参照。
+
+**Version42以降**：Owner確認事項（LAN公開＋トークン設定の可否、
 実際の16件の取り込み、Cloudflare実デプロイの実行可否、ADR 0071・
-案Cの要否、Appearance/ManagementFeedback等を含む新しい
+案Cの要否、Appearance/ManagementFeedback/Memory等を含む新しい
 AgentDelegationGrantの発行可否）への回答を受けて、実地確認・
 実際のデプロイ・Grant発行を行う。
 
