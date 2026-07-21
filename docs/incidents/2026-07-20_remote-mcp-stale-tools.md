@@ -91,6 +91,25 @@ Get-ScheduledTaskInfo -TaskName ProjectARC-AutoStart       # 自動起動タス�
    `docs/setup/collaboration-runner.md`4章）を踏まえてOwnerが判断
    すること。
 
+## 6.5. 追記：Gemini実接続での切り分け結果（2026-07-20、Owner報告）
+
+Owner経由で、Gemini（別クライアント）が実際にProject ARCのRemote MCPへ
+接続し、`agent_message_list`（ToClaudeCode）の呼び出しに成功したと
+報告された。**この事実自体が切り分けに使える**——`agent_message_list`
+はVersion18の「主要10エンドポイント」buildには存在しないツール
+（AgentMessage関連機能はVersion17〜19以降に追加）であるため、これが
+実際に呼び出せて結果を返したということは、**接続先のサーバー自体は
+既に最新（26ツール相当）のbuildで動作している**ことを強く示唆する。
+Gemini側の接続UIに表示される一覧が10件のままなのは、5章の表の
+「26件／26件（実は両方最新）・ChatGPT/Gemini側connector cacheが
+古いだけ」のケースに一致する可能性が高い。
+
+**Owner/Gemini側の次の一手（このセッションからは実行不可）**：
+Geminiに`capability_registry_get`も同様に名前指定で直接呼び出させ、
+`toolCount: 26`が返れば上記の推定が確定する。確定すれば、Owner PC側の
+再起動は不要で、Gemini側のconnector再接続（接続の削除→再追加、または
+「ツールを更新」に相当する操作）のみで解決する可能性が高い。
+
 ## 7. Version39との関係
 
 この診断はVersion39着手前に対応すべき指示だったが、リモートへの
