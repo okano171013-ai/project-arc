@@ -16,11 +16,13 @@ import type { ProposalType } from '../../../domain/value-objects/Proposal.js';
  * ——`target`/`reason`等の自由記述テキストの意味を読むことは一切しない。
  *
  * ルール（優先順）：
- * 0. `proposalType === 'AgentDelegationGrant' | 'InterventionPolicySettings'`
- *    なら、signalsの内容に関わらず常にLevel2（Version24、ADR 0051、
- *    Version26でInterventionPolicySettingsを追加、ADR 0053）。委譲書・
- *    介入ポリシー設定という「Systemがいつ自動実行してよいか」を決める
- *    境界自体の作成・変更が既存のOwner`do`必須フローを絶対に迂回
+ * 0. `proposalType === 'AgentDelegationGrant' | 'InterventionPolicySettings'
+ *    | 'FinanceLog'`なら、signalsの内容に関わらず常にLevel2
+ *    （Version24、ADR 0051、Version26でInterventionPolicySettingsを
+ *    追加、ADR 0053。Version40でFinanceLogを追加、ADR 0072・Owner
+ *    指示）。委譲書・介入ポリシー設定・金銭記録という「Systemがいつ
+ *    自動実行してよいか」を決める境界、または収入・支出・資産に
+ *    関わる型の作成・変更が既存のOwner`do`必須フローを絶対に迂回
  *    できないようにする、型ベースの決定的ルール——「この型である」
  *    という機械的事実のlookupであり、内容の意味解釈ではない。
  * 1. `signals`が省略された場合（=申告なし）は境界事例として扱い、
@@ -39,10 +41,14 @@ export interface ClassifyApprovalLevelOutput {
 
 export class ClassifyApprovalLevelUseCase {
   execute(signals: ApprovalSignals | undefined, proposalType?: ProposalType): ClassifyApprovalLevelOutput {
-    if (proposalType === 'AgentDelegationGrant' || proposalType === 'InterventionPolicySettings') {
+    if (
+      proposalType === 'AgentDelegationGrant' ||
+      proposalType === 'InterventionPolicySettings' ||
+      proposalType === 'FinanceLog'
+    ) {
       return {
         level: 'Level2',
-        reason: `${proposalType}自体の作成・変更は常にLevel2（type固定ルール、ADR 0051/0053）`,
+        reason: `${proposalType}自体の作成・変更は常にLevel2（type固定ルール、ADR 0051/0053/0072）`,
         triggeredSignals: [],
       };
     }

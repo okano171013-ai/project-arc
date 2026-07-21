@@ -170,9 +170,30 @@ Capability/Gap表（ADR 0070）を作成し、Version39時点でも(b)(c)は
 クラウド契約・課金・本番公開・秘密情報設定は一切実施していない。
 詳細は`docs/reports/Version39_Report.md`・ADR 0070・0071参照。
 
-**Version40以降**：Owner確認事項（LAN公開＋トークン設定の可否、
+**Version40は完了済み**：Owner本人発信のAgentMessage
+（id `ba6548bc-...`、Critical、`docs/handoff/archive/
+Version40_ARC_Brief.md`）に基づき、MealLog/NutritionLog/WeightLog/
+Reflection/ChallengeLog/CheckIn/DistractionSignal/Appearance/
+ManagementFeedbackの9種を対象に、既存`AgentDelegationGrant`の
+scopeを拡張してProposal不要の保存を可能にした（新規ツールは
+追加せず既存`proposal_create`を拡張、ADR 0072）。過去Versionから
+`AUTO_APPROVABLE_TYPES`に含まれていた`FinanceLog`は、Owner指示に
+基づき明示的に除外し、常にOwner個別確認を要求するよう是正した。
+StudySessionの対話型ライフサイクル（create/update/finish/list、
+日次・期間集計）をMCP Tool6件として新規追加した（Version27の
+「MCP Toolは用意しない」方針をOwner指示により反転）。全ての
+自動保存パスへread-after-write検証・`saved`/`verified`区別・
+失敗時の`retryQueueId`を実装した。`capability_registry_get`へ
+実行環境診断情報を追加し、`scripts/mirror-agent-messages.mjs`
+（AgentMessage→Git Inboxミラー、経路C）を新設した。実際のGrant
+発行・Constitution/Principlesの変更は一切実施していない。詳細は
+`docs/reports/Version40_Report.md`・ADR 0072参照。
+
+**Version41以降**：Owner確認事項（LAN公開＋トークン設定の可否、
 実際の16件の取り込み、Cloudflare実デプロイの実行可否、ADR 0071・
-案Cの要否）への回答を受けて、実地確認・実際のデプロイを行う。
+案Cの要否、Appearance/ManagementFeedback等を含む新しい
+AgentDelegationGrantの発行可否）への回答を受けて、実地確認・
+実際のデプロイ・Grant発行を行う。
 
 | 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
 |---:|---|---|---|

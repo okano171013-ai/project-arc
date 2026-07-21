@@ -203,6 +203,19 @@ ConstitutionやPrinciplesの変更が必要な場合は、勝手に変更せず�
 
 ## 対応結果
 
-Version40として着手。詳細は`docs/reports/Version40_Report.md`・
-`docs/developer-feedback/Version40_Developer_Feedback.md`・関連ADR
-参照（作業完了後に追記）。
+Version40として完了。既存の`AgentDelegationGrant`機構（Version24、
+ADR 0051）のscopeをAppearance・ManagementFeedbackへ拡張し、
+FinanceLogを明示的に除外することで、新規`*_create`ツールを追加せず
+に項目1の要求を満たした（ADR 0072決定1「書き込み経路を増やさない」
+方針）。StudySession対話型ライフサイクル（項目2、6ツール）、保存
+信頼性契約（項目4、read-after-write・saved/verified・
+retryQueueId）、`capability_registry_get`拡充（項目5）、
+`scripts/mirror-agent-messages.mjs`（項目6）を実装した。項目8の
+ADR 0031・Constitution整合性は、既存のConstitution第4条改定
+（Version24）の枠内で完結すると判断し、新たな改定は行わなかった
+——この判断根拠はADR 0072に記録した。項目9の完了報告項目は
+`docs/developer-feedback/Version40_Developer_Feedback.md`に含めた。
+
+詳細は`docs/reports/Version40_Report.md`・
+`docs/developer-feedback/Version40_Developer_Feedback.md`・
+ADR 0072参照。

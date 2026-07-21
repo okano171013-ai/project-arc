@@ -66,9 +66,10 @@ const AGENT_DELEGATION_GRANT_SCOPES: AgentDelegationGrantScope[] = [
   'MealLog',
   'NutritionLog',
   'WeightLog',
-  'FinanceLog',
   'CheckIn',
   'DistractionSignal',
+  'Appearance',
+  'ManagementFeedback',
 ];
 const MEMORY_CATEGORIES: MemoryCategory[] = [
   'Assets', 'Appearance', 'Goals', 'Preferences', 'Education',

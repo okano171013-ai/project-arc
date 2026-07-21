@@ -14,6 +14,13 @@
 
 import type { ProposalType } from '../value-objects/Proposal.js';
 
+/**
+ * Version40（ADR 0072）：`FinanceLog`はOwner指示（AgentMessage
+ * `ba6548bc-...`）により、Grantのscopeから明示的に除外した——収入・
+ * 支出・資産・課金・契約に関する操作は常にOwnerの個別承認を要求する
+ * （`ClassifyApprovalLevelUseCase`の型固定Level2ルールと二重の安全
+ * 装置）。`Appearance`・`ManagementFeedback`を追加した。
+ */
 export type AgentDelegationGrantScope = Extract<
   ProposalType,
   | 'Reflection'
@@ -21,9 +28,10 @@ export type AgentDelegationGrantScope = Extract<
   | 'MealLog'
   | 'NutritionLog'
   | 'WeightLog'
-  | 'FinanceLog'
   | 'CheckIn'
   | 'DistractionSignal'
+  | 'Appearance'
+  | 'ManagementFeedback'
 >;
 
 export type AgentDelegationGrantStatus = 'Active' | 'Paused' | 'Revoked';

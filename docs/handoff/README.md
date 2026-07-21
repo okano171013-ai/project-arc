@@ -62,12 +62,46 @@ AgentMessageの`tags`に`mf:<ManagementFeedbackのid>`を付与する規約
 `tags?: string[]`を再利用する——新しいフィールドは追加しない
 （Principle 9のYAGNI）。
 
-## 自動化の限界（両経路共通）
+## 経路C：AgentMessage → Git Inboxミラー（Version40）
 
-- どちらの経路でも、**書き込みは必ずOwnerの明示的な承認
+Version39〜40のセッションで、Claude Codeが動くクラウドサンドボックス
+環境と、本番Project ARC（Ownerの実機）が**別のデータストア**を見て
+いるため、`agent_message_list`（経路B）がサンドボックス側からは
+`fetch failed`になり、実際に保存された指示書を読めないという実例が
+繰り返し発生した（`docs/incidents/2026-07-20_remote-mcp-stale-tools.md`・
+`docs/handoff/archive/Version40_ARC_Brief.md`参照）。
+
+これを緩和するため、`scripts/mirror-agent-messages.mjs`を追加した。
+**Owner自身のPC**（本番のProject ARCと本物のgit checkoutが両方存在
+する環境）で、`pnpm run api`起動中に次を実行する。
+
+```bash
+node scripts/mirror-agent-messages.mjs
+```
+
+未処理の`ToClaudeCode`なAgentMessageを`docs/handoff/ARC_INBOX.md`
+（経路A）へ自動的に転記する。転記済みのメッセージは`<!--
+mirrored-agent-message-id: ... -->`マーカーで識別し、再実行しても
+重複追記しない。転記後は`git diff`で内容を確認し、commit・pushする
+——これにより、経路B（ライブ、`agent_message_list`）が特定の実行
+環境から読めない場合でも、経路A（Git）が確実なフォールバックとして
+機能する。
+
+**推奨運用**：Owner自身がARCから新しい指示を受け取ったと感じたとき、
+または定期的に（Collaboration Runnerの新着通知と合わせて）このコマンドを
+実行する。Claude Code自身はこのスクリプトを自分のセッションから実行
+できない——本番データストアへのアクセスはOwnerのPC上でしか成立しない
+ため（`docs/incidents/2026-07-20_remote-mcp-stale-tools.md`3章参照）。
+
+## 自動化の限界（3経路共通）
+
+- どの経路でも、**書き込みは必ずOwnerの明示的な承認
   （Write Proposal Layerのapprove）を経由する**——ARCが直接
   「判断」して保存することはない（Constitution第2条・第4条）。
 - 経路Bはトンネル起動中しか機能しない。Owner不在時・トンネル未起動時
   は経路Aが唯一の手段になる。
+- 経路Cはミラーのみで、承認・書き込みそのものは代行しない
+  ——`agent_message_list`で本番から直接読めるという前提が崩れた
+  場合の可視性確保が目的。
 - 将来メール/Slack等のコネクタを接続すれば、経路Aの往復もさらに
   自動化できる可能性がある（Owner希望があれば検討する）。

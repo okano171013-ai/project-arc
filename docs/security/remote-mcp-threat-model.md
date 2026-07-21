@@ -506,3 +506,78 @@ CSP・token非埋め込み・冪等な再送UXにより、既知の攻撃面
 満たすものではなく、cloud ingress受付（段階a）のみをカバーする
 ——canonical ARCへの確定保存（段階b）・全生活履歴のread
 availability（段階c）は引き続きPC起動が前提のままである。
+
+## 13. Version40監査：AgentDelegationGrant scope拡張・保存信頼性契約・
+StudySession直接書き込みツール
+
+Owner本人発信のAgentMessage（id `ba6548bc-c550-43a6-b5a1-
+7ab4dd4c9889`、Critical）に基づき、Proposal承認フローを迂回できる
+範囲を広げた（ADR 0072）。範囲拡大は必ず既存の安全装置と併せて
+評価する必要があるため、本章で監査結果を記録する。
+
+### 13.1 AUTO_APPROVABLE_TYPESの拡張・縮小
+
+`Appearance`・`ManagementFeedback`を追加、`FinanceLog`を除外した
+（ADR 0072決定2・3）。`FinanceLog`は`ClassifyApprovalLevelUseCase`の
+型固定Level2ルールへ追加し、`AgentDelegationGrantScope`という型
+自体からも除外した——「scopeにFinanceLogを含むGrant」がもはや
+TypeScriptレベルで構築不能になっている（コンパイル時に防げる、
+実行時チェックへ依存しない二重の安全装置）。回帰テストで、
+scopeにFinanceLogを含まないGrantが存在する状態でFinanceLog
+Proposalを送っても自動承認されないことを確認済み
+（`WriteProposalGateway.test.ts`）。
+
+### 13.2 保存信頼性契約が監査に与える影響
+
+`createProposal`の自動承認パスに、read-after-write検証と
+try/catchによる失敗の構造化報告（`saved`/`verified`/`saveError`/
+`retryQueueId`）を追加した（ADR 0072決定4）。重要な点として、
+**書き込みが失敗した場合はGrantの`usageCount`を消費しない**
+——失敗した試行にOwnerの委譲予算を使わせない設計であることを、
+Repositoryの`save()`を例外送出させる回帰テストで確認済み
+（`WriteProposalGateway.test.ts`「reports saved:false...」）。
+これにより、悪意ある・不安定なクライアントが失敗を繰り返しても、
+有効なGrantの残り使用回数を消耗させて正当な保存を妨害する
+（可用性への攻撃）リスクを抑えている。
+
+### 13.3 StudySessionライフサイクルツール：Version27方針の意図的な
+反転
+
+`study_session_create`/`update`/`finish`は、Version27が明示的に
+「MCP Toolは意図的に用意しない——ARC自身はこの経路を呼べない」と
+決めた方針を反転させる。Owner本人の明示的な今回指示（項目2）を
+根拠とする。この経路はWrite Proposal Layer・
+`AgentDelegationGrant`・`ApprovalDecision`監査のいずれも経由しない
+**直接書き込み**である——既存のStudy Timer Gateway
+（`/api/study-sessions`、Bearer token認証、Version27）と同じ設計
+思想（機械的な記録であり、Owner確認を要する「判断」を含まない）を
+踏襲した。
+
+**既知のトレードオフ**：この経路はApprovalDecisionの監査ログに
+一切記録されない。個人の学習記録という低リスクなデータであること、
+Constitution第2条上「保存する」という機械的操作自体が判断を伴わない
+ことから許容範囲と判断したが、将来的に監査要件が強まった場合は
+ApprovalDecision記録を追加することを技術的負債として記録する
+（`docs/reports/Version40_Report.md`8章）。
+
+### 13.4 `capability_registry_get`の環境情報開示
+
+`environment.cwd`・`environment.dataDirectory`を返すようになった
+（ADR 0072、本Version）。ファイルパス自体は機微情報ではないが、
+将来Owner固有のユーザー名等がパスに含まれる環境（Windows
+`C:\Users\<username>\...`等）では、この情報がMCP経由でChatGPT等の
+外部サービスへ渡ることになる点は認識しておく必要がある——
+現状の`/mcp`エンドポイントは無認証（ADR 0044）のため、接続できる
+誰でもこの情報を取得できる。実害は限定的（Ownerは既にファイル
+システムパスをローカルで把握している）と判断し、本Versionでは
+対応不要としたが、将来Remote MCPへ認証を導入する際に併せて
+再評価する。
+
+### 13.5 結論
+
+Version40の変更は、いずれも「機械的に判定可能な範囲を広げる・
+失敗を握りつぶさない」という既存の設計原則の延長線上にあり、
+Constitution第2条・第4条・ADR 0031の中核的保証（Ownerの明示行為
+なしに書き込みが確定しない、という原則そのもの）には抵触しない。
+StudySessionツールの監査ログ非対応（13.3）は唯一の新規トレード
+オフであり、明示的に記録した。

@@ -44,6 +44,12 @@ import { registerInterventionPolicySettingsGetTool } from './tools/interventionP
 import { registerDailyBehaviorScoreGetTool } from './tools/dailyBehaviorScoreGet.js';
 import { registerInterventionEffectivenessGetTool } from './tools/interventionEffectivenessGet.js';
 import { registerCapabilityRegistryGetTool } from './tools/capabilityRegistryGet.js';
+import { registerStudySessionCreateTool } from './tools/studySessionCreate.js';
+import { registerStudySessionUpdateTool } from './tools/studySessionUpdate.js';
+import { registerStudySessionFinishTool } from './tools/studySessionFinish.js';
+import { registerStudySessionListTool } from './tools/studySessionList.js';
+import { registerStudySummaryByDateTool } from './tools/studySummaryByDate.js';
+import { registerStudySummaryByPeriodTool } from './tools/studySummaryByPeriod.js';
 
 export function buildMcpServer(connector: Connector): McpServer {
   const server = new McpServer({ name: 'project-arc', version: '1.0.0' });
@@ -73,6 +79,12 @@ export function buildMcpServer(connector: Connector): McpServer {
   registerInterventionPolicySettingsGetTool(server, connector);
   registerDailyBehaviorScoreGetTool(server, connector);
   registerInterventionEffectivenessGetTool(server, connector);
+  registerStudySessionCreateTool(server, connector);
+  registerStudySessionUpdateTool(server, connector);
+  registerStudySessionFinishTool(server, connector);
+  registerStudySessionListTool(server, connector);
+  registerStudySummaryByDateTool(server, connector);
+  registerStudySummaryByPeriodTool(server, connector);
   registerCapabilityRegistryGetTool(server);
 
   return server;

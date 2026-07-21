@@ -39,13 +39,17 @@ import { ClassifyApprovalLevelUseCase } from '../approval-policy/ClassifyApprova
 import { RecordApprovalDecisionUseCase } from '../approval-policy/RecordApprovalDecision.js';
 
 /**
- * Version24で導入、Version25・Version26で拡張：この8型のみ、有効な
+ * Version24で導入、Version25・Version26で拡張、Version40で再編
+ * （ADR 0072、Owner指示`ba6548bc-...`）：この9型のみ、有効な
  * AgentDelegationGrantがあれば自動承認の対象になりうる。
  * `AgentDelegationGrant`自体・`InterventionPolicySettings`・
- * `InterventionResponse`は絶対に含めない（型固定Level2ルールと
- * 合わせた二重の安全装置、ADR 0051/0053）——`InterventionResponse`
- * （却下・スヌーズ等）の自動化はOwner確認前に広げない、という
- * Version26の明示的な判断（`docs/reports/Version26_Report.md`参照）。
+ * `InterventionResponse`・**`FinanceLog`**は絶対に含めない（型固定
+ * Level2ルールと合わせた二重の安全装置、ADR 0051/0053/0072）——
+ * `InterventionResponse`（却下・スヌーズ等）の自動化はOwner確認前に
+ * 広げないというVersion26の判断、`FinanceLog`は収入・支出・資産・
+ * 課金・契約に関する操作を常にOwner個別確認とするVersion40の
+ * Owner指示に基づく（過去Versionでは`AUTO_APPROVABLE_TYPES`に
+ * 含まれていたが、Version40で明示的に除外した）。
  */
 const AUTO_APPROVABLE_TYPES: readonly ProposalType[] = [
   'Reflection',
@@ -53,9 +57,10 @@ const AUTO_APPROVABLE_TYPES: readonly ProposalType[] = [
   'MealLog',
   'NutritionLog',
   'WeightLog',
-  'FinanceLog',
   'CheckIn',
   'DistractionSignal',
+  'Appearance',
+  'ManagementFeedback',
 ];
 
 /**
@@ -311,6 +316,24 @@ export interface CreateProposalInput {
 export interface ApproveProposalOutput {
   type: ProposalType;
   result: unknown;
+  /** Version40（ADR 0072）：`approveProposal`が実際に保存を確認できた場合のみ設定される。 */
+  saved?: boolean;
+  verified?: boolean;
+}
+
+/**
+ * Version40（ADR 0072）：payload内の`idempotencyKey`をtypeを問わず
+ * 機械的に取り出す。存在しない型（Reflection/Appearance/
+ * ManagementFeedback等）ではundefinedを返す——呼び出し側が
+ * `type:target:createdAt`から代替キーを組み立てる。
+ */
+function extractIdempotencyKey(payload: Record<string, unknown>): string | undefined {
+  const record = payload.record;
+  if (record && typeof record === 'object' && 'idempotencyKey' in record) {
+    const value = (record as { idempotencyKey?: unknown }).idempotencyKey;
+    return typeof value === 'string' && value.length > 0 ? value : undefined;
+  }
+  return undefined;
 }
 
 export interface RejectProposalOutput {
@@ -349,22 +372,22 @@ export class WriteProposalGatewayUseCase {
   private readonly recordApprovalDecision: RecordApprovalDecisionUseCase;
 
   constructor(
-    reflectionRepository: ReflectionRepository,
+    private readonly reflectionRepository: ReflectionRepository,
     memoryRepository: MemoryRepository,
     externalKnowledgeRepository: ExternalKnowledgeRepository,
     externalSourceRepository: ExternalSourceRepository,
-    appearanceLogRepository: AppearanceLogRepository,
-    managementFeedbackRepository: ManagementFeedbackRepository,
+    private readonly appearanceLogRepository: AppearanceLogRepository,
+    private readonly managementFeedbackRepository: ManagementFeedbackRepository,
     agentMessageRepository: AgentMessageRepository,
     approvalDecisionRepository: ApprovalDecisionRepository,
-    challengeLogRepository: ChallengeLogRepository,
+    private readonly challengeLogRepository: ChallengeLogRepository,
     private readonly agentDelegationGrantRepository: AgentDelegationGrantRepository,
-    mealLogRepository: MealLogRepository,
-    nutritionLogRepository: NutritionLogRepository,
-    weightLogRepository: WeightLogRepository,
+    private readonly mealLogRepository: MealLogRepository,
+    private readonly nutritionLogRepository: NutritionLogRepository,
+    private readonly weightLogRepository: WeightLogRepository,
     financeLogRepository: FinanceLogRepository,
-    checkInRepository: CheckInRepository,
-    distractionSignalRepository: DistractionSignalRepository,
+    private readonly checkInRepository: CheckInRepository,
+    private readonly distractionSignalRepository: DistractionSignalRepository,
     interventionRepository: InterventionRepository,
     interventionPolicySettingsRepository: InterventionPolicySettingsRepository,
   ) {
@@ -418,13 +441,31 @@ export class WriteProposalGatewayUseCase {
     // ルールと合わせて二重に自動承認の対象から除外される。
     let autoApproved = false;
     let autoApprovalResult: unknown;
+    let saveOutcome: { saved: boolean; verified: boolean; retryQueueId?: string; saveError?: string } | undefined;
     if (classification.level !== 'Level2' && AUTO_APPROVABLE_TYPES.includes(input.type)) {
       const grant = await this.findValidGrant(input.type);
       if (grant) {
-        autoApprovalResult = await this.executeApproval(input.type, validatedPayload);
-        grant.recordUsage();
-        await this.agentDelegationGrantRepository.save(grant);
-        autoApproved = true;
+        // Version40（ADR 0072、保存信頼性契約）：Owner`do`を介さない
+        // 唯一の書き込み経路であるため、失敗を「成功したように」返す
+        // ことは絶対に避ける。executeApproval自体の例外・
+        // read-after-write検証の不一致のどちらも「保存されなかった」
+        // として扱い、Grantの使用回数は消費しない（失敗した試行に
+        // Ownerの委譲予算を使わせない）。
+        try {
+          autoApprovalResult = await this.executeApproval(input.type, validatedPayload);
+          const verified = await this.verifyPersisted(input.type, (autoApprovalResult as ApproveProposalOutput).result);
+          grant.recordUsage();
+          await this.agentDelegationGrantRepository.save(grant);
+          autoApproved = true;
+          saveOutcome = { saved: true, verified };
+        } catch (error) {
+          saveOutcome = {
+            saved: false,
+            verified: false,
+            saveError: error instanceof Error ? error.message : String(error),
+            retryQueueId: extractIdempotencyKey(input.payload) ?? `${input.type}:${input.target}:${new Date().toISOString()}`,
+          };
+        }
       }
     }
 
@@ -437,6 +478,7 @@ export class WriteProposalGatewayUseCase {
       signals: input.signals,
       approvalLevel: classification.level,
       ...(autoApproved ? { autoApproved: true, result: (autoApprovalResult as ApproveProposalOutput).result } : {}),
+      ...(saveOutcome ?? {}),
     };
 
     await this.recordApprovalDecision.execute({
@@ -445,7 +487,7 @@ export class WriteProposalGatewayUseCase {
         proposalType: proposal.type,
         target: proposal.target,
         level: classification.level,
-        reason: classification.reason,
+        reason: saveOutcome && !saveOutcome.saved ? `${classification.reason}（自動保存失敗: ${saveOutcome.saveError}）` : classification.reason,
         triggeredSignals: classification.triggeredSignals,
         signals: input.signals ?? {},
         approver: autoApproved ? 'auto-save' : 'Owner',
@@ -468,6 +510,12 @@ export class WriteProposalGatewayUseCase {
     const classification = this.classifyApprovalLevel.execute(proposal.signals, proposal.type);
 
     const output = await this.executeApproval(proposal.type, payload);
+    // Version40（ADR 0072）：Owner`do`を経た明示承認パスでも、
+    // 保存の事実をread-after-writeで確認し`verified`として返す
+    // （対応する型のみ——検証手段が無い型は`verified`を付与しない）。
+    const verified = AUTO_APPROVABLE_TYPES.includes(proposal.type)
+      ? await this.verifyPersisted(proposal.type, output.result)
+      : undefined;
 
     await this.recordApprovalDecision.execute({
       record: {
@@ -482,7 +530,7 @@ export class WriteProposalGatewayUseCase {
       },
     });
 
-    return output;
+    return { ...output, saved: true, ...(verified !== undefined ? { verified } : {}) };
   }
 
   async rejectProposal(proposal: Proposal): Promise<RejectProposalOutput> {
@@ -502,6 +550,71 @@ export class WriteProposalGatewayUseCase {
     });
 
     return { rejected: true, type: proposal.type };
+  }
+
+  /**
+   * Version40（ADR 0072、保存信頼性契約）：`executeApproval`が
+   * 返した結果を、対応するRepositoryから改めて`findAll`/`findByDate`
+   * で再取得し、実際に書き込まれているかを確認する。`AUTO_APPROVABLE_
+   * TYPES`の9型のみ対応——それ以外の型（Memory・ExternalKnowledge・
+   * AgentMessage・AgentDelegationGrant・InterventionResponse・
+   * InterventionPolicySettings）はOwnerの明示`do`を経由するため、
+   * 今回のVersionではread-after-write検証の対象に含めない
+   * （`docs/reports/Version40_Report.md`参照、既知のスコープ限定）。
+   */
+  private async verifyPersisted(type: ProposalType, result: unknown): Promise<boolean> {
+    switch (type) {
+      case 'Reflection': {
+        const { reflection } = result as { reflection: { id: string; record: { date: string } } };
+        const found = await this.reflectionRepository.findByDate(reflection.record.date);
+        return found?.id === reflection.id;
+      }
+      case 'ChallengeLog': {
+        const { log } = result as { log: { id: string } };
+        const all = await this.challengeLogRepository.findAll();
+        return all.some((l) => l.id === log.id);
+      }
+      case 'MealLog': {
+        const { log } = result as { log: { id: string } };
+        const all = await this.mealLogRepository.findAll();
+        return all.some((l) => l.id === log.id);
+      }
+      case 'NutritionLog': {
+        const { log } = result as { log: { id: string } };
+        const all = await this.nutritionLogRepository.findAll();
+        return all.some((l) => l.id === log.id);
+      }
+      case 'WeightLog': {
+        const { log } = result as { log: { id: string } };
+        const all = await this.weightLogRepository.findAll();
+        return all.some((l) => l.id === log.id);
+      }
+      case 'CheckIn': {
+        const { checkIn } = result as { checkIn: { id: string } };
+        const all = await this.checkInRepository.findAll();
+        return all.some((c) => c.id === checkIn.id);
+      }
+      case 'DistractionSignal': {
+        const { signal } = result as { signal: { id: string } };
+        const all = await this.distractionSignalRepository.findAll();
+        return all.some((s) => s.id === signal.id);
+      }
+      case 'Appearance': {
+        const { log } = result as { log: { id: string } };
+        const all = await this.appearanceLogRepository.findAll();
+        return all.some((l) => l.id === log.id);
+      }
+      case 'ManagementFeedback': {
+        const { feedback } = result as { feedback: { id: string } };
+        const found = await this.managementFeedbackRepository.findById(feedback.id);
+        return found !== null;
+      }
+      default:
+        // AUTO_APPROVABLE_TYPESに含まれない型からは呼ばれない想定だが、
+        // 呼ばれた場合は「検証手段がない」ことを明示するためfalseを返す
+        // （黙って`true`とみなさない——保存信頼性契約の趣旨）。
+        return false;
+    }
   }
 
   private async findValidGrant(type: ProposalType) {

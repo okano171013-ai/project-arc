@@ -72,6 +72,10 @@ import { GetInterventionPolicySettingsUseCase } from '../../application/use-case
 import { GetDailyBehaviorScoreUseCase } from '../../application/use-cases/behavior-score/GetDailyBehaviorScore.js';
 import { RecordStudySessionUseCase } from '../../application/use-cases/study-session/RecordStudySession.js';
 import { SummarizeStudySessionsUseCase } from '../../application/use-cases/study-session/SummarizeStudySessions.js';
+import { StartStudySessionUseCase } from '../../application/use-cases/study-session/StartStudySession.js';
+import { UpdateStudySessionUseCase } from '../../application/use-cases/study-session/UpdateStudySession.js';
+import { FinishStudySessionUseCase } from '../../application/use-cases/study-session/FinishStudySession.js';
+import { ListStudySessionsUseCase } from '../../application/use-cases/study-session/ListStudySessions.js';
 import type { ExternalKnowledgeStatus } from '../../domain/entities/ExternalKnowledge.js';
 import type { AgentDelegationGrantStatus } from '../../domain/entities/AgentDelegationGrant.js';
 import type { DevelopmentGrantStatus } from '../../domain/entities/DevelopmentGrant.js';
@@ -109,6 +113,7 @@ import { JsonFileDistractionSignalRepository } from '../../adapters/repositories
 import { JsonFileInterventionRepository } from '../../adapters/repositories/JsonFileInterventionRepository.js';
 import { JsonFileInterventionPolicySettingsRepository } from '../../adapters/repositories/JsonFileInterventionPolicySettingsRepository.js';
 import { JsonFileStudySessionRepository } from '../../adapters/repositories/JsonFileStudySessionRepository.js';
+import { JsonFileInProgressStudySessionRepository } from '../../adapters/repositories/JsonFileInProgressStudySessionRepository.js';
 import { RuleBasedCaptureClassifier } from '../../adapters/providers/RuleBasedCaptureClassifier.js';
 import { isAuthorized } from '../security/apiKeyAuth.js';
 import { loadEnv } from '../config/env.js';
@@ -238,6 +243,9 @@ export function buildUseCases(options: BuildAppOptions = {}) {
     repoPath(dataDir, 'intervention-policy-settings.json'),
   );
   const studySessionRepository = new JsonFileStudySessionRepository(repoPath(dataDir, 'study-sessions.json'));
+  const inProgressStudySessionRepository = new JsonFileInProgressStudySessionRepository(
+    repoPath(dataDir, 'in-progress-study-sessions.json'),
+  );
   const classifier = new RuleBasedCaptureClassifier();
 
   return {
@@ -358,6 +366,13 @@ export function buildUseCases(options: BuildAppOptions = {}) {
     ),
     recordStudySession: new RecordStudySessionUseCase(studySessionRepository),
     summarizeStudySessions: new SummarizeStudySessionsUseCase(studySessionRepository),
+    startStudySession: new StartStudySessionUseCase(inProgressStudySessionRepository),
+    updateStudySession: new UpdateStudySessionUseCase(inProgressStudySessionRepository),
+    finishStudySession: new FinishStudySessionUseCase(
+      inProgressStudySessionRepository,
+      new RecordStudySessionUseCase(studySessionRepository),
+    ),
+    listStudySessions: new ListStudySessionsUseCase(studySessionRepository, inProgressStudySessionRepository),
     readGateway: new ReadGatewayUseCase(
       reflectionRepository,
       appearanceLogRepository,
@@ -1132,6 +1147,51 @@ export function createApp(options: BuildAppOptions = {}) {
         throw new Error('from and to are required');
       }
       const result = await useCases.summarizeStudySessions.execute({ from, to });
+      return ok(result);
+    }),
+
+    // --- StudySession対話型ライフサイクル（Version40、Owner指示`ba6548bc-...`項目2） ---
+    // Version27の「MCP Toolは意図的に用意しない」方針をOwner本人の
+    // 明示指示により変更した（`docs/adr/0072-...md`参照）。既存の
+    // `/api/study-sessions`（Study Timerアプリ専用、書き込み経路は
+    // 増やさない——finish時はRecordStudySessionUseCaseへ委譲する）。
+    route('POST', '/study-sessions/start', async (req) => {
+      const body = await readJsonBody(req);
+      const result = await useCases.startStudySession.execute({
+        subject: body.subject as string,
+        task: body.task as string | undefined,
+        source: (body.source as string | undefined) ?? 'mcp',
+      });
+      return ok({ id: result.session.id, record: result.session.record }, 201);
+    }),
+
+    route('POST', '/study-sessions/update', async (req) => {
+      const body = await readJsonBody(req);
+      const result = await useCases.updateStudySession.execute({
+        id: body.id as string,
+        subject: body.subject as string | undefined,
+        task: body.task as string | undefined,
+      });
+      return ok({ id: result.session.id, record: result.session.record });
+    }),
+
+    route('POST', '/study-sessions/finish', async (req) => {
+      const body = await readJsonBody(req);
+      const result = await useCases.finishStudySession.execute({ id: body.id as string });
+      return ok({
+        sessionId: result.session.record.sessionId,
+        duplicate: result.duplicate,
+        durationMs: result.session.record.durationMs,
+        storedAt: result.session.storedAt.toISOString(),
+      });
+    }),
+
+    route('GET', '/study-sessions', async (req) => {
+      const url = new URL(req.url ?? '/', 'http://localhost');
+      const limitParam = url.searchParams.get('limit');
+      const limit = limitParam ? Number(limitParam) : 20;
+      const date = url.searchParams.get('date') ?? undefined;
+      const result = await useCases.listStudySessions.execute({ limit, date });
       return ok(result);
     }),
   ];

@@ -545,9 +545,10 @@ describe('WriteProposalGatewayUseCase', () => {
           | 'MealLog'
           | 'NutritionLog'
           | 'WeightLog'
-          | 'FinanceLog'
           | 'CheckIn'
           | 'DistractionSignal'
+          | 'Appearance'
+          | 'ManagementFeedback'
         )[];
       }> = {},
     ) {
@@ -700,11 +701,6 @@ describe('WriteProposalGatewayUseCase', () => {
         (ctx2: ReturnType<typeof buildGateway>) => ctx2.weightLogRepo.store.length,
       ],
       [
-        'FinanceLog' as const,
-        { record: { occurredAt: '2026-07-17T12:00:00.000Z', type: 'Expense', amount: 1200 } },
-        (ctx2: ReturnType<typeof buildGateway>) => ctx2.financeLogRepo.store.length,
-      ],
-      [
         'CheckIn' as const,
         {
           record: {
@@ -728,8 +724,22 @@ describe('WriteProposalGatewayUseCase', () => {
         },
         (ctx2: ReturnType<typeof buildGateway>) => ctx2.distractionSignalRepo.store.length,
       ],
+      [
+        'Appearance' as const,
+        {
+          record: { date: '2026-07-20', overallRating: 4 },
+        },
+        (ctx2: ReturnType<typeof buildGateway>) => ctx2.appearanceRepo.store.length,
+      ],
+      [
+        'ManagementFeedback' as const,
+        {
+          record: { author: 'Owner', category: 'Bug', content: 'テスト用フィードバック', reason: '回帰テスト' },
+        },
+        (ctx2: ReturnType<typeof buildGateway>) => ctx2.feedbackRepo.store.size,
+      ],
     ])(
-      'auto-approves a %s proposal when a valid grant covers it (Version25/26: Life Log/行動介入レイヤーの自動承認)',
+      'auto-approves a %s proposal when a valid grant covers it (Version25/26/40: Life Log/行動介入レイヤー/Appearance・ManagementFeedbackの自動承認)',
       async (type, payload, countOf) => {
         await seedGrant(ctx, { scope: [type] });
         const proposal = await ctx.gateway.createProposal({
@@ -740,9 +750,68 @@ describe('WriteProposalGatewayUseCase', () => {
         });
 
         expect(proposal.autoApproved).toBe(true);
+        expect(proposal.saved).toBe(true);
+        expect(proposal.verified).toBe(true);
         expect(countOf(ctx)).toBe(1);
       },
     );
+
+    it('never auto-approves FinanceLog even without signals (Version40, Owner指示による除外, ADR 0072)', async () => {
+      // AgentDelegationGrantScopeの型自体からFinanceLogを除外したため、
+      // 「FinanceLogをscopeに含むGrant」はもはや構築できない
+      // ——ここでは、type固定Level2ルール単体でも自動承認を防げることを
+      // scopeにFinanceLogを含まないGrantで確認する（二重の安全装置の
+      // 片方が万一外れても安全であることの回帰テスト）。
+      await seedGrant(ctx, { scope: ['Reflection'] });
+      const proposal = await ctx.gateway.createProposal({
+        type: 'FinanceLog',
+        target: 'FinanceLogの提案',
+        payload: { record: { occurredAt: '2026-07-17T12:00:00.000Z', type: 'Expense', amount: 1200 } },
+        reason: 'ARCによる記録',
+      });
+
+      expect(proposal.autoApproved).toBeUndefined();
+      expect(proposal.approvalLevel).toBe('Level2');
+      expect(ctx.financeLogRepo.store.length).toBe(0);
+    });
+
+    it('reports saved:false with a retryQueueId and does not consume grant usage when the write fails (Version40, ADR 0072 保存信頼性契約)', async () => {
+      const grant = await seedGrant(ctx, { scope: ['MealLog'], usageLimit: 5 });
+      const originalSave = ctx.mealLogRepo.save.bind(ctx.mealLogRepo);
+      ctx.mealLogRepo.save = async () => {
+        throw new Error('disk full (simulated)');
+      };
+
+      const proposal = await ctx.gateway.createProposal({
+        type: 'MealLog',
+        target: '失敗するMealLogの提案',
+        payload: { record: { occurredAt: '2026-07-17T12:00:00.000Z', items: ['味噌汁'], idempotencyKey: 'idem-1' } },
+        reason: 'ARCによる記録',
+      });
+
+      expect(proposal.autoApproved).toBeUndefined();
+      expect(proposal.saved).toBe(false);
+      expect(proposal.verified).toBe(false);
+      expect(proposal.saveError).toContain('disk full');
+      expect(proposal.retryQueueId).toBe('idem-1');
+      expect(ctx.mealLogRepo.store).toHaveLength(0);
+
+      const persistedGrant = (await ctx.agentDelegationGrantRepo.findAll()).find((g) => g.id === grant.id)!;
+      expect(persistedGrant.usageCount).toBe(0);
+
+      // 復旧：同じidempotencyKeyで再試行すれば成功する（重複保存にならない設計の確認）。
+      ctx.mealLogRepo.save = originalSave;
+      const retried = await ctx.gateway.createProposal({
+        type: 'MealLog',
+        target: '再試行されたMealLogの提案',
+        payload: { record: { occurredAt: '2026-07-17T12:00:00.000Z', items: ['味噌汁'], idempotencyKey: 'idem-1' } },
+        reason: 'ARCによる記録',
+      });
+      expect(retried.autoApproved).toBe(true);
+      expect(retried.saved).toBe(true);
+      expect(retried.verified).toBe(true);
+      expect(ctx.mealLogRepo.store).toHaveLength(1);
+    });
 
     it.each([
       ['MealLog' as const, { record: { occurredAt: '2026-07-17T12:00:00.000Z', items: ['味噌汁'] } }],

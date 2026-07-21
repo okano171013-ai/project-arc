@@ -55,6 +55,16 @@ export interface ConnectorProposal {
   /** Version24：有効なAgentDelegationGrantによりOwnerのdoなしで即時書き込みされた場合のみtrue。 */
   readonly autoApproved?: boolean;
   readonly result?: unknown;
+  /**
+   * Version40（ADR 0072、保存信頼性契約）：`autoApproved`試行が行われた
+   * 場合のみ設定される。両方trueの場合のみ「保存確認済み」とみなせる。
+   */
+  readonly saved?: boolean;
+  readonly verified?: boolean;
+  /** `saved`がfalseの場合のみ設定される、再試行に使える冪等キー相当の値。 */
+  readonly retryQueueId?: string;
+  /** `saved`がfalseの場合のみ設定される、失敗理由。 */
+  readonly saveError?: string;
 }
 
 export interface ConnectorApprovalDecision {
@@ -263,6 +273,25 @@ export interface SummarizeStudySessionsResult {
   bySubject: Record<string, number>;
 }
 
+/** Version40：進行中StudySession（対話から開始・未終了）のrecord。 */
+export interface ConnectorInProgressStudySessionRecord {
+  subject: string;
+  task?: string;
+  startedAt: string;
+  source: string;
+}
+
+/** Version40：`listStudySessions`が返す、進行中・完了済み混在の1件。 */
+export interface ConnectorStudySessionListItem {
+  id: string;
+  status: 'InProgress' | 'Completed';
+  subject: string;
+  task?: string;
+  startedAt: string;
+  endedAt?: string;
+  durationMs?: number;
+}
+
 export type ManagementFeedbackResolution =
   | 'Open'
   | 'Accepted'
@@ -384,7 +413,9 @@ export class Connector {
     return proposal;
   }
 
-  async approveProposal(proposal: ConnectorProposal): Promise<{ type: string; result: unknown }> {
+  async approveProposal(
+    proposal: ConnectorProposal,
+  ): Promise<{ type: string; result: unknown; saved?: boolean; verified?: boolean }> {
     return this.request('POST', '/proposal/approve', proposal);
   }
 
@@ -558,9 +589,13 @@ export class Connector {
 
   // --- Study Session Ingestion（Version27） ---
   // `remoteServer.ts`（公開トンネル側）が専用のStudy Timer tokenで
-  // 認証した後、この2メソッド経由でARC Connector HTTP APIへ内部転送する
-  // （ADR 0054）。ARC自身（MCP Tool経由）はこの2メソッドを呼び出す手段を
-  // 持たない——意図的に対応するMCP Toolを用意しない。
+  // 認証した後、`recordStudySession`経由でARC Connector HTTP APIへ内部
+  // 転送する（ADR 0054）。ARC自身（MCP Tool経由）は`recordStudySession`
+  // を呼び出す手段を持たない——意図的に対応するMCP Toolを用意しない
+  // （Study Timerアプリ専用の書き込み経路、Version27の方針を維持）。
+  // `summarizeStudySessions`は読み取り専用の集計のみのため、Version40で
+  // `study_summary_by_date`/`study_summary_by_period`としてMCP Tool化
+  // した（ADR 0072）——書き込み経路は増やしていない。
 
   async recordStudySession(input: RecordStudySessionInput): Promise<RecordStudySessionResult> {
     return this.request('POST', '/api/study-sessions', input);
@@ -571,6 +606,42 @@ export class Connector {
       'GET',
       `/api/study-sessions/summary?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
     );
+  }
+
+  // Version40（Owner指示`ba6548bc-...`項目2、ADR 0072）：対話（ChatGPT/
+  // Claude Code）から直接呼べるStudySessionライフサイクル。上記2つとは
+  // 別経路（`/study-sessions/*`）——Study Timerアプリ専用の
+  // `/api/study-sessions`は変更しない。
+
+  async startStudySession(input: {
+    subject: string;
+    task?: string;
+    source?: string;
+  }): Promise<{ id: string; record: ConnectorInProgressStudySessionRecord }> {
+    return this.request('POST', '/study-sessions/start', input);
+  }
+
+  async updateStudySession(input: {
+    id: string;
+    subject?: string;
+    task?: string;
+  }): Promise<{ id: string; record: ConnectorInProgressStudySessionRecord }> {
+    return this.request('POST', '/study-sessions/update', input);
+  }
+
+  async finishStudySession(
+    id: string,
+  ): Promise<{ sessionId: string; duplicate: boolean; durationMs: number; storedAt: string }> {
+    return this.request('POST', '/study-sessions/finish', { id });
+  }
+
+  async listStudySessions(input: {
+    limit: number;
+    date?: string;
+  }): Promise<{ sessions: ConnectorStudySessionListItem[] }> {
+    const params = new URLSearchParams({ limit: String(input.limit) });
+    if (input.date) params.set('date', input.date);
+    return this.request('GET', `/study-sessions?${params.toString()}`);
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {

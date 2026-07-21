@@ -1,12 +1,12 @@
 # Project ARC — PM Status
 
-最終監査日: 2026-07-20（Version39時点に更新）  
-基準HEAD: `61f0055`（Version39、`docs/reports/Version39_Report.md`参照）  
+最終監査日: 2026-07-21（Version40時点に更新）  
+基準HEAD: （Version40、`docs/reports/Version40_Report.md`参照、コミット後に追記コミットで実ハッシュへ更新）  
 作業ツリー: `.claude/settings.local.json`のみ未追跡（ローカル設定、対象外）。
 
 ## 5分サマリー
 
-Version1〜39まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session、Capability Registry、Runner Control Plane、Data Durability、Program A（読み取り専用公開）、**Program B Mobile Ingress（ローカル完成＋Cloudflare Workers実装をローカルエミュレータで実機検証、cloud側Quick Capture UI実装済み）**まで到達した。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
+Version1〜40まで完了。local生活記録、Google連携、検索・意思決定支援、HTTP/MCP、提案承認、Agent協調、Life Log、行動介入、Study Session（対話型ライフサイクル対応）、Capability Registry（環境診断拡充）、Runner Control Plane、Data Durability、Program A（読み取り専用公開）、**Program B Mobile Ingress（ローカル完成＋Cloudflare Workers実装をローカルエミュレータで実機検証、cloud側Quick Capture UI実装済み）**まで到達した。Version40では、Owner本人発信のCritical指示に基づき、AgentDelegationGrant scopeを拡張して低リスク記録9種のProposal省略を可能にし、保存信頼性契約（read-after-write・saved/verified区別）を導入した（ADR 0072）。設計思想はOwner主権、Systemは判断しない、local-first、層境界の維持。
 
 Owner優先順位（2026-07-19）により、Version35からProgram B
 （Mobile Daily Capture）を最優先で進めた。Version35〜37でローカル
@@ -27,6 +27,26 @@ preflightチェック（`pnpm cloudflare:preflight`）を追加した。実機
 修正した。**クラウド契約・課金・本番公開・秘密情報設定・認証済み
 LAN公開の有効化は一切実施していない**（Owner指示通り）。
 
+**Version40は、Owner本人発信のAgentMessage（id `ba6548bc-...`、
+Critical、`docs/handoff/archive/Version40_ARC_Brief.md`）**を受け、
+MealLog/NutritionLog/WeightLog/Reflection/ChallengeLog/CheckIn/
+DistractionSignal/Appearance/ManagementFeedbackの9種を対象に、
+既存の`AgentDelegationGrant`（Version24〜、Constitution第4条限定
+改定）のscopeを拡張することで、個別Proposal承認なしの保存を可能に
+した（新規`*_create`ツールは追加せず既存の`proposal_create`を
+拡張、ADR 0072）。過去Version（25〜26）から`AUTO_APPROVABLE_TYPES`
+に含まれていた`FinanceLog`は、Owner指示に基づき明示的に除外し、
+常にOwner個別確認を要求するよう是正した。StudySessionの対話型
+ライフサイクル（create/update/finish/list、日次・期間集計）を
+MCP Tool6件として新規追加し（Version27の「MCP Toolは用意しない」
+方針をOwner指示により意図的に反転）、全ての自動保存パスへ
+read-after-write検証・`saved`/`verified`区別・失敗時の
+`retryQueueId`を実装した。`capability_registry_get`へ実行環境
+診断情報を追加し、`scripts/mirror-agent-messages.mjs`
+（AgentMessage→Git Inboxミラー）を新設した。実際のGrant発行・
+Constitution/Principlesの変更は一切実施していない（発行は
+Constitution第4条によりOwner自身の操作が必要）。
+
 Owner向け判断事項は`docs/project-management/
 Version35_Decision_Packet.md`・`Version37_Decision_Packet.md`・
 `Version38_Activation_Packet.md`（実デプロイの1ページ実行
@@ -42,10 +62,11 @@ Version35_Decision_Packet.md`・`Version37_Decision_Packet.md`・
 | Version37 | 完了（Mobile Ingressセキュリティ強化、退避ログJSONL Importer、Cloud Adapter境界整理） |
 | Version38 | 完了（Cloudflare Worker実装・Miniflare実機検証、最小権限read契約、pull/reconciliation、NutritionLog対応） |
 | Version39 | 完了（Cloud Quick Capture UI、CSP nonce、token非埋め込み、PC-off Capability/Gap表、Canonical Store所在3案比較、`cloudflare:preflight`） |
-| Typecheck / Lint | 2026-07-20合格（Version39時点で再確認、`cloudflare:typecheck`も合格） |
-| Build | 不合格。TS2742と`dist`書込競合（Version31以降スコープ外、ARC-PM-005として継続。Version39で`git stash`比較により無関係を再確認） |
-| Test | Version39時点642件合格（メイン）＋17件合格（`pnpm cloudflare:test`、別ゲート） |
-| Remote MCP | 認証の実装・テストは完備（Version22）。**本番は今なお無認証**（ADR 0051の「有効化した」という記録は誤りだったとVersion30で判明、訂正済み）。MCP Tool数26（Version34から変化なし——Mobile IngressはRemote MCPの一部ではない）。**2026-07-20、Owner報告：公開Remote MCPが旧10ツールのまま**（`docs/incidents/2026-07-20_remote-mcp-stale-tools.md`）。現在のソースは26ツール公開が正しいことを実機確認済み——原因はOwner実機側の未再起動の可能性が高いが、最終確認・対応はOwner Action待ち |
+| Version40 | 完了（AgentDelegationGrant scope拡張、保存信頼性契約、StudySession対話型ライフサイクル6ツール、`capability_registry_get`環境診断拡充、AgentMessage→Git Inboxミラースクリプト） |
+| Typecheck / Lint | 2026-07-21合格（Version40時点で再確認、`cloudflare:typecheck`も合格） |
+| Build | 不合格。TS2742と`dist`書込競合（Version31以降スコープ外、ARC-PM-005として継続。Version40で`git stash`比較により無関係を再確認） |
+| Test | Version40時点660件合格（メイン、92 test files）＋17件合格（`pnpm cloudflare:test`、別ゲート） |
+| Remote MCP | 認証の実装・テストは完備（Version22）。**本番は今なお無認証**（ADR 0051の「有効化した」という記録は誤りだったとVersion30で判明、訂正済み）。MCP Tool数32（Version40でStudySession系6件追加、26→32）。**2026-07-20、Owner報告：公開Remote MCPが旧10ツールのまま**（`docs/incidents/2026-07-20_remote-mcp-stale-tools.md`）。Gemini実接続で`agent_message_list`（旧buildには存在しないtool）が呼べたことから、サーバー側は最新でclient側connector cacheが古いだけの可能性が高いと判断——最終確認はOwner Action待ち |
 | Program A | DevelopmentGrant・AgentTaskが読み取り専用でARCから確認可能。write操作は未公開（変化なし） |
 | Program B | ローカルMobile Ingress完成（認証・rate limit・監査ログ・退避ログImporter）。Cloudflare Worker実装（cloud側Quick Capture UI込み）をMiniflareで実機検証済み・未デプロイ。実デプロイはOwner確認待ち（`Version38_Activation_Packet.md`）。「PC-off対応」は(a)cloud ingress受付のみ達成、(b)canonical確定・(c)全履歴read availabilityは未達（ADR 0070のCapability/Gap表） |
 | Data Durability | `pnpm backup create/list/restore`が動作。`data/ingress-records.json`も自動的にbackup対象に含まれることを実機で確認済み |
@@ -76,6 +97,8 @@ Version35_Decision_Packet.md`・`Version37_Decision_Packet.md`・
 
 **Program B**: Architecture Gate論点整理（ADR 0064）、Mobile Ingressデータ契約（ADR 0065）、ローカルMVP、Quick Capture UI・sync自動化（Version36）、セキュリティ強化・退避ログImporter・Cloud Adapter境界（Version37）、Cloudflare Worker実装のMiniflare実機検証・pull/reconciliation（Version38）、cloud側Quick Capture UI・CSP・token非埋め込み・PC-off Capability/Gap表（ADR 0070）・Canonical Store所在3案比較（ADR 0071）・`cloudflare:preflight`（Version39）まで完了。次はOwner確認事項（`MOBILE_INGRESS_HOST`のLAN公開＋トークン設定、実際の16件の取り込み、Cloudflare実デプロイ、ADR 0071・案Cの要否）の回答を受けての実地確認。契約・課金・秘密情報設定・実デプロイは`Version38_Activation_Packet.md`の手順が確定するまで未実施のまま凍結する。
 
+**Program A/Write Proposal Layer**: Version40でAgentDelegationGrant scope拡張（Appearance/ManagementFeedback追加、FinanceLog除外）・保存信頼性契約（read-after-write・saved/verified区別）・StudySession対話型ライフサイクル6ツール・`capability_registry_get`環境診断・AgentMessage→Git Inboxミラースクリプトを実装した（ADR 0072）。次はOwner自身によるAgentDelegationGrant発行（Constitution第4条によりOwner操作必須）を待って、実際のChatGPT/Gemini接続からの体験確認を行う。
+
 **Stability Gate**: 残りARC-PM-005〜010を閉じる。ARC-PM-001は本番反映（Owner Action）のみ残存、ARC-PM-002〜004・014は解消済み。外部公開、認証、秘密情報、データ削除はOwner承認が必要。
 
 ## 技術的負債
@@ -92,6 +115,8 @@ Version35_Decision_Packet.md`・`Version37_Decision_Packet.md`・
 - ADR 0071・案C（Hybrid read-through cache）の要否: Owner/ARCの価値判断待ち（急ぎ度：低）
 - `MOBILE_INGRESS_HOST`のLAN公開＋`MOBILE_INGRESS_API_TOKEN`設定の有効化: Owner確認事項（確認事項3、`Version35_Decision_Packet.md`）——スマホからの実送信に必要。認証機構は実装済み（fail-closed、ADR 0066）
 - 実際の16件の取り込み: Owner自身が`pnpm import-pending-logs`を実行（Importerは実装済み、ADR 0067）
+- Appearance/ManagementFeedback等を含むAgentDelegationGrantの発行: Owner自身が`proposal_create`（type: AgentDelegationGrant）→`do`→`proposal_approve`で実行する必要がある（Constitution第4条によりClaude Code・ARC自身は発行できない、Version40、ADR 0072）
+- StudySessionツールの監査ログ（ApprovalDecision）対応の要否: Owner判断待ち（急ぎ度：低、Version40 Report8章）
 - `STUDY_TIMER_API_TOKEN`と実timer疎通: Owner作業
 - StudyLog配線: StudySessionとのmodel判断待ち
 

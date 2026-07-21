@@ -1006,3 +1006,43 @@ Version38のDoDは全項目達成済み。
       有効化・Canonical Storeの実移行は一切実施していない
 
 Version39のDoDは全項目達成済み。
+
+## Version40完了チェックリスト
+
+- [x] `pnpm test` が全て緑（660件、92 test files、InProgressStudySession・
+      StudySession lifecycle・capabilityRegistry・WriteProposalGateway
+      保存信頼性契約の新規テストを含む）
+- [x] `pnpm typecheck` / `pnpm lint` がエラーゼロ
+- [x] AgentDelegationGrantScope・AUTO_APPROVABLE_TYPESへAppearance・
+      ManagementFeedbackを追加し、FinanceLogを除外した（型システム
+      レベル＋ClassifyApprovalLevelの型固定Level2ルールの二重の
+      安全装置）
+- [x] 新規`*_create`MCP Toolは追加せず、既存`proposal_create`の
+      auto-approve機構を拡張しただけであることをADR 0072に明記
+- [x] `createProposal`/`approveProposal`にread-after-write検証を
+      実装し、`saved`/`verified`/`retryQueueId`/`saveError`を返す
+      ことをテストで確認（保存失敗時にGrantのusageCountを消費しない
+      ことも確認済み）
+- [x] StudySession対話型ライフサイクル6ツール
+      （create/update/finish/list、summary by date/period）を実装。
+      実MCP clientで実機確認済み（検証用スクリプトは削除済み）
+- [x] `capability_registry_get`に`environment`
+      （cwd/dataDirectory/dataFileCount/processStartedAt/
+      processUptimeSeconds）を追加。`PROJECT_ARC_VERSION`を
+      34→40へ更新
+- [x] `scripts/mirror-agent-messages.mjs`を実装・実機確認済み
+      （合成テストデータで転記・重複防止まで確認、確認後に
+      `ARC_INBOX.md`は`git checkout`で元へ戻した）
+- [x] ARC-PM-005（`pnpm build`のTS2742失敗）が本Versionの変更と
+      無関係であることを`git stash`比較で再確認
+- [x] ADR 0072（AgentDelegationGrant scope拡張・保存信頼性契約・
+      StudySession直接書き込みツール）を作成済み
+- [x] `docs/security/remote-mcp-threat-model.md`13章を追加済み
+- [x] README / docsに実装との乖離がない
+- [x] `docs/reports/Version40_Report.md`を生成済み（14章構成）
+- [x] `docs/developer-feedback/Version40_Developer_Feedback.md`を生成済み
+- [x] `docs/handoff/archive/Version40_ARC_Brief.md`の対応結果を更新済み
+- [x] 実際のAgentDelegationGrant発行・Constitution/Principles変更・
+      クラウド契約・課金・本番公開・秘密情報設定は一切実施していない
+
+Version40のDoDは全項目達成済み。

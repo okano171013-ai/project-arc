@@ -72,6 +72,13 @@ AIを用いた個人用ライフマネジメントシステム。「第二の脳
   Version28の診断Tool追加後は24件）——ARC自身はこの経路
   を呼び出す手段を持たず、「既存Proposal承認経路とは別の、汎用書き込み
   に使えない専用経路」という指示書要件を構造的に満たす
+- **Version40で方針を反転**：Owner本人の明示指示により、対話
+  （ChatGPT/Claude Code）から直接呼べる`study_session_create`/
+  `update`/`finish`/`list`・`study_summary_by_date`/`by_period`
+  （MCP Tool6件）を追加した。ただしこの経路は上記の
+  `/api/study-sessions`（Study Timerアプリ専用）とは別物のまま
+  ——確定保存時は既存の`RecordStudySessionUseCase`へ委譲し、
+  StudySessionの書き込み経路自体は増やしていない（ADR 0072）
 
 ### 旧Version26のスコープ：「行動介入レイヤーと厳格コーチング」
 

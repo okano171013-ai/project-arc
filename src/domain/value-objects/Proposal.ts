@@ -70,4 +70,17 @@ export interface Proposal {
   readonly autoApproved?: boolean;
   /** `autoApproved`がtrueの場合のみ、実行結果（`ApproveProposalOutput.result`相当）を含む。 */
   readonly result?: unknown;
+  /**
+   * Version40（ADR 0072、保存信頼性契約）：`autoApproved`試行が
+   * 行われた場合のみ設定される。`saved`はRepositoryへの書き込み
+   * 自体が例外を投げなかったか、`verified`はread-after-write検証
+   * （保存直後の再取得）が一致したかを表す。両方trueの場合のみ
+   * 「保存確認済み」と呼んでよい。
+   */
+  readonly saved?: boolean;
+  readonly verified?: boolean;
+  /** `saved`がfalseの場合のみ設定される、再試行に使える冪等キー相当の値。 */
+  readonly retryQueueId?: string;
+  /** `saved`がfalseの場合のみ設定される、失敗理由。 */
+  readonly saveError?: string;
 }
