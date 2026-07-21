@@ -1,6 +1,6 @@
 # Version40 Report: 低リスク記録の直接保存API化・StudySessionツール優先追加・保存信頼性契約
 
-commit: （このセクションはコミット後の追記コミットで実ハッシュに置き換える）
+commit: `be6b73b`
 
 ## 1. Version概要
 

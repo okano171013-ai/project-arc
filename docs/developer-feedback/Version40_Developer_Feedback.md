@@ -4,7 +4,7 @@
 
 - Version / 日付: Version40 / 2026-07-21
 - 担当エンジン: Claude Code
-- Git commit / tag: （コミット後の追記コミットで実ハッシュに置き換える）
+- Git commit / tag: `be6b73b`
 - 対応Issue / 関連Report: 低リスク記録の直接保存API化・StudySessionツール優先追加・保存信頼性契約 / `docs/reports/Version40_Report.md`
 - 状態: Complete（ローカル実装・実機確認のみ。実際のGrant発行はOwner確認待ち）
 
@@ -154,7 +154,7 @@ Constitution第4条・ADR 0031に関わる判断（AUTO_APPROVABLE_TYPESの
 ## 完了宣言
 
 - [x] Report、Feedback、Roadmap、PM Status、Open Issuesが同じ事実を示す
-- [x] commit / tagを記録する（本コミット後の追記コミットで実ハッシュに置き換える）
+- [x] commit / tagを記録した（`be6b73b`）
 - [x] 未実行テストを成功扱いしていない（660件全件実行・全件合格を実機で確認）
 - [x] Owner確認事項を通常タスクへ埋没させていない（9章に明記）
 - [x] 次担当者がこの文書だけで再開できる（8章に依存関係付きで記載）
