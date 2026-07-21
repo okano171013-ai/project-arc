@@ -110,6 +110,44 @@ Geminiに`capability_registry_get`も同様に名前指定で直接呼び出さ�
 再起動は不要で、Gemini側のconnector再接続（接続の削除→再追加、または
 「ツールを更新」に相当する操作）のみで解決する可能性が高い。
 
+## 6.6. 最終解決（2026-07-21、Owner実機作業により確定）
+
+Owner本人がPC上で実際に次を実行し、根本原因と解決を確定した。
+
+1. `git status`で判明した実態：ローカルの`feature/v4-v6-smart-capture`
+   ブランチのHEADが`6f6c47c`（2026-07-19、Version29「wip: セッション
+   再開前の作業状態を保存」）のまま、`origin`から**36コミット**
+   遅れていた——2026-07-19以降、一度も`git pull`されていなかった。
+2. `git pull`は当初、ローカルの未コミット変更（`docs/project-
+   management/STATUS.md`）と未追跡ファイル（`docs/project-
+   management/OWNER_PRIORITY_PROGRAMS_2026-07-19.md`）との衝突で
+   失敗していた。該当ファイルを退避・破棄（内容は既にリモートに
+   正式コミット済みの重複だったため安全と判断）した上で再実行し、
+   `db3dc22`（Version40）まで正常に取り込めた。
+3. `git pull`成功後も、**稼働中のNode.jsプロセス自体を再起動する
+   まではメモリ上の古いコードのまま**だった（`capability_registry_
+   get`の`buildCommit`はディスクの`.git/HEAD`を都度読むため新しい
+   値を返す一方、`toolCount`等はプロセス起動時にロードされた古い
+   コード由来の値のままという、興味深い不一致が実機で観測された）。
+   `.\scripts\stop-all.ps1` → `.\scripts\start-all.ps1`で再起動後、
+   `scripts/diagnose-remote-mcp.mjs`でlocalhost・公開URLの両方が
+   `toolCount: 32`・`projectVersion: 40`・`buildCommit: db3dc22...`
+   で一致することを確認した。
+4. その後、ChatGPT側で**新規チャット**から`capability_registry_get`
+   を呼び出し、同じ値（Version40・32ツール・StudySession系6ツール
+   含む）が返ることを確認——サーバー側・クライアント側の双方で
+   解決を確定した。
+
+**教訓**：当初「ChatGPT/Gemini側のconnector cacheが古いだけ」という
+仮説を有力視していたが、実際は終始一貫して**Owner PC側のRemote MCP
+プロセスが単純に長期間再起動されていなかった**ことが根本原因
+だった。会話の途中、ChatGPT側が「実際にはツールを実行していない」
+と述べた直後に以前と全く同じ診断結果を返したため一時的にその結果を
+疑ったが、後のOwner実機確認により、その報告は実際には正確だった
+ことが判明した——AIの自己申告だけで判断せず、実行環境側の
+一次情報（`git log`・実際のプロセス再起動）で必ず裏付けるべき、
+という教訓を残す。
+
 ## 7. Version39との関係
 
 この診断はVersion39着手前に対応すべき指示だったが、リモートへの

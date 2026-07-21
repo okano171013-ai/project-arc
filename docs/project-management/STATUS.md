@@ -66,7 +66,7 @@ Version35_Decision_Packet.md`・`Version37_Decision_Packet.md`・
 | Typecheck / Lint | 2026-07-21合格（Version40時点で再確認、`cloudflare:typecheck`も合格） |
 | Build | 不合格。TS2742と`dist`書込競合（Version31以降スコープ外、ARC-PM-005として継続。Version40で`git stash`比較により無関係を再確認） |
 | Test | Version40時点660件合格（メイン、92 test files）＋17件合格（`pnpm cloudflare:test`、別ゲート） |
-| Remote MCP | 認証の実装・テストは完備（Version22）。**本番は今なお無認証**（ADR 0051の「有効化した」という記録は誤りだったとVersion30で判明、訂正済み）。MCP Tool数32（Version40でStudySession系6件追加、26→32）。**2026-07-20、Owner報告：公開Remote MCPが旧10ツールのまま**（`docs/incidents/2026-07-20_remote-mcp-stale-tools.md`）。Gemini実接続で`agent_message_list`（旧buildには存在しないtool）が呼べたことから、サーバー側は最新でclient側connector cacheが古いだけの可能性が高いと判断——最終確認はOwner Action待ち |
+| Remote MCP | 認証の実装・テストは完備（Version22）。**本番は今なお無認証**（ADR 0051の「有効化した」という記録は誤りだったとVersion30で判明、訂正済み）。MCP Tool数32（Version40でStudySession系6件追加、26→32）。**2026-07-20〜21の公開Remote MCP旧ツール問題は解決済み**（`docs/incidents/2026-07-20_remote-mcp-stale-tools.md`）——根本原因はOwner PC側のプロセスが36コミット・2日間再起動されていなかったこと。`git pull`→プロセス再起動後、localhost・公開URL・ChatGPT新規チャットの3経路全てで`toolCount: 32`・`buildCommit: db3dc22`一致を実機確認済み |
 | Program A | DevelopmentGrant・AgentTaskが読み取り専用でARCから確認可能。write操作は未公開（変化なし） |
 | Program B | ローカルMobile Ingress完成（認証・rate limit・監査ログ・退避ログImporter）。Cloudflare Worker実装（cloud側Quick Capture UI込み）をMiniflareで実機検証済み・未デプロイ。実デプロイはOwner確認待ち（`Version38_Activation_Packet.md`）。「PC-off対応」は(a)cloud ingress受付のみ達成、(b)canonical確定・(c)全履歴read availabilityは未達（ADR 0070のCapability/Gap表） |
 | Data Durability | `pnpm backup create/list/restore`が動作。`data/ingress-records.json`も自動的にbackup対象に含まれることを実機で確認済み |
@@ -109,7 +109,6 @@ Version35_Decision_Packet.md`・`Version37_Decision_Packet.md`・
 
 ## 停止中タスク
 
-- **【急ぎ度：高】公開Remote MCPが旧10ツールのまま**: `docs/incidents/2026-07-20_remote-mcp-stale-tools.md`4〜6章の手順（`scripts/diagnose-remote-mcp.mjs`）でOwner自身が実機診断・要否判断のうえ`.\scripts\stop-all.ps1`/`start-all.ps1`を実行する必要がある——Owner実機はこのセッションからアクセス不可
 - OAuth本番有効化: 準備完了（Version30）。Owner承認と接続再設定待ち——`docs/setup/remote-mcp-oauth-migration.md`のチェックリストで一度で実行できる
 - Program B（Mobile Ingress）クラウドActivation Gate: ローカルMVPは完成済み（Version35〜37）。Cloudflare Worker実装（cloud側Quick Capture UI込み）はMiniflareで実機検証済み・未デプロイ（Version38〜39、ADR 0069・0070）。実デプロイの実行手順は`Version38_Activation_Packet.md`（1ページ、Version39でQuick Capture UI分を追記）に整理済み——実行はOwner確認待ち
 - ADR 0071・案C（Hybrid read-through cache）の要否: Owner/ARCの価値判断待ち（急ぎ度：低）
