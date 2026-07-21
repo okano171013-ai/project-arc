@@ -1,6 +1,6 @@
 # Version41 Report: MemoryをAgentDelegationGrant scopeへ追加
 
-commit: （このセクションはコミット後の追記コミットで実ハッシュに置き換える）
+commit: `3650250`
 
 ## 1. Version概要
 
