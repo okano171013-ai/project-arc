@@ -96,6 +96,15 @@ Version35_Decision_Packet.md`・`Version37_Decision_Packet.md`・
 
 ## 現在の目標・次のマイルストーン
 
+**運用方針（2026-07-21、Owner決定、ADR 0074）**：ChatGPT接続の
+チャットごとの不安定さ・Remote MCPのPC依存（PCが起動していないと
+使えない）が実際の日常利用で繰り返し問題になったため、**Owner本人が
+当面Notionを個人情報記録の母体とし、Project ARCは日常使いから
+一時的に外す**と判断した。**コードは一切ロールバックしない**——
+Version1〜41（665件のテスト合格）はそのまま維持し、開発も継続する。
+将来Remote MCP接続の安定性・PC-off Gapが解決した時点で、Notionの
+データを一括でProject ARCへ移行し運用を戻す想定。詳細はADR 0074参照。
+
 **Program B**: Architecture Gate論点整理（ADR 0064）、Mobile Ingressデータ契約（ADR 0065）、ローカルMVP、Quick Capture UI・sync自動化（Version36）、セキュリティ強化・退避ログImporter・Cloud Adapter境界（Version37）、Cloudflare Worker実装のMiniflare実機検証・pull/reconciliation（Version38）、cloud側Quick Capture UI・CSP・token非埋め込み・PC-off Capability/Gap表（ADR 0070）・Canonical Store所在3案比較（ADR 0071）・`cloudflare:preflight`（Version39）まで完了。次はOwner確認事項（`MOBILE_INGRESS_HOST`のLAN公開＋トークン設定、実際の16件の取り込み、Cloudflare実デプロイ、ADR 0071・案Cの要否）の回答を受けての実地確認。契約・課金・秘密情報設定・実デプロイは`Version38_Activation_Packet.md`の手順が確定するまで未実施のまま凍結する。
 
 **Program A/Write Proposal Layer**: Version40でAgentDelegationGrant scope拡張（Appearance/ManagementFeedback追加、FinanceLog除外）・保存信頼性契約（read-after-write・saved/verified区別）・StudySession対話型ライフサイクル6ツール・`capability_registry_get`環境診断・AgentMessage→Git Inboxミラースクリプトを実装した（ADR 0072）。次はOwner自身によるAgentDelegationGrant発行（Constitution第4条によりOwner操作必須）を待って、実際のChatGPT/Gemini接続からの体験確認を行う。

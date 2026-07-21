@@ -200,11 +200,22 @@ auto-approve機構を拡張しただけ。`ExternalKnowledge`は指示の対象�
 のため追加していない。詳細は`docs/reports/Version41_Report.md`・
 ADR 0073参照。
 
-**Version42以降**：Owner確認事項（LAN公開＋トークン設定の可否、
-実際の16件の取り込み、Cloudflare実デプロイの実行可否、ADR 0071・
-案Cの要否、Appearance/ManagementFeedback/Memory等を含む新しい
-AgentDelegationGrantの発行可否）への回答を受けて、実地確認・
-実際のデプロイ・Grant発行を行う。
+**運用方針の変更（2026-07-21、ADR 0074）**：Version41完了後、Owner
+本人が実際にChatGPT経由でGrant発行・Memory保存を試みる中で、
+チャットごとの接続不安定さとRemote MCPのPC依存（PC-off Gap、
+ADR 0070）が繰り返し障害になり、「結局使いものになっていない」と
+判断した。当面、個人情報記録の母体をNotionへ切り替え、Project ARCは
+日常使いから外れる。**コードのロールバックは行わない**——Version1〜
+41の資産・開発はそのまま維持し、将来Notionのデータを一括移行して
+運用を戻す想定。
+
+**Version42以降**：ADR 0074の運用方針を踏まえ、次に着手する技術
+テーマ（Remote MCP接続の安定性改善、あるいはADR 0071の案A・Cへ
+本格的に進むかどうか）は、Owner/ARCと改めて相談してから決定する。
+それまでの間、下記の従来からの確認事項（LAN公開＋トークン設定の
+可否、実際の16件の取り込み、Cloudflare実デプロイの実行可否、
+ADR 0071・案Cの要否、Appearance/ManagementFeedback/Memory等を含む
+新しいAgentDelegationGrantの発行可否）への回答も引き続き有効。
 
 | 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
 |---:|---|---|---|
