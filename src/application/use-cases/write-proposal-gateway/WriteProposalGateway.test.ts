@@ -626,6 +626,48 @@ describe('WriteProposalGatewayUseCase', () => {
       expect(proposal.approvalLevel).toBe('Level2');
     });
 
+    it.each(['Appearance', 'ManagementFeedback', 'Memory'] as const)(
+      'accepts %s in an AgentDelegationGrant create payload scope (Version40/41で追加したscopeのpayload検証漏れの回帰テスト)',
+      async (scopeValue) => {
+        const proposal = await ctx.gateway.createProposal({
+          type: 'AgentDelegationGrant',
+          target: '新しい委譲',
+          payload: {
+            action: 'create',
+            record: {
+              scope: [scopeValue],
+              expiresAt: new Date(Date.now() + 1000).toISOString(),
+              usageLimit: 1,
+              reason: 'テスト',
+            },
+          },
+          reason: '理由',
+        });
+        // Level2固定でOwnerのdoが必要——ここではpayload構造検証を通過
+        // すること（validatePayloadが例外を投げないこと）だけを確認する。
+        expect(proposal.approvalLevel).toBe('Level2');
+      },
+    );
+
+    it('rejects FinanceLog in an AgentDelegationGrant create payload scope (Version40で除外したscopeを再度受け付けないことの回帰テスト)', async () => {
+      await expect(
+        ctx.gateway.createProposal({
+          type: 'AgentDelegationGrant',
+          target: '新しい委譲',
+          payload: {
+            action: 'create',
+            record: {
+              scope: ['FinanceLog'],
+              expiresAt: new Date(Date.now() + 1000).toISOString(),
+              usageLimit: 1,
+              reason: 'テスト',
+            },
+          },
+          reason: '理由',
+        }),
+      ).rejects.toThrow();
+    });
+
     it('stops auto-approving once usageLimit is reached (上限到達後はOwner do待ちへフォールバック)', async () => {
       await seedGrant(ctx, { usageLimit: 1 });
 

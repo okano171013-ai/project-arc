@@ -160,6 +160,14 @@ const payloadSchemas: Record<ProposalType, z.ZodTypeAny> = {
     action: z.enum(['create', 'pause', 'resume', 'revoke']),
     record: z
       .object({
+        // Version40/41（ADR 0072・0073）でAgentDelegationGrantScopeを
+        // 変更した際、このzodスキーマの更新が漏れていた——scopeの
+        // 構造検証はTypeScriptの型ではなくここが実行時に強制する
+        // ため、型定義だけ変更してもこの配列を同期しないと新しい
+        // scope（Appearance/ManagementFeedback/Memory）を含む
+        // Proposalが400で拒否される（実際にOwnerがMemory scopeで
+        // Grant作成を試みて発覚したバグ）。`FinanceLog`は逆にVersion40
+        // で除外したはずが、ここに残っていた。
         scope: z
           .array(
             z.enum([
@@ -168,9 +176,11 @@ const payloadSchemas: Record<ProposalType, z.ZodTypeAny> = {
               'MealLog',
               'NutritionLog',
               'WeightLog',
-              'FinanceLog',
               'CheckIn',
               'DistractionSignal',
+              'Appearance',
+              'ManagementFeedback',
+              'Memory',
             ]),
           )
           .min(1),
