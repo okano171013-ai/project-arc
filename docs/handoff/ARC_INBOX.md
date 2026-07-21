@@ -365,5 +365,34 @@ Version39完了後は、このゴールへ最短で到達する後続Versionを�
 完了報告では上記2条件を実機で満たした証拠がない限り「PC不要」「全チャット対応」
 と表現しないでください。
 
+## 着手中の正式指示：Version40「低リスク記録の直接保存API化・StudySessionツール優先追加」— 2026-07-20（優先度Critical）
+
+Owner（加納央都）本人発信。原文はAgentMessage
+（id `ba6548bc-c550-43a6-b5a1-7ab4dd4c9889`、direction: ToClaudeCode、
+Critical、relatedVersionは「Version29」と記載されているが古い参照
+——Version39完了済みの現行コードを基準に整合性確認すること）として
+本番Project ARCへ保存済みだが、このセッションの`agent_message_list`
+呼び出しは`fetch failed`となり本文を取得できなかったため、Ownerが
+ChatGPT画面から直接コピーしてチャットへ貼り付ける形で伝達された
+（この経路自体の脆弱性が指示内容の項目6と一致——本Versionで
+Git Inboxミラーの整備を行う）。原文全文は`docs/handoff/archive/
+Version40_ARC_Brief.md`に保管。
+
+要旨：(1) MealLog/NutritionLog/WeightLog/Reflection/CheckIn/
+DistractionSignal/ChallengeLog/Appearance/ManagementFeedbackの
+9種を、既存AgentDelegationGrantの枠組みで個別Proposal不要にする、
+(2) StudySession関連6ツールを最優先追加しTimeline空でも正しく集計、
+(3) FinanceLog・AgentDelegationGrant管理・システム設定・Constitution・
+認証・外部公開・削除等は引き続きProposal必須、(4) 全save処理へ
+read-after-write検証・冪等キー・再試行キューを実装、(5) MCP接続の
+チャット間安定性・`capability_registry_get`の診断情報拡充、
+(6) AgentMessage→Git Inboxのミラー経路整備、(7) 回帰テスト、
+(8) ADR 0031・Constitutionとの整合性を勝手に変更せず整理、
+(9) 完了報告に規定項目を含める。
+
+着手・停止条件は既存の標準運用（金銭・秘密情報・本番デプロイ・
+Constitution変更・破壊的操作のみOwner確認、それ以外はローカルで
+自律的に進める）に従う。
+
 
 <!-- ここにARCの指示書を貼り付け -->
