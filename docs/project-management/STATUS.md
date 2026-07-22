@@ -139,7 +139,7 @@ Notion側ページは削除せず`Synced`チェックボックスで管理する
 - `MOBILE_INGRESS_HOST`のLAN公開＋`MOBILE_INGRESS_API_TOKEN`設定の有効化: Owner確認事項（確認事項3、`Version35_Decision_Packet.md`）——スマホからの実送信に必要。認証機構は実装済み（fail-closed、ADR 0066）
 - 実際の16件の取り込み: Owner自身が`pnpm import-pending-logs`を実行（Importerは実装済み、ADR 0067）
 - Appearance/ManagementFeedback/Memory等を含むAgentDelegationGrantの発行: Owner自身が`proposal_create`（type: AgentDelegationGrant）→`do`→`proposal_approve`で実行する必要がある（Constitution第4条によりClaude Code・ARC自身は発行できない、Version40〜41、ADR 0072・0073）——保留中の「ほしい物リスト・方針」の保存にはMemory scopeを含むGrant発行が必要
-- Notion Internal Integration Tokenの作成・対象データベースへの共有・`NOTION_API_KEY`/`NOTION_DATABASE_ID`設定: Owner作業（Notion側のUI操作、Claude Code/ARCは代行できない、Version42、ADR 0075）——設定後の`pnpm mobile-sync notion-pull`実機確認もOwner環境で必要
+- Notion Internal Integration Tokenの作成・対象データベースへの共有・`NOTION_API_KEY`/`NOTION_DATABASE_ID`設定: Owner作業（Notion側のUI操作、Claude Code/ARCは代行できない、Version42、ADR 0075）——設定後の`pnpm mobile-sync notion-pull`実機確認もOwner環境で必要。**急ぎ度：低**（2026-07-22、Owner本人「いつかやるから」——今は着手せず、必要になったタイミングでOwner自身が行う想定。以後のVersionでこの項目を急かさない）
 - StudySessionツールの監査ログ（ApprovalDecision）対応の要否: Owner判断待ち（急ぎ度：低、Version40 Report8章）
 - `STUDY_TIMER_API_TOKEN`と実timer疎通: Owner作業
 - StudyLog配線: StudySessionとのmodel判断待ち
