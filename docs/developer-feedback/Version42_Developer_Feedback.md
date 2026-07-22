@@ -4,7 +4,7 @@
 
 - Version / 日付: Version42 / 2026-07-22
 - 担当エンジン: Claude Code
-- Git commit / tag: （このセクションはコミット後の追記コミットで実ハッシュに置き換える）
+- Git commit / tag: `864e75c`
 - 対応Issue / 関連Report: Notion Transport統合（ADR 0074の一部撤回、ADR 0075） / `docs/reports/Version42_Report.md`
 - 状態: Complete
 
@@ -100,7 +100,7 @@ ADR 0075を新規作成した。
 ## 完了宣言
 
 - [x] Report、Feedback、Roadmap、PM Status、Open Issuesが同じ事実を示す
-- [x] commit / tagを記録した（追記コミットで実ハッシュに置き換え予定）
+- [x] commit / tagを記録した（`864e75c`）
 - [x] 未実行テストを成功扱いしていない（675件全件実行・全件合格を実機で確認）
 - [x] Owner確認事項を通常タスクへ埋没させていない（9章に明記）
 - [x] 次担当者がこの文書だけで再開できる（8章に依存関係付きで記載）

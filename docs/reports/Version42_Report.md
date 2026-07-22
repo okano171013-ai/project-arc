@@ -1,6 +1,6 @@
 # Version42 Report: Notion Transport統合（ADR 0074の一部撤回、ADR 0075）
 
-commit: （このセクションはコミット後の追記コミットで実ハッシュに置き換える）
+commit: `864e75c`
 
 ## 1. Version概要
 
