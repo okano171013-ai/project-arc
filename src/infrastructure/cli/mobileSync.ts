@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
- * pnpm mobile-sync [sync|list|resolve|retry|pull]（Version35、
- * ADR 0064・0065。`pull`はVersion38、ADR 0069）
+ * pnpm mobile-sync [sync|list|resolve|retry|pull|notion-pull]
+ * （Version35、ADR 0064・0065。`pull`はVersion38、ADR 0069。
+ * `notion-pull`はVersion42、ADR 0075）
  *
  * Mobile Ingress（`mobileIngress.ts`、127.0.0.1限定）が受信した
  * `Accepted`状態のIngressRecordを、PC起動時にlocalへCanonicalizeする
@@ -13,6 +14,12 @@
  * `CLOUD_INGRESS_URL`/`CLOUD_INGRESS_PULL_TOKEN`が未設定の場合は
  * 明確なエラーで終了する——クラウド未使用のOwnerには一切影響しない
  * opt-in機能。
+ *
+ * `notion-pull`はNotion（Ownerが日常記録するTransport source）の
+ * `Synced`未チェックのページをローカルへ引き下ろす。
+ * `NOTION_API_KEY`/`NOTION_DATABASE_ID`が未設定の場合は明確な
+ * エラーで終了する——Notion未使用のOwnerには一切影響しないopt-in
+ * 機能。
  */
 import { buildUseCases } from '../http/server.js';
 import { JsonFileReflectionRepository } from '../../adapters/repositories/JsonFileReflectionRepository.js';
@@ -24,6 +31,8 @@ import { ListIngressRecordsUseCase } from '../../application/use-cases/mobile-in
 import { ReceiveIngressRecordUseCase } from '../../application/use-cases/mobile-ingress/ReceiveIngressRecord.js';
 import { PullCloudIngressUseCase } from '../../application/use-cases/mobile-ingress/PullCloudIngress.js';
 import { HttpCloudIngressClient } from '../http/cloudIngressClient.js';
+import { PullNotionEntriesUseCase } from '../../application/use-cases/mobile-ingress/PullNotionEntries.js';
+import { HttpNotionClient } from '../http/notionClient.js';
 import type { IngressRecordStatus } from '../../domain/entities/IngressRecord.js';
 import { serializeIngressRecord } from '../../application/serializers.js';
 import { isMainModule } from '../runner/runnerLock.js';
@@ -58,6 +67,25 @@ export function buildPullUseCase(dataDir = 'data', cloudUrl?: string, pullToken?
   return new PullCloudIngressUseCase(client, buildCommands(dataDir).receive);
 }
 
+/** テスト用に`NotionClient`実装を差し替えられるようexportする（Version42、ADR 0075）。 */
+export function buildNotionPullUseCase(
+  dataDir = 'data',
+  apiKey?: string,
+  databaseId?: string,
+): PullNotionEntriesUseCase {
+  const { NOTION_API_KEY, NOTION_DATABASE_ID } = loadEnv();
+  const key = apiKey ?? NOTION_API_KEY;
+  const dbId = databaseId ?? NOTION_DATABASE_ID;
+  if (!key || !dbId) {
+    throw new Error(
+      'notion-pull requires NOTION_API_KEY and NOTION_DATABASE_ID to be set ' +
+        '(Owner-created Notion Internal Integration — see docs/adr/0075-notion-transport-integration.md)',
+    );
+  }
+  const client = new HttpNotionClient(key, dbId);
+  return new PullNotionEntriesUseCase(client, buildCommands(dataDir).receive);
+}
+
 export async function runMobileSyncCommand(
   command: string | undefined,
   arg1: string | undefined,
@@ -90,8 +118,14 @@ export async function runMobileSyncCommand(
       const pull = buildPullUseCase(dataDir);
       return pull.execute();
     }
+    case 'notion-pull': {
+      const pull = buildNotionPullUseCase(dataDir);
+      return pull.execute();
+    }
     default:
-      throw new Error('usage: pnpm mobile-sync [sync|list [status]|resolve <id> accept|discard|retry <id>|pull]');
+      throw new Error(
+        'usage: pnpm mobile-sync [sync|list [status]|resolve <id> accept|discard|retry <id>|pull|notion-pull]',
+      );
   }
 }
 

@@ -56,6 +56,13 @@ const envSchema = z.object({
   // （クラウド未使用のOwnerには一切影響しないopt-in機能）。
   CLOUD_INGRESS_URL: z.string().url().optional(),
   CLOUD_INGRESS_PULL_TOKEN: z.string().optional(),
+  // Version42（ADR 0075）。`pnpm mobile-sync notion-pull`がNotion
+  // （Owner作成のInternal Integration）をTransport sourceとして
+  // 引き下ろす際の認証情報。未設定なら`notion-pull`コマンドは明確な
+  // エラーで終了する（Notion未使用のOwnerには一切影響しないopt-in
+  // 機能、CLOUD_INGRESS_*と同じ設計）。
+  NOTION_API_KEY: z.string().optional(),
+  NOTION_DATABASE_ID: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;

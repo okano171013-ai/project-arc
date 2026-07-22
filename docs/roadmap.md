@@ -209,13 +209,33 @@ ADR 0070）が繰り返し障害になり、「結局使いものになってい
 41の資産・開発はそのまま維持し、将来Notionのデータを一括移行して
 運用を戻す想定。
 
-**Version42以降**：ADR 0074の運用方針を踏まえ、次に着手する技術
+**Version42は完了済み**：ADR 0074の直後、OwnerがClaude.ai側で
+公式Notionコネクタを接続し、「1. Project ARCのコードとしてNotion
+連携を実装する」を明示選択した（ADR 0075、ADR 0074「見送った案」の
+一部撤回）。NotionをMobile Ingressと同格の新しいTransport source
+として位置づけ、既存の`IngressRecord`/`ReceiveIngressRecordUseCase`/
+`SyncIngressRecordsUseCase`（Canonicalizeパイプライン）をそのまま
+再利用した——新しい受信側抽象・新しいCanonical Storeは作っていない。
+`NotionClient`ポート＋`HttpNotionClient`実装、
+`PullNotionEntriesUseCase`、`pnpm mobile-sync notion-pull`
+サブコマンドを追加した。Notion側データベースの`Synced`チェック
+ボックスで同期状態を管理し、pull後もNotionのページ自体は削除
+しない（Ownerの一次記録として残す）。認証は`NOTION_API_KEY`/
+`NOTION_DATABASE_ID`（Owner作成のInternal Integration Token、
+未設定ならopt-inで無効のまま）。本サンドボックスからは
+`api.notion.com`への直接到達性がない（プロキシポリシー）ため、
+`HttpNotionClient`はfake serverによる契約テストのみで検証しており、
+実際のNotion APIとの疎通はOwner環境での実機確認が必要。詳細は
+`docs/reports/Version42_Report.md`・ADR 0075参照。
+
+**Version43以降**：ADR 0074の運用方針を踏まえ、次に着手する技術
 テーマ（Remote MCP接続の安定性改善、あるいはADR 0071の案A・Cへ
 本格的に進むかどうか）は、Owner/ARCと改めて相談してから決定する。
 それまでの間、下記の従来からの確認事項（LAN公開＋トークン設定の
 可否、実際の16件の取り込み、Cloudflare実デプロイの実行可否、
 ADR 0071・案Cの要否、Appearance/ManagementFeedback/Memory等を含む
-新しいAgentDelegationGrantの発行可否）への回答も引き続き有効。
+新しいAgentDelegationGrantの発行可否、Notion Internal Integrationの
+実際の作成・`notion-pull`実機確認）への回答も引き続き有効。
 
 | 優先 | 導入すべき機能 | 目的・既存資産との接続 | 完了の目安 |
 |---:|---|---|---|

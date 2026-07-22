@@ -414,5 +414,25 @@ Remote MCPのPC依存（PC-off Gap、ADR 0070）が繰り返し障害になり�
 時点で、Notionのデータを一括移行し運用を戻す想定。実装・コード変更
 は一切行っていない（純粋な運用方針・ADR記録のみ）。
 
+**処理済み**：Version42「Notion Transport統合」（ADR 0075、
+`docs/reports/Version42_Report.md`）。ADR 0074決定の直後、Owner
+本人がClaude.ai側で公式Notionコネクタを接続し、「notionに接続して
+開発を進めて」と指示。解釈確認の結果、Owner本人が「Project ARCの
+コードとしてNotion連携を実装する（ADR 0074の決定を覆して、今すぐ
+着手する）」を明示選択した。NotionをMobile Ingressと同格の新しい
+Transport sourceとして位置づけ、既存の`IngressRecord`/
+`ReceiveIngressRecordUseCase`/`SyncIngressRecordsUseCase`
+（Canonicalizeパイプライン）をそのまま再利用した——新しい受信側
+抽象・新しいCanonical Storeは作っていない。`NotionClient`ポート＋
+`HttpNotionClient`実装、`PullNotionEntriesUseCase`、`pnpm
+mobile-sync notion-pull`サブコマンドを追加した。pull後もNotion側
+ページは削除せず`Synced`チェックボックスで管理する（Ownerの一次
+記録を壊さない設計）。認証は`NOTION_API_KEY`/`NOTION_DATABASE_ID`
+（Owner作成のInternal Integration Token、未設定ならopt-inで無効の
+まま）。本サンドボックスからは`api.notion.com`への直接到達性が
+ない（プロキシポリシー、実機確認済み）ため、fake serverによる
+契約テストのみで検証しており、実際のNotion APIとの疎通はOwner
+環境での実機確認が必要。675件のテストが全て合格。
+
 
 <!-- ここにARCの指示書を貼り付け -->

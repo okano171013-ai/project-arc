@@ -1064,3 +1064,31 @@ Version40のDoDは全項目達成済み。
       一切実施していない
 
 Version41のDoDは全項目達成済み。
+
+## Version42完了チェックリスト
+
+- [x] `pnpm test` が全て緑（675件、94 test files、Notion Transport
+      統合の新規テストを含む）
+- [x] `pnpm typecheck` / `pnpm lint` がエラーゼロ
+- [x] `NotionClient`ポート（Application層）＋`HttpNotionClient`実装
+      （Infrastructure層）を追加
+- [x] `PullNotionEntriesUseCase`を追加（`PullCloudIngressUseCase`と
+      同型、既存の`ReceiveIngressRecordUseCase`をそのまま再利用）
+- [x] `pnpm mobile-sync notion-pull`サブコマンドを追加
+- [x] `NOTION_API_KEY`/`NOTION_DATABASE_ID`環境変数を追加
+      （未設定ならopt-inで無効のまま、既存の`CLOUD_INGRESS_*`と同型）
+- [x] ADR 0075（ADR 0074「見送った案」の一部撤回、Notion Transport
+      統合の設計）を作成済み
+- [x] `HttpNotionClient`はfake serverでの契約テストのみ
+      （`api.notion.com`への直接到達性が本サンドボックスにないことを
+      実機確認済み）——実際のNotion APIとの疎通はOwner環境での実機
+      確認が必要
+- [x] ARC-PM-005が本Versionの変更と無関係であることを`git stash`
+      比較で再確認
+- [x] `docs/reports/Version42_Report.md`を生成済み
+- [x] `docs/developer-feedback/Version42_Developer_Feedback.md`を生成済み
+
+Version42のDoDは全項目達成済み。Notion側データベースの実作成・
+Internal Integration Tokenの発行・`notion-pull`の実機確認はOwner
+作業として残っている（`docs/project-management/STATUS.md`「停止中
+タスク」参照）。

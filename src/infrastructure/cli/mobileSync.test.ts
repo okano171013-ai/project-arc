@@ -49,6 +49,15 @@ describe('mobile-sync CLI', () => {
     );
   });
 
+  it('notion-pull requires NOTION_API_KEY/NOTION_DATABASE_ID to be configured (Version42, ADR 0075)', async () => {
+    // Notion未使用のOwnerに影響しないopt-in設計を検証する（CLOUD_INGRESS_*と同型）。
+    delete process.env.NOTION_API_KEY;
+    delete process.env.NOTION_DATABASE_ID;
+    await expect(runMobileSyncCommand('notion-pull', undefined, undefined, DATA_DIR)).rejects.toThrow(
+      /NOTION_API_KEY and NOTION_DATABASE_ID/,
+    );
+  });
+
   it('cleans up: no leftover .tmp files after sync writes (atomic writes, ADR 0058)', async () => {
     const repo = new JsonFileIngressRecordRepository(`${DATA_DIR}/ingress-records.json`);
     await new ReceiveIngressRecordUseCase(repo).execute({

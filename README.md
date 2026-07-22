@@ -532,6 +532,7 @@ pnpm mobile-sync list <status>      # IngressRecordを状態別に一覧表示�
 pnpm mobile-sync resolve <id> accept|discard  # Pending/FailedなIngressRecordをOwnerが解決
 pnpm mobile-sync retry <id>         # Failed状態のIngressRecordを再試行（MAX_RETRY超過後は不可）
 pnpm mobile-sync pull               # cloud側queue（Cloudflare Workers等）をローカルへ引き下ろす（Version38、ADR 0069）。CLOUD_INGRESS_URL/CLOUD_INGRESS_PULL_TOKEN未設定なら明確なエラーで終了
+pnpm mobile-sync notion-pull        # Notion（Transport source、ADR 0075）のSynced未チェックページをローカルへ引き下ろす（Version42）。NOTION_API_KEY/NOTION_DATABASE_ID未設定なら明確なエラーで終了
 
 pnpm import-pending-logs -- <path> --dry-run  # 退避中ログJSONLファイルをschema検証のみ行う（書き込みなし、Version37、ADR 0067）
 pnpm import-pending-logs -- <path>            # 対応済みtypeの行のみIngressRecordとしてAccept（未対応typeはunsupported_typeとして報告、実データはこのリポジトリに含まれない）
